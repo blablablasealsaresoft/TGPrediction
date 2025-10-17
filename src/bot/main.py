@@ -226,13 +226,14 @@ Total PnL: {stats['total_pnl']:+.4f} SOL
 
 *Commands:*
 /deposit - Fund your wallet
-/withdraw <amount> <address> - Withdraw funds
 /balance - Check balance
+/export_wallet - Export private keys
 
 ⚠️ *Security:*
 • Your wallet is encrypted and secure
 • Never share your wallet info
 • This is YOUR personal trading wallet
+• You can export keys to use in Phantom/Solflare
 """
         
         keyboard = [
@@ -241,7 +242,10 @@ Total PnL: {stats['total_pnl']:+.4f} SOL
                 InlineKeyboardButton("🔄 Refresh", callback_data="refresh_wallet")
             ],
             [
-                InlineKeyboardButton("📊 Trading History", callback_data="show_history"),
+                InlineKeyboardButton("🔐 Export Keys", callback_data="export_keys_prompt"),
+                InlineKeyboardButton("📊 History", callback_data="show_history")
+            ],
+            [
                 InlineKeyboardButton("◀️ Back", callback_data="back_to_start")
             ]
         ]
@@ -317,6 +321,74 @@ After depositing, use /balance to check your new balance
             f"Wallet: `{wallet_address[:8]}...{wallet_address[-8:]}`",
             parse_mode='Markdown'
         )
+    
+    async def export_wallet_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        🔐 EXPORT PRIVATE KEY
+        Allows users to export their private key to import into Phantom, Solflare, etc.
+        """
+        user_id = update.effective_user.id
+        chat_type = update.message.chat.type
+        
+        # Security: Only allow in private chats
+        if chat_type != 'private':
+            await update.message.reply_text(
+                "⚠️ *SECURITY WARNING*\n\n"
+                "For your security, private keys can only be exported in private messages.\n\n"
+                "Please send `/export_wallet` to me in a private message.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Get user's wallet
+        wallet_address = await self.wallet_manager.get_user_wallet_address(user_id)
+        
+        if not wallet_address:
+            await update.message.reply_text(
+                "❌ No wallet found. Use /start to create one first!"
+            )
+            return
+        
+        # Export private key
+        private_key = await self.wallet_manager.export_private_key(user_id)
+        
+        if not private_key:
+            await update.message.reply_text(
+                "❌ Failed to export private key. Please contact support."
+            )
+            return
+        
+        # Send with STRONG security warnings
+        message = f"""🔐 *YOUR PRIVATE KEY*
+
+⚠️ *CRITICAL SECURITY WARNINGS:*
+• NEVER share this key with anyone
+• NEVER post this key anywhere
+• Anyone with this key can steal ALL your funds
+• Keep this key safe and backed up
+• Delete this message after saving the key
+
+*Your Wallet:*
+`{wallet_address}`
+
+*Private Key (Base58):*
+`{private_key}`
+
+*How to Import:*
+1. Open Phantom or Solflare wallet
+2. Go to Settings → Import Private Key
+3. Paste your private key above
+4. Your wallet will be imported!
+
+⚠️ *REMEMBER:* This bot uses your personal wallet. If you import it elsewhere, any trades you make will affect your balance here too.
+
+*After importing, you have FULL control of your funds in both places.*
+
+🗑️ Please delete this message after saving your key safely!"""
+        
+        await update.message.reply_text(message, parse_mode='Markdown')
+        
+        logger.info(f"User {user_id} exported their private key")
     
     async def ai_analyze_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -1153,6 +1225,12 @@ Command: /publish_strategy
         """Show help menu with all commands"""
         message = """❓ *HELP & COMMANDS*
 
+*💰 Wallet:*
+/wallet - Your wallet info
+/balance - Check balance
+/deposit - Deposit instructions
+/export_wallet - Export private keys
+
 *📊 Analysis:*
 /analyze <token> - AI analysis
 /ai <token> - Quick analysis
@@ -1310,6 +1388,29 @@ Use /ai with token address to get AI insights
         
         elif data == "show_deposit":
             await self._show_deposit_info(query)
+        
+        elif data == "export_keys_prompt":
+            # Prompt user to use command in private message for security
+            message = """🔐 *EXPORT PRIVATE KEYS*
+
+For security reasons, private keys must be exported in a private message.
+
+*To export your keys:*
+1. Open a private message with me
+2. Send the command: /export_wallet
+3. You'll receive your private key securely
+
+⚠️ *Never share your private key with anyone!*
+
+Your keys give COMPLETE access to your wallet and funds."""
+            
+            keyboard = [[InlineKeyboardButton("◀️ Back", callback_data="show_wallet")]]
+            
+            await query.edit_message_text(
+                message,
+                parse_mode='Markdown',
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
         
         elif data == "my_stats":
             await self.my_stats_command(query, context)
@@ -1757,6 +1858,8 @@ Use /settings command to modify these settings
         app.add_handler(CommandHandler("wallet", self.wallet_command))
         app.add_handler(CommandHandler("deposit", self.deposit_command))
         app.add_handler(CommandHandler("balance", self.balance_command))
+        app.add_handler(CommandHandler("export_wallet", self.export_wallet_command))
+        app.add_handler(CommandHandler("export_keys", self.export_wallet_command))  # Alias
         
         # Analysis commands (with short aliases)
         app.add_handler(CommandHandler("ai_analyze", self.ai_analyze_command))

@@ -219,6 +219,24 @@ class UserWalletManager:
             )
             return result.scalars().all()
     
+    async def export_private_key(self, user_id: int) -> Optional[str]:
+        """
+        Export user's private key in base58 format (for importing to Phantom, etc.)
+        
+        Returns:
+            Base58-encoded private key string, or None if wallet not found
+        """
+        keypair = await self.get_user_keypair(user_id)
+        if not keypair:
+            return None
+        
+        # Export as base58 (compatible with Phantom, Solflare, etc.)
+        private_key_bytes = bytes(keypair)
+        private_key_b58 = base58.b58encode(private_key_bytes).decode()
+        
+        logger.info(f"User {user_id} exported their private key")
+        return private_key_b58
+    
     def clear_cache(self):
         """Clear wallet cache (security)"""
         self._wallet_cache = {}
