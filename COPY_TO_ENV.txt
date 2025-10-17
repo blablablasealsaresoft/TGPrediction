@@ -1,0 +1,204 @@
+# ==========================================
+# COPY THIS ENTIRE FILE TO .env
+# Then fill in your values where indicated
+# ==========================================
+
+# ================================
+# REQUIRED - MUST FILL THESE OUT
+# ================================
+
+# Get from @BotFather on Telegram
+TELEGRAM_BOT_TOKEN=paste_your_bot_token_here
+
+# Get from @userinfobot on Telegram (your user ID)
+ADMIN_CHAT_ID=paste_your_telegram_id_here
+
+# Generated wallet private key (from scripts/generate_wallet.py)
+# OR use your existing wallet private key (Base58 encoded)
+WALLET_PRIVATE_KEY=2KBD49gknMGpsVSJWuUFbTPLsVLd4kMEN8n8cBERvJFML8sBzavGqpHH14mYUwDWYHZ6EdTx1DzHxto6PUsUVpke
+
+# ================================
+# FEE COLLECTION (Already configured!)
+# ================================
+
+# Your team multisig wallet (fees will be sent here)
+TEAM_WALLET_ADDRESS=4164wKUM9HJy...azg4FSMycfR5
+
+# Transaction fee: 0.5% of each trade
+TRANSACTION_FEE_PERCENTAGE=0.5
+
+# Fee limits
+MIN_FEE_SOL=0.001
+MAX_FEE_SOL=0.1
+
+# ================================
+# SOLANA SETTINGS (Pre-configured)
+# ================================
+
+# Default free RPC (or upgrade to premium)
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+
+# Network (use devnet for testing first!)
+SOLANA_NETWORK=mainnet-beta
+
+# ================================
+# TRADING SETTINGS (Safe defaults)
+# ================================
+
+MAX_SLIPPAGE=5.0
+DEFAULT_BUY_AMOUNT_SOL=0.1
+MIN_PROFIT_PERCENTAGE=2.0
+MAX_TRADE_SIZE_SOL=10.0
+DAILY_LOSS_LIMIT_SOL=50.0
+
+# ================================
+# SAFETY (Recommended settings)
+# ================================
+
+REQUIRE_CONFIRMATION=true
+MIN_LIQUIDITY_USD=10000
+CHECK_MINT_AUTHORITY=true
+CHECK_FREEZE_AUTHORITY=true
+CHECK_HONEYPOTS=true
+MAX_CONCURRENT_POSITIONS=5
+
+# ================================
+# PLATFORM FEATURES
+# ================================
+
+# Fee model: per_trade or monthly_subscription
+FEE_MODEL=per_trade
+
+# Subscription prices (if using subscription model)
+SUBSCRIPTION_BASIC_SOL=0.5
+SUBSCRIPTION_PRO_SOL=1.0
+SUBSCRIPTION_ELITE_SOL=2.5
+
+# Free tier limits
+FREE_TIER_DAILY_TRADES=5
+
+# ================================
+# RATE LIMITING
+# ================================
+
+RATE_LIMIT_PER_MINUTE=60
+MAX_TRADES_PER_HOUR=20
+TRADE_COOLDOWN_SECONDS=5
+DAILY_TRADE_LIMIT_PER_USER=100
+
+# ================================
+# SOCIAL MEDIA (Optional - Leave blank if not using)
+# ================================
+
+TWITTER_API_KEY=
+TWITTER_API_SECRET=
+TWITTER_BEARER_TOKEN=
+REDDIT_CLIENT_ID=
+REDDIT_CLIENT_SECRET=
+REDDIT_USER_AGENT=TradingBot/1.0
+DISCORD_TOKEN=
+
+# ================================
+# DATABASE
+# ================================
+
+# SQLite (simple, good for starting)
+DATABASE_URL=sqlite+aiosqlite:///trading_bot.db
+
+# PostgreSQL (recommended for production - uncomment if using)
+# DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/trading_bot
+
+# ================================
+# MONITORING
+# ================================
+
+ENABLE_HEALTH_CHECK_SERVER=true
+HEALTH_CHECK_PORT=8080
+ENABLE_ADMIN_ALERTS=true
+ALERT_LARGE_TRADE_THRESHOLD=5.0
+
+# ================================
+# LOGGING
+# ================================
+
+LOG_LEVEL=INFO
+LOG_FILE=logs/trading_bot.log
+DETAILED_TRANSACTION_LOGS=true
+
+# ================================
+# REFERRALS & REWARDS
+# ================================
+
+ENABLE_REFERRAL_PROGRAM=true
+REFERRAL_BONUS_PERCENTAGE=20.0
+MIN_REFERRALS_FOR_REWARDS=3
+
+# ================================
+# AI FEATURES
+# ================================
+
+ENABLE_AI_FEATURES=true
+ENABLE_COPY_TRADING=true
+ENABLE_STRATEGY_MARKETPLACE=true
+ENABLE_SENTIMENT_ANALYSIS=false
+ENABLE_COMMUNITY_FEATURES=true
+ENABLE_GAMIFICATION=true
+
+# ================================
+# ANTI-MEV
+# ================================
+
+ENABLE_JITO_BUNDLES=true
+JITO_TIP_LAMPORTS=10000
+
+# ================================
+# ADVANCED
+# ================================
+
+JUPITER_SLIPPAGE_BPS=50
+TX_CONFIRMATION_TIMEOUT=60
+MAX_TX_RETRIES=3
+ENABLE_PRIORITY_FEES=true
+PRIORITY_FEE_LAMPORTS=5000
+AUTO_BACKUP_ENABLED=true
+BACKUP_RETENTION_DAYS=30
+MAINTENANCE_MODE=false
+MAX_USERS=0
+
+# ================================
+# NOTIFICATIONS
+# ================================
+
+SEND_TRADE_CONFIRMATIONS=true
+SEND_DAILY_SUMMARIES=true
+
+# ==========================================
+# SETUP INSTRUCTIONS:
+# ==========================================
+# 
+# 1. Copy this entire file
+# 2. Create a new file named ".env" in the root folder
+# 3. Paste everything
+# 4. Fill in the 3 required values at the top:
+#    - TELEGRAM_BOT_TOKEN (from @BotFather)
+#    - ADMIN_CHAT_ID (from @userinfobot)  
+#    - WALLET_PRIVATE_KEY (from generate_wallet.py or your wallet)
+# 5. Replace the full multisig address in TEAM_WALLET_ADDRESS
+# 6. Save the file
+# 7. Run: python scripts/run_bot.py
+#
+# ==========================================
+# IMPORTANT NOTES:
+# ==========================================
+#
+# Bot Wallet Generated:
+# Address: FEroaDc5UhxRxqFtrNeUy4uhPuxD5wHbYUpJQhXFZgE2
+# Private: 2KBD49gknMGpsVSJWuUFbTPLsVLd4kMEN8n8cBERvJFML8sBzavGqpHH14mYUwDWYHZ6EdTx1DzHxto6PUsUVpke
+#
+# - Fund this wallet with 1-5 SOL for gas fees
+# - All user trading fees (0.5%) go to your multisig
+# - Keep private key SECRET
+# - Never commit .env to git
+#
+# ==========================================
+

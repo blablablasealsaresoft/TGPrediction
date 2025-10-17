@@ -1,0 +1,100 @@
+================================================================================
+HOW TO PUSH YOUR TRADING BOT TO GITHUB - SUPER SIMPLE
+================================================================================
+
+OPTION 1: USE THE SCRIPT (EASIEST!)
+====================================
+
+Open PowerShell in this folder and run:
+
+    .\scripts\git_setup.ps1
+
+The script will guide you through everything!
+
+
+OPTION 2: MANUAL (4 STEPS)
+===========================
+
+STEP 1: Create Repository on GitHub
+------------------------------------
+1. Go to: https://github.com/new
+2. Name: solana-trading-bot
+3. Privacy: Private (recommended)
+4. DON'T check "Initialize with README"
+5. Click "Create repository"
+
+
+STEP 2: Open PowerShell Here
+-----------------------------
+Right-click in this folder → "Open in Terminal" or "PowerShell"
+
+
+STEP 3: Run These Commands
+---------------------------
+git init
+git add .
+git commit -m "Initial commit: Revolutionary Solana Trading Bot"
+git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPO.git
+git push -u origin main
+
+
+STEP 4: Authenticate
+--------------------
+When prompted:
+- Username: your_github_username
+- Password: USE A PERSONAL ACCESS TOKEN (not your password!)
+
+Get token: https://github.com/settings/tokens
+- Click "Generate new token (classic)"
+- Select "repo" scope
+- Copy and use as password
+
+
+================================================================================
+IMPORTANT: SECURITY
+================================================================================
+
+✓ .gitignore is configured (protects sensitive files)
+✓ .env will NOT be pushed (safe)
+✓ *.db will NOT be pushed (safe)
+✓ logs/ will NOT be pushed (safe)
+
+NEVER push .env file - it contains your private keys!
+
+
+================================================================================
+DONE!
+================================================================================
+
+After pushing, your code will be at:
+https://github.com/YOUR-USERNAME/YOUR-REPO
+
+You can:
+- Clone on other computers
+- Share with team
+- Deploy from GitHub
+- Track changes
+
+
+================================================================================
+NEED MORE HELP?
+================================================================================
+
+Read these files:
+- GITHUB_PUSH_GUIDE.md (simple guide)
+- PUSH_TO_GITHUB.md (detailed guide)
+- Or just run: .\scripts\git_setup.ps1
+
+
+================================================================================
+YOUR BOT INFO
+================================================================================
+
+Bot Wallet: FEroaDc5UhxRxqFtrNeUy4uhPuxD5wHbYUpJQhXFZgE2
+Team Wallet: 5GwJiL3BX8EfaMQDpNrnr3kbHT64c5RRaK33uPtaQAHY
+Fee Rate: 0.5%
+UI: Professional button-based (like Pocket Pro Bot)
+
+
+================================================================================
+

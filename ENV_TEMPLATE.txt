@@ -1,0 +1,323 @@
+# ================================
+# SOLANA TRADING BOT - PLATFORM CONFIGURATION
+# Professional Telegram Trading Platform
+# ================================
+# 
+# INSTRUCTIONS:
+# 1. Copy this entire file
+# 2. Create a new file named ".env" in the root directory
+# 3. Paste the contents and fill in your actual values
+# 4. Never commit the .env file to git
+#
+# ================================
+
+# ================================
+# TELEGRAM CONFIGURATION
+# ================================
+# Get your bot token from @BotFather on Telegram
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+
+# Your admin Telegram user ID (get from @userinfobot)
+ADMIN_CHAT_ID=your_admin_telegram_id
+
+# ================================
+# SOLANA BLOCKCHAIN
+# ================================
+# Solana RPC endpoint (default mainnet - FREE)
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+
+# For better performance, consider premium RPC providers:
+# SOLANA_RPC_URL=https://solana-mainnet.g.alchemy.com/v2/YOUR-API-KEY
+# SOLANA_RPC_URL=https://rpc.ankr.com/solana
+
+# Network: mainnet-beta (production) or devnet (testing)
+SOLANA_NETWORK=mainnet-beta
+
+# Bot's operational wallet private key (Base58 encoded)
+# ⚠️ IMPORTANT: This is for bot operations, keep secure!
+# Generate with: solana-keygen new
+WALLET_PRIVATE_KEY=your_bot_wallet_private_key_here
+
+# ================================
+# PLATFORM FEE CONFIGURATION 💰
+# ================================
+# Team wallet for collecting transaction fees
+TEAM_WALLET_ADDRESS=5GwJiL3BX8EfaMQDpNrnr3kbHT64c5RRaK33uPtaQAHY
+
+# Transaction fee percentage (0.5 = 0.5% fee per trade)
+# Recommended: 0.3-1.0% for competitive pricing
+TRANSACTION_FEE_PERCENTAGE=0.5
+
+# Minimum fee in SOL (to cover small trades)
+MIN_FEE_SOL=0.001
+
+# Maximum fee in SOL (cap for large trades)
+MAX_FEE_SOL=0.1
+
+# Fee collection method: 'per_trade' or 'monthly_subscription'
+FEE_MODEL=per_trade
+
+# ================================
+# SUBSCRIPTION TIERS (Optional)
+# ================================
+# If using subscription model, set prices in SOL
+SUBSCRIPTION_BASIC_SOL=0.5
+SUBSCRIPTION_PRO_SOL=1.0
+SUBSCRIPTION_ELITE_SOL=2.5
+
+# Free tier limits (trades per day for non-subscribers)
+FREE_TIER_DAILY_TRADES=5
+
+# ================================
+# TRADING PARAMETERS
+# ================================
+# Maximum slippage tolerance (percentage)
+MAX_SLIPPAGE=5.0
+
+# Default buy amount in SOL
+DEFAULT_BUY_AMOUNT_SOL=0.1
+
+# Minimum profit percentage to trigger auto-sell
+MIN_PROFIT_PERCENTAGE=2.0
+
+# Maximum trade size per transaction (per user)
+MAX_TRADE_SIZE_SOL=10.0
+
+# Daily loss limit per user
+DAILY_LOSS_LIMIT_SOL=50.0
+
+# ================================
+# SAFETY & SECURITY 🛡️
+# ================================
+# Require user confirmation before executing trades
+REQUIRE_CONFIRMATION=true
+
+# Minimum liquidity required (USD)
+MIN_LIQUIDITY_USD=10000
+
+# Check if mint authority is revoked
+CHECK_MINT_AUTHORITY=true
+
+# Check if freeze authority is revoked
+CHECK_FREEZE_AUTHORITY=true
+
+# Enable honeypot detection
+CHECK_HONEYPOTS=true
+
+# Maximum number of concurrent trades per user
+MAX_CONCURRENT_POSITIONS=5
+
+# ================================
+# USER LIMITS & RESTRICTIONS
+# ================================
+# Maximum users (0 = unlimited)
+MAX_USERS=0
+
+# Daily trade limit per user (0 = unlimited)
+DAILY_TRADE_LIMIT_PER_USER=100
+
+# ================================
+# SOCIAL MEDIA APIs (Optional)
+# For sentiment analysis features
+# ================================
+# Twitter API v2 credentials
+TWITTER_API_KEY=
+TWITTER_API_SECRET=
+TWITTER_BEARER_TOKEN=
+
+# Reddit API credentials
+REDDIT_CLIENT_ID=
+REDDIT_CLIENT_SECRET=
+REDDIT_USER_AGENT=TradingBot/1.0
+
+# Discord bot token
+DISCORD_TOKEN=
+
+# ================================
+# DATABASE CONFIGURATION
+# ================================
+# SQLite (default, easy setup - good for starting)
+DATABASE_URL=sqlite+aiosqlite:///trading_bot.db
+
+# PostgreSQL (recommended for production with many users)
+# DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/trading_bot
+
+# Redis for caching (optional but recommended)
+# REDIS_URL=redis://localhost:6379
+
+# ================================
+# MONITORING & HEALTH CHECKS
+# ================================
+# Enable health check HTTP server
+ENABLE_HEALTH_CHECK_SERVER=true
+
+# Health check server port
+HEALTH_CHECK_PORT=8080
+
+# Send alerts to admin for critical events
+ENABLE_ADMIN_ALERTS=true
+
+# Alert on large trades (SOL threshold)
+ALERT_LARGE_TRADE_THRESHOLD=5.0
+
+# ================================
+# LOGGING & DEBUGGING
+# ================================
+# Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_LEVEL=INFO
+
+# Log file location
+LOG_FILE=logs/trading_bot.log
+
+# Enable detailed transaction logging
+DETAILED_TRANSACTION_LOGS=true
+
+# ================================
+# REFERRAL PROGRAM 🎁
+# ================================
+# Enable referral rewards
+ENABLE_REFERRAL_PROGRAM=true
+
+# Referral bonus percentage (of fees from referred user)
+# Example: If user A refers user B, A gets 20% of B's fees
+REFERRAL_BONUS_PERCENTAGE=20.0
+
+# Minimum referrals to unlock rewards
+MIN_REFERRALS_FOR_REWARDS=3
+
+# ================================
+# AI & ADVANCED FEATURES 🤖
+# ================================
+# Enable AI-powered analysis
+ENABLE_AI_FEATURES=true
+
+# Enable copy trading marketplace
+ENABLE_COPY_TRADING=true
+
+# Enable strategy marketplace
+ENABLE_STRATEGY_MARKETPLACE=true
+
+# Enable sentiment analysis (requires API keys above)
+ENABLE_SENTIMENT_ANALYSIS=false
+
+# Enable community ratings
+ENABLE_COMMUNITY_FEATURES=true
+
+# Enable gamification & rewards
+ENABLE_GAMIFICATION=true
+
+# ================================
+# ANTI-MEV PROTECTION 🛡️
+# ================================
+# Use Jito bundles for MEV protection
+ENABLE_JITO_BUNDLES=true
+
+# Jito tip amount in lamports (10000 = 0.00001 SOL)
+JITO_TIP_LAMPORTS=10000
+
+# ================================
+# RATE LIMITING
+# ================================
+# Maximum API calls per user per minute
+RATE_LIMIT_PER_MINUTE=60
+
+# Maximum trades per user per hour
+MAX_TRADES_PER_HOUR=20
+
+# Cooldown between trades (seconds)
+TRADE_COOLDOWN_SECONDS=5
+
+# ================================
+# NOTIFICATIONS 📱
+# ================================
+# Send trade confirmations to users
+SEND_TRADE_CONFIRMATIONS=true
+
+# Send daily P&L summaries
+SEND_DAILY_SUMMARIES=true
+
+# ================================
+# BACKUP & MAINTENANCE
+# ================================
+# Auto-backup database daily
+AUTO_BACKUP_ENABLED=true
+
+# Backup retention days
+BACKUP_RETENTION_DAYS=30
+
+# Maintenance mode (disable trading temporarily)
+MAINTENANCE_MODE=false
+
+# ================================
+# ADVANCED SETTINGS
+# ================================
+# Jupiter aggregator slippage (basis points, 50 = 0.5%)
+JUPITER_SLIPPAGE_BPS=50
+
+# Transaction confirmation timeout (seconds)
+TX_CONFIRMATION_TIMEOUT=60
+
+# Maximum retries for failed transactions
+MAX_TX_RETRIES=3
+
+# Enable transaction priority fees (for faster execution)
+ENABLE_PRIORITY_FEES=true
+
+# Priority fee in lamports (5000 = 0.000005 SOL)
+PRIORITY_FEE_LAMPORTS=5000
+
+# ================================
+# 📋 QUICK START CHECKLIST
+# ================================
+# 
+# Required (Must fill these out):
+# ✅ TELEGRAM_BOT_TOKEN - Get from @BotFather
+# ✅ ADMIN_CHAT_ID - Get from @userinfobot  
+# ✅ WALLET_PRIVATE_KEY - Generate with: solana-keygen new
+#
+# Already configured for you:
+# ✅ TEAM_WALLET_ADDRESS - Set to: 5GwJiL3BX8EfaMQDpNrnr3kbHT64c5RRaK33uPtaQAHY
+# ✅ SOLANA_RPC_URL - Set to default free endpoint
+# ✅ TRANSACTION_FEE_PERCENTAGE - Set to 0.5%
+#
+# Recommended (Optional but good to set):
+# ⚪ MAX_TRADE_SIZE_SOL - Protect users from large losses
+# ⚪ DAILY_LOSS_LIMIT_SOL - Daily loss protection
+# ⚪ ALERT_LARGE_TRADE_THRESHOLD - Get notified of big trades
+#
+# After configuration:
+# 1. Save as .env in the root directory
+# 2. Run: python scripts/setup_project.py
+# 3. Run: python scripts/run_bot.py
+# 4. Test with small amounts first!
+#
+# ================================
+# 💡 FEE COLLECTION EXPLAINED
+# ================================
+#
+# How fees work:
+# 1. User makes a trade (e.g., buys 1 SOL of tokens)
+# 2. Fee is calculated: 1 SOL × 0.5% = 0.005 SOL
+# 3. Fee is sent to: 5GwJiL3BX8EfaMQDpNrnr3kbHT64c5RRaK33uPtaQAHY
+# 4. User's trade executes with remaining amount
+#
+# Fee limits:
+# - Minimum: 0.001 SOL (even for tiny trades)
+# - Maximum: 0.1 SOL (capped for large trades)
+#
+# Example fees at 0.5%:
+# - 0.1 SOL trade → 0.001 SOL fee (minimum)
+# - 1 SOL trade → 0.005 SOL fee  
+# - 10 SOL trade → 0.05 SOL fee
+# - 100 SOL trade → 0.1 SOL fee (maximum cap)
+#
+# Monthly revenue example (100 active users):
+# - Average 10 trades/user/day
+# - Average 1 SOL per trade
+# - Average fee: 0.005 SOL
+# - Daily: 100 users × 10 trades × 0.005 = 5 SOL/day
+# - Monthly: 5 SOL × 30 = 150 SOL/month
+# - At $100/SOL = $15,000/month revenue 💰
+#
+# ================================
+

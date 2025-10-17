@@ -1,0 +1,72 @@
+# ==========================================
+# MINIMAL .env FILE - READY TO USE
+# Just fill in the 3 values marked with <<<
+# ==========================================
+
+# 1. Get from @BotFather on Telegram <<<
+TELEGRAM_BOT_TOKEN=paste_your_bot_token_here
+
+# 2. Get from @userinfobot on Telegram <<<
+ADMIN_CHAT_ID=paste_your_telegram_id_here
+
+# 3. Your complete multisig address <<<
+TEAM_WALLET_ADDRESS=paste_full_multisig_address_here
+
+# Bot operational wallet (already configured!)
+WALLET_PRIVATE_KEY=2KBD49gknMGpsVSJWuUFbTPLsVLd4kMEN8n8cBERvJFML8sBzavGqpHH14mYUwDWYHZ6EdTx1DzHxto6PUsUVpke
+
+# Solana settings (pre-configured)
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+SOLANA_NETWORK=mainnet-beta
+
+# Fee settings (ready to go!)
+TRANSACTION_FEE_PERCENTAGE=0.5
+MIN_FEE_SOL=0.001
+MAX_FEE_SOL=0.1
+FEE_MODEL=per_trade
+
+# Trading parameters
+MAX_SLIPPAGE=5.0
+DEFAULT_BUY_AMOUNT_SOL=0.1
+MAX_TRADE_SIZE_SOL=10.0
+DAILY_LOSS_LIMIT_SOL=50.0
+
+# Safety
+REQUIRE_CONFIRMATION=true
+MIN_LIQUIDITY_USD=10000
+CHECK_MINT_AUTHORITY=true
+CHECK_FREEZE_AUTHORITY=true
+
+# Database
+DATABASE_URL=sqlite+aiosqlite:///trading_bot.db
+
+# Monitoring
+ENABLE_HEALTH_CHECK_SERVER=true
+HEALTH_CHECK_PORT=8080
+LOG_LEVEL=INFO
+LOG_FILE=logs/trading_bot.log
+
+# Features
+ENABLE_AI_FEATURES=true
+ENABLE_COPY_TRADING=true
+ENABLE_STRATEGY_MARKETPLACE=true
+ENABLE_COMMUNITY_FEATURES=true
+ENABLE_GAMIFICATION=true
+ENABLE_JITO_BUNDLES=true
+
+# ==========================================
+# THAT'S IT! Only 3 values needed.
+#
+# Bot wallet (for operations):
+#   FEroaDc5UhxRxqFtrNeUy4uhPuxD5wHbYUpJQhXFZgE2
+#   → Send 1-5 SOL here for gas fees
+#
+# Your multisig (for fees):
+#   4164wKUM9HJy...azg4FSMycfR5
+#   → Paste full address above
+#   → Receives all 0.5% fees automatically
+#
+# To launch:
+#   python scripts/run_bot.py
+# ==========================================
+
