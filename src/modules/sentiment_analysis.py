@@ -208,18 +208,89 @@ class TwitterMonitor:
         keywords: List[str],
         duration_hours: int
     ) -> List[Dict]:
-        """Fetch real mentions from Twitter API v2"""
+        """Fetch real mentions from Twitter API v2 using tweepy"""
         try:
-            # Twitter API v2 endpoint
-            url = "https://api.twitter.com/2/tweets/search/recent"
+            import tweepy
+            import asyncio
+            from functools import partial
+            
+            # Initialize Twitter API client
+            client = tweepy.Client(bearer_token=self.api_key)
             
             # Build search query
             query = " OR ".join(keywords)
+            query += " -is:retweet lang:en"  # Filter retweets and non-English
             
-            headers = {
-                "Authorization": f"Bearer {self.api_key}"
-            }
+            mentions = []
+            loop = asyncio.get_event_loop()
             
+            # Search recent tweets (run in executor since tweepy is sync)
+            try:
+                tweets = await loop.run_in_executor(
+                    None,
+                    partial(
+                        client.search_recent_tweets,
+                        query=query,
+                        max_results=100,
+                        tweet_fields=['created_at', 'public_metrics', 'author_id'],
+                        user_fields=['public_metrics'],
+                        expansions=['author_id']
+                    )
+                )
+                
+                if not tweets or not tweets.data:
+                    logger.info("No Twitter mentions found")
+                    return []
+                
+                # Create user lookup
+                users = {}
+                if tweets.includes and 'users' in tweets.includes:
+                    users = {str(u.id): u for u in tweets.includes['users']}
+                
+                # Transform to our format
+                for tweet in tweets.data:
+                    user = users.get(str(tweet.author_id), None)
+                    
+                    mentions.append({
+                        'id': str(tweet.id),
+                        'text': tweet.text,
+                        'user': {
+                            'followers': user.public_metrics['followers_count'] if user else 0
+                        },
+                        'timestamp': tweet.created_at,
+                        'engagement': {
+                            'likes': tweet.public_metrics['like_count'],
+                            'retweets': tweet.public_metrics['retweet_count'],
+                            'replies': tweet.public_metrics['reply_count']
+                        }
+                    })
+                
+                logger.info(f"Fetched {len(mentions)} real Twitter mentions using tweepy")
+                return mentions
+                
+            except tweepy.TweepyException as e:
+                logger.error(f"Tweepy error: {e}")
+                return []
+                    
+        except ImportError:
+            logger.error("tweepy not installed. Run: pip install tweepy")
+            # Fallback to manual API call
+            return await self._fetch_twitter_manual(keywords, duration_hours)
+        except Exception as e:
+            logger.error(f"Error fetching Twitter data: {e}")
+            return []
+    
+    async def _fetch_twitter_manual(
+        self,
+        keywords: List[str],
+        duration_hours: int
+    ) -> List[Dict]:
+        """Fallback: Manual Twitter API v2 call"""
+        try:
+            url = "https://api.twitter.com/2/tweets/search/recent"
+            query = " OR ".join(keywords) + " -is:retweet lang:en"
+            
+            headers = {"Authorization": f"Bearer {self.api_key}"}
             params = {
                 "query": query,
                 "max_results": 100,
@@ -234,8 +305,6 @@ class TwitterMonitor:
             async with self.session.get(url, headers=headers, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    
-                    # Transform to our format
                     mentions = []
                     tweets = data.get('data', [])
                     users = {u['id']: u for u in data.get('includes', {}).get('users', [])}
@@ -245,9 +314,7 @@ class TwitterMonitor:
                         mentions.append({
                             'id': tweet['id'],
                             'text': tweet['text'],
-                            'user': {
-                                'followers': user.get('public_metrics', {}).get('followers_count', 0)
-                            },
+                            'user': {'followers': user.get('public_metrics', {}).get('followers_count', 0)},
                             'timestamp': datetime.fromisoformat(tweet['created_at'].replace('Z', '+00:00')),
                             'engagement': {
                                 'likes': tweet.get('public_metrics', {}).get('like_count', 0),
@@ -255,15 +322,14 @@ class TwitterMonitor:
                             }
                         })
                     
-                    logger.info(f"Fetched {len(mentions)} real Twitter mentions")
+                    logger.info(f"Fetched {len(mentions)} Twitter mentions (manual API)")
                     return mentions
                 else:
                     logger.warning(f"Twitter API error: {response.status}")
-                    # Fall back to simulation
                     return []
                     
         except Exception as e:
-            logger.error(f"Error fetching real Twitter data: {e}")
+            logger.error(f"Error with manual Twitter API: {e}")
             return []
     
     def _score_to_category(self, score: float) -> str:
@@ -377,22 +443,122 @@ class RedditMonitor:
         return []
     
     async def _fetch_real_reddit_posts(self, keywords: List[str]) -> List[Dict]:
-        """Fetch real Reddit posts using Reddit API"""
+        """Fetch real Reddit posts using Reddit API (praw)"""
         try:
-            # TODO: Implement with praw or Reddit API when credentials are configured
-            # For now, return empty until implementation is complete
-            logger.warning("Real Reddit API integration in progress")
+            import praw
+            import asyncio
+            from functools import partial
+            
+            # Initialize Reddit API client
+            reddit = praw.Reddit(
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                user_agent="SolanaBot/1.0"
+            )
+            
+            posts = []
+            search_query = " OR ".join(keywords)
+            
+            # Search in specified subreddits (using sync praw in executor)
+            loop = asyncio.get_event_loop()
+            
+            for subreddit_name in self.subreddits[:3]:  # Limit to avoid rate limits
+                try:
+                    # Run praw synchronous calls in executor
+                    subreddit = await loop.run_in_executor(
+                        None,
+                        reddit.subreddit,
+                        subreddit_name
+                    )
+                    
+                    # Search for posts
+                    search_results = await loop.run_in_executor(
+                        None,
+                        partial(subreddit.search, search_query, limit=10, time_filter='day')
+                    )
+                    
+                    for submission in search_results:
+                        posts.append({
+                            'id': submission.id,
+                            'title': submission.title,
+                            'body': submission.selftext[:500],  # Limit text length
+                            'upvotes': submission.score,
+                            'comment_count': submission.num_comments,
+                            'timestamp': datetime.fromtimestamp(submission.created_utc),
+                            'url': f"https://reddit.com{submission.permalink}"
+                        })
+                        
+                except Exception as e:
+                    logger.warning(f"Error searching {subreddit_name}: {e}")
+                    continue
+            
+            logger.info(f"Fetched {len(posts)} real Reddit posts")
+            return posts
+            
+        except ImportError:
+            logger.error("praw not installed. Run: pip install praw")
             return []
         except Exception as e:
             logger.error(f"Error fetching Reddit posts: {e}")
             return []
     
     async def _fetch_real_reddit_comments(self, keywords: List[str]) -> List[Dict]:
-        """Fetch real Reddit comments using Reddit API"""
+        """Fetch real Reddit comments using Reddit API (praw)"""
         try:
-            # TODO: Implement with praw or Reddit API when credentials are configured
-            # For now, return empty until implementation is complete
-            logger.warning("Real Reddit API integration in progress")
+            import praw
+            import asyncio
+            from functools import partial
+            
+            # Initialize Reddit API client
+            reddit = praw.Reddit(
+                client_id=self.client_id,
+                client_secret=self.client_secret,
+                user_agent="SolanaBot/1.0"
+            )
+            
+            comments = []
+            search_query = " OR ".join(keywords)
+            loop = asyncio.get_event_loop()
+            
+            # Get comments from recent posts
+            posts = await self._fetch_real_reddit_posts(keywords)
+            
+            for post_data in posts[:5]:  # Limit to 5 posts to avoid rate limits
+                try:
+                    # Get submission
+                    submission = await loop.run_in_executor(
+                        None,
+                        reddit.submission,
+                        post_data['id']
+                    )
+                    
+                    # Get top comments
+                    await loop.run_in_executor(
+                        None,
+                        submission.comments.replace_more,
+                        0
+                    )
+                    
+                    top_comments = submission.comments.list()[:10]  # Get top 10 comments
+                    
+                    for comment in top_comments:
+                        if hasattr(comment, 'body') and len(comment.body) > 10:
+                            comments.append({
+                                'id': comment.id,
+                                'body': comment.body[:300],  # Limit length
+                                'upvotes': comment.score,
+                                'timestamp': datetime.fromtimestamp(comment.created_utc)
+                            })
+                            
+                except Exception as e:
+                    logger.warning(f"Error fetching comments: {e}")
+                    continue
+            
+            logger.info(f"Fetched {len(comments)} real Reddit comments")
+            return comments
+            
+        except ImportError:
+            logger.error("praw not installed. Run: pip install praw")
             return []
         except Exception as e:
             logger.error(f"Error fetching Reddit comments: {e}")
