@@ -446,13 +446,23 @@ Recommendation: {ml_pred.get('recommendation', 'N/A')}
 Key Factors: {key_factors_text}
 
 *📱 SOCIAL SENTIMENT:*
-Score: {sentiment['sentiment_score']:.1f}/100
-Twitter Mentions: {sentiment['twitter']['mentions']}
-Viral Potential: {sentiment['viral_potential']:.1%}
-Going Viral: {"🔥 YES" if sentiment['twitter']['trending'] else "No"}
-
-*👥 COMMUNITY INTELLIGENCE:*
 """
+            
+            # Check if sentiment data is available
+            twitter_mentions = sentiment.get('twitter', {}).get('mentions', 0)
+            if twitter_mentions > 0:
+                message += f"""Score: {sentiment['sentiment_score']:.1f}/100
+Twitter Mentions: {twitter_mentions}
+Viral Potential: {sentiment['viral_potential']:.1%}
+Going Viral: {"🔥 YES" if sentiment.get('twitter', {}).get('trending', False) else "No"}
+"""
+            else:
+                message += """⚠️ Not Available (API keys required)
+Configure TWITTER_API_KEY in .env for real-time sentiment
+
+"""
+            
+            message += "\n*👥 COMMUNITY INTELLIGENCE:*\n"
             
             if community_signal:
                 message += f"""Community Score: {community_signal['community_score']:.1f}/100
