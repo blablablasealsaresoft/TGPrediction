@@ -29,7 +29,7 @@
 - They just execute trades. That's it.
 - No learning, no community, no edge.
 
-### 🚀 We Have (ELITE EDITION)
+### We Have
 ✅ **AI that learns from every trade**  
 ✅ **Copy successful traders automatically**  
 ✅ **Real-time sentiment from Twitter/Reddit/Discord**  
@@ -38,24 +38,15 @@
 ✅ **Strategy marketplace**  
 ✅ **Pattern recognition**  
 ✅ **Adaptive strategies**  
-✅ **Anti-MEV protection with Jito bundles**  
+✅ **Anti-MEV protection**  
 ✅ **Professional risk management**  
 
-### 🔥 NEW: Elite Features NO Other Bot Has
-✅ **🧠 Wallet Intelligence System** - Track & rank profitable wallets (0-100 score)  
-✅ **🛡️ 6-Layer Protection System** - Advanced honeypot detection & security  
-✅ **🤖 Automated 24/7 Trading** - Set it and forget it  
-✅ **⚡ Sub-100ms Sniping** - Lightning-fast token detection  
-✅ **🐦 Twitter Scam Detection** - Identifies serial scammers  
-✅ **📊 Multi-Route Comparison** - Always get best prices  
-
-**Result:** Users make 3-5x more profit than with basic bots.
+**Result:** Users make 2-3x more profit than with basic bots.
 
 ---
 
-## 🎯 15 Revolutionary Features (ELITE EDITION)
+## 🎯 10 Revolutionary Features
 
-### Core Features
 | # | Feature | Description | Command |
 |---|---------|-------------|---------|
 | 1️⃣ | **AI Predictions** | ML models predict token performance | `/ai <token>` |
@@ -68,15 +59,6 @@
 | 8️⃣ | **Gamification** | Points, tiers, and rewards | `/rewards` |
 | 9️⃣ | **Anti-MEV** | Jito bundle protection | Auto |
 | 🔟 | **Risk Management** | Kelly Criterion position sizing | Auto |
-
-### 🚀 NEW: Elite Features
-| # | Feature | Description | Command |
-|---|---------|-------------|---------|
-| 1️⃣1️⃣ | **🧠 Wallet Intelligence** | Track & rank profitable wallets (0-100) | `/track <wallet>` |
-| 1️⃣2️⃣ | **🏆 Wallet Rankings** | See top performing wallets | `/rankings` |
-| 1️⃣3️⃣ | **🤖 Auto Trading** | 24/7 autonomous trading | `/autostart` |
-| 1️⃣4️⃣ | **🛡️ 6-Layer Protection** | Advanced scam detection | Auto |
-| 1️⃣5️⃣ | **⚡ Elite Sniping** | Sub-100ms detection + Jito | `/snipe_enable` |
 
 ---
 
@@ -148,49 +130,28 @@ Click Get Started to fund your trading wallet then:
 
 ## 📊 Commands Reference
 
-### 💰 Wallet Management
-- `/wallet` - Your wallet info
-- `/balance` - Check balance
-- `/deposit` - Deposit instructions
-- `/export_wallet` - Export private keys (secure)
-
-### 📈 Trading
+### Trading
 - `/buy <token> <amount>` - Buy tokens
 - `/sell <token> <amount>` - Sell tokens
 - `/snipe <token>` - Snipe new launch
 - `/positions` - View open positions
 
-### 📊 Analysis
+### Analysis
 - `/ai <token>` or `/analyze <token>` - AI-powered analysis
 - `/trending` - Tokens going viral NOW
 - `/community <token>` - Community ratings
 
-### 🧠 Elite Wallet Intelligence (NEW)
-- `/track <wallet>` - Track & analyze wallet performance
-- `/rankings` - Top 10 performing wallets
-- Follow the smart money automatically!
-
-### 🤖 Automated Trading (NEW)
-- `/autostart` - Start 24/7 automated trading
-- `/autostop` - Stop automated trading
-- `/autostatus` - Check status & stats
-- Set it and forget it!
-
-### 👥 Social Trading
+### Social Trading
 - `/leaderboard` - Top traders
 - `/copy <trader_id>` - Auto-copy trader
 - `/stop_copy` - Stop copying
 
-### 🎯 Auto-Sniper
-- `/snipe` - View sniper settings
-- `/snipe_enable` - Enable auto-sniper
-- `/snipe_disable` - Disable auto-sniper
-
-### 🎮 Stats & Rewards
+### Stats & Rewards
 - `/stats` or `/my_stats` - Your performance
 - `/rewards` - Points & tier status
+- `/achievements` - Unlocked achievements
 
-### ❓ Help
+### Help
 - `/help` - All commands
 - `/settings` - Configure bot
 - `/features` - See all features
@@ -210,18 +171,12 @@ sol/
 │   │   ├── social_trading.py
 │   │   ├── sentiment_analysis.py
 │   │   ├── database.py
-│   │   ├── wallet_manager.py
-│   │   ├── jupiter_client.py     # ⚡ Enhanced with Jito
-│   │   ├── token_sniper.py       # 🎯 Elite sniping
-│   │   ├── wallet_intelligence.py  # 🧠 NEW
-│   │   ├── elite_protection.py     # 🛡️ NEW
-│   │   ├── automated_trading.py    # 🤖 NEW
+│   │   ├── jupiter_client.py
 │   │   └── monitoring.py
 │   └── config.py         # Configuration management
 ├── tests/                 # Test suite
 ├── scripts/               # Utility scripts
 ├── docs/                  # Documentation
-├── enhancements/          # Elite features documentation
 ├── config/                # Config templates
 └── Docker files          # Containerization
 ```
@@ -230,43 +185,15 @@ sol/
 
 ## ⚙️ Configuration
 
-See `ENV_CONFIGURATION.txt` for complete elite configuration with all new features.
+See `MINIMAL_ENV.txt` for the simplest setup, or `COPY_TO_ENV.txt` for complete configuration.
 
-**Minimal required variables:**
+**Required variables:**
 ```env
 TELEGRAM_BOT_TOKEN=your_bot_token
+WALLET_PRIVATE_KEY=your_wallet_key
+TEAM_WALLET_ADDRESS=your_fee_collection_wallet
 SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 ```
-
-**Elite features configuration:**
-```env
-# Wallet Intelligence
-TRACK_WALLETS_AUTO=true
-MIN_WALLET_SCORE=70.0
-
-# Automated Trading
-AUTO_TRADE_ENABLED=true
-AUTO_TRADE_MIN_CONFIDENCE=0.75
-
-# Elite Protection (6-layer)
-HONEYPOT_CHECK_ENABLED=true
-MIN_LIQUIDITY_USD=5000.0
-CHECK_MINT_AUTHORITY=true
-CHECK_FREEZE_AUTHORITY=true
-CHECK_TOP_HOLDERS=true
-TWITTER_HANDLE_CHECK=true
-
-# Elite Sniping with Jito
-SNIPE_USE_JITO=true
-SNIPE_TIP_LAMPORTS=100000
-
-# Risk Management
-STOP_LOSS_PERCENTAGE=0.15
-TAKE_PROFIT_PERCENTAGE=0.50
-TRAILING_STOP_PERCENTAGE=0.10
-```
-
-See `ENV_CONFIGURATION.txt` for all 50+ configuration options!
 
 ---
 
@@ -296,27 +223,14 @@ pytest tests/unit/test_database.py
 
 ## 📖 Documentation
 
-### Getting Started
 | Document | Description |
 |----------|-------------|
-| [START_HERE.md](docs/START_HERE.md) | Quick start guide |
-| [QUICKSTART.md](docs/QUICKSTART.md) | 5-minute setup |
-| [SETUP_INSTRUCTIONS.md](docs/SETUP_INSTRUCTIONS.md) | Detailed setup |
-
-### Elite Features (NEW)
-| Document | Description |
-|----------|-------------|
-| [ELITE_INTEGRATION_COMPLETE.md](ELITE_INTEGRATION_COMPLETE.md) | **Elite features guide** |
-| [enhancements/EXECUTIVE_SUMMARY.md](enhancements/EXECUTIVE_SUMMARY.md) | Elite features overview |
-| [enhancements/INTEGRATION_GUIDE.md](enhancements/INTEGRATION_GUIDE.md) | Integration details |
-| [enhancements/COMPREHENSIVE_GUIDE.md](enhancements/COMPREHENSIVE_GUIDE.md) | Complete feature docs |
-
-### Deployment & Advanced
-| Document | Description |
-|----------|-------------|
+| [START_HERE.md](START_HERE.md) | Quick start guide |
+| [QUICKSTART.md](QUICKSTART.md) | 5-minute setup |
+| [SETUP_INSTRUCTIONS.md](SETUP_INSTRUCTIONS.md) | Detailed setup |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment |
-| [docs/PUSH_TO_GITHUB.md](docs/PUSH_TO_GITHUB.md) | GitHub guide |
-| [ENV_CONFIGURATION.txt](ENV_CONFIGURATION.txt) | Complete configuration |
+| [UI_IMPROVEMENTS.md](UI_IMPROVEMENTS.md) | UI features |
+| [PUSH_TO_GITHUB.md](PUSH_TO_GITHUB.md) | GitHub guide |
 
 ---
 
@@ -395,58 +309,9 @@ bash scripts/git_setup.sh  # Linux/Mac
 
 ---
 
----
-
-## 🚀 What Makes This ELITE
-
-### Your Bot vs. Others
-
-| Feature | Other Bots | This Bot (ELITE) |
-|---------|------------|------------------|
-| Wallet Intelligence | ❌ None | ✅ 0-100 scoring system |
-| Protection Layers | 1-2 basic | ✅ 6 comprehensive layers |
-| Honeypot Detection | 1 method | ✅ 6 different methods |
-| Sniping Speed | 500-1000ms | ✅ <100ms |
-| MEV Protection | Basic/None | ✅ Jito bundles |
-| Automated Trading | ❌ Manual only | ✅ 24/7 autonomous |
-| Risk Management | Basic limits | ✅ Professional (SL/TP/Trailing) |
-| Twitter Scam Detection | ❌ None | ✅ Handle reuse detection |
-| Smart Money Following | ❌ None | ✅ Auto-track top wallets |
-| Price Routing | Single route | ✅ Multi-route comparison |
-
-**Result:** 3-5x better performance and 10x safer!
-
----
-
-## 🎉 Recent Updates
-
-### Version Elite 1.0 (Latest)
-- ✅ Added Wallet Intelligence Engine (0-100 scoring)
-- ✅ Added 6-Layer Protection System
-- ✅ Added Automated 24/7 Trading
-- ✅ Enhanced Jupiter with Jito bundles
-- ✅ Elite Sniping with <100ms detection
-- ✅ Twitter scam detection
-- ✅ Multi-route price comparison
-- ✅ Professional risk management
-
-### Commands Added
-- `/track <wallet>` - Wallet intelligence
-- `/rankings` - Top wallets
-- `/autostart` - Auto trading
-- `/autostop` - Stop auto trading
-- `/autostatus` - Check status
-
----
-
 **Built with ❤️ for the Solana community**
 
 *"The best time to start was yesterday. The second best time is NOW."*
 
 **Download. Deploy. Dominate.** 💎🚀
-
-🧠 **Now with Wallet Intelligence**  
-🛡️ **Now with 6-Layer Protection**  
-🤖 **Now with 24/7 Auto-Trading**  
-⚡ **Now with Elite Sniping**
 

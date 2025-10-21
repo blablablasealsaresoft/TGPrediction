@@ -56,6 +56,11 @@ from src.modules.jupiter_client import JupiterClient, AntiMEVProtection
 from src.modules.monitoring import BotMonitor, PerformanceTracker
 from src.config import get_config
 
+# 🚀 ELITE ENHANCEMENTS
+from src.modules.wallet_intelligence import WalletIntelligenceEngine, WalletMetrics
+from src.modules.elite_protection import EliteProtectionSystem, ProtectionConfig
+from src.modules.automated_trading import AutomatedTradingEngine, TradingConfig as AutoTradingConfig
+
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -108,8 +113,18 @@ class RevolutionaryTradingBot:
         self.jupiter = JupiterClient(self.client)
         self.anti_mev = AntiMEVProtection(self.client)
         
-        # 🎯 Auto-Sniper (NEW!)
-        self.sniper = AutoSniper(self.ai_manager, self.wallet_manager, self.jupiter)
+        # 🚀 ELITE SYSTEMS
+        self.wallet_intelligence = WalletIntelligenceEngine(self.client)
+        self.elite_protection = EliteProtectionSystem(self.client, ProtectionConfig())
+        self.auto_trader = None  # Initialized when user starts auto-trading
+        
+        # 🎯 Auto-Sniper with Elite Protection
+        self.sniper = AutoSniper(
+            self.ai_manager,
+            self.wallet_manager, 
+            self.jupiter,
+            protection_system=self.elite_protection
+        )
         
         # Monitoring
         self.monitor = BotMonitor(None, admin_chat_id=int(os.getenv('ADMIN_CHAT_ID', 0)))
@@ -117,7 +132,10 @@ class RevolutionaryTradingBot:
         
         logger.info("🚀 Revolutionary Trading Bot initialized!")
         logger.info("🔐 Individual user wallets enabled")
-        logger.info("🎯 Auto-sniper ready")
+        logger.info("🎯 Elite Auto-sniper ready")
+        logger.info("🧠 Wallet Intelligence System ready")
+        logger.info("🛡️ Elite Protection System (6-layer) ready")
+        logger.info("🤖 Automated Trading Engine ready")
     
     def _load_wallet(self) -> Optional[Keypair]:
         """Load wallet from environment"""
@@ -1231,41 +1249,275 @@ Command: /publish_strategy
         
         await update.message.reply_text(message, parse_mode='Markdown')
     
+    async def track_wallet_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        🧠 ELITE FEATURE: Track and analyze wallet performance
+        """
+        if not context.args:
+            await update.message.reply_text(
+                "Usage: /track <wallet_address>\n\n"
+                "Track any wallet and see their:\n"
+                "• Performance score (0-100)\n"
+                "• Win rate & profit factor\n"
+                "• Best/worst tokens\n"
+                "• Trading patterns"
+            )
+            return
+        
+        wallet_address = context.args[0]
+        user_id = update.effective_user.id
+        
+        await update.message.reply_text(
+            f"🧠 Analyzing wallet {wallet_address[:8]}...\n"
+            "This may take a moment...",
+            parse_mode=None
+        )
+        
+        try:
+            await self.wallet_intelligence.track_wallet(wallet_address, analyze=True)
+            metrics = self.wallet_intelligence.get_wallet_metrics(wallet_address)
+            
+            if metrics:
+                score = metrics.calculate_score()
+                rank = self.wallet_intelligence.get_wallet_rank(wallet_address)
+                
+                message = f"""🧠 WALLET INTELLIGENCE REPORT
+
+Address: {wallet_address[:8]}...{wallet_address[-8:]}
+Overall Score: {score:.1f}/100
+Rank: #{rank if rank else 'N/A'}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+PERFORMANCE:
+• Total Trades: {metrics.total_trades}
+• Win Rate: {metrics.win_rate*100:.1f}%
+• Profit Factor: {metrics.profit_factor:.2f}x
+• Total P&L: {metrics.total_profit_sol - metrics.total_loss_sol:.4f} SOL
+• Avg Profit/Trade: {metrics.avg_profit_per_trade:.4f} SOL
+
+RECENT PERFORMANCE:
+• Last 7 Days: {metrics.recent_performance_7d:.4f} SOL
+• Last 30 Days: {metrics.recent_performance_30d:.4f} SOL
+
+TRADING STYLE:
+• Consistency: {metrics.consistency_score*100:.1f}%
+• Avg Hold Time: {metrics.avg_hold_time_hours:.1f}h
+• Sharpe Ratio: {metrics.sharpe_ratio:.2f}
+
+BEST TOKENS:
+{chr(10).join(f'• {token[:8]}...' for token in metrics.best_tokens[:3]) if metrics.best_tokens else '• None yet'}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+Use /rankings to see top wallets!
+"""
+                
+                # Award points
+                await self.rewards.award_points(user_id, 5, 'Tracked wallet')
+                
+                await update.message.reply_text(message, parse_mode=None)
+            else:
+                await update.message.reply_text("❌ Failed to analyze wallet")
+                
+        except Exception as e:
+            logger.error(f"Error tracking wallet: {e}")
+            await update.message.reply_text(f"❌ Error: {str(e)}")
+    
+    async def rankings_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        🧠 ELITE FEATURE: Show top performing wallets
+        """
+        top_wallets = self.wallet_intelligence.get_top_wallets(limit=10)
+        
+        if not top_wallets:
+            await update.message.reply_text(
+                "No wallets tracked yet!\n\n"
+                "Use /track <wallet_address> to start tracking profitable wallets."
+            )
+            return
+        
+        message = "🏆 TOP PERFORMING WALLETS\n\n"
+        message += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        for idx, (address, metrics, score) in enumerate(top_wallets, 1):
+            medal = "🥇" if idx == 1 else "🥈" if idx == 2 else "🥉" if idx == 3 else f"{idx}."
+            
+            message += f"{medal} {address[:8]}...{address[-4:]}\n"
+            message += f"   Score: {score:.1f} | "
+            message += f"Win Rate: {metrics.win_rate*100:.0f}% | "
+            message += f"P&L: {metrics.recent_performance_30d:+.2f} SOL\n\n"
+        
+        message += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        message += "Use /track <address> to analyze any wallet!"
+        
+        await update.message.reply_text(message, parse_mode=None)
+    
+    async def autostart_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """
+        🤖 ELITE FEATURE: Start automated trading
+        """
+        user_id = update.effective_user.id
+        
+        # Check balance
+        balance = await self.wallet_manager.get_user_balance(user_id)
+        if balance < 0.1:
+            await update.message.reply_text(
+                "❌ Insufficient Balance\n\n"
+                "You need at least 0.1 SOL to enable auto-trading.\n\n"
+                "Use /deposit to fund your wallet.",
+                parse_mode=None
+            )
+            return
+        
+        # Get user keypair
+        user_keypair = await self.wallet_manager.get_user_keypair(user_id)
+        if not user_keypair:
+            await update.message.reply_text("❌ Could not access your wallet")
+            return
+        
+        # Initialize auto trader if not exists
+        if not self.auto_trader:
+            config = AutoTradingConfig()
+            self.auto_trader = AutomatedTradingEngine(
+                config,
+                self.wallet_intelligence,
+                self.jupiter,
+                self.elite_protection
+            )
+        
+        # Start automated trading
+        await self.auto_trader.start_automated_trading(
+            user_id,
+            user_keypair,
+            self.wallet_manager
+        )
+        
+        message = """🤖 AUTOMATED TRADING STARTED!
+
+The bot will now:
+• Monitor top wallet activities 24/7
+• Scan for high-confidence opportunities
+• Execute trades automatically
+• Manage positions with stop losses
+• Take profits automatically
+• Follow your risk settings
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+RISK LIMITS:
+• Max per trade: 0.1 SOL
+• Max daily trades: 50
+• Max daily loss: 50 SOL
+• Stop loss: 15%
+• Take profit: 50%
+• Trailing stop: 10%
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+COMMANDS:
+/autostop - Stop auto-trading
+/autostatus - Check status
+/positions - View open positions
+
+⚠️ Monitor your bot regularly!
+"""
+        
+        await update.message.reply_text(message, parse_mode=None)
+    
+    async def autostop_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Stop automated trading"""
+        if self.auto_trader and self.auto_trader.is_running:
+            await self.auto_trader.stop_automated_trading()
+            await update.message.reply_text(
+                "🛑 AUTOMATED TRADING STOPPED\n\n"
+                "All open positions remain active.\n"
+                "Use /positions to manage them.\n\n"
+                "To restart: /autostart"
+            )
+        else:
+            await update.message.reply_text(
+                "Automated trading is not running.\n\n"
+                "Use /autostart to enable it."
+            )
+    
+    async def autostatus_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show automated trading status"""
+        if not self.auto_trader:
+            await update.message.reply_text("Automated trading not initialized. Use /autostart")
+            return
+        
+        status = self.auto_trader.get_status()
+        
+        status_emoji = "✅ RUNNING" if status['is_running'] else "❌ STOPPED"
+        
+        message = f"""🤖 AUTOMATED TRADING STATUS
+
+Status: {status_emoji}
+
+TODAY'S STATS:
+• Trades Executed: {status['daily_trades']}
+• Total P&L: {status['daily_pnl']:+.4f} SOL
+• Active Positions: {status['active_positions']}
+
+OPEN POSITIONS:
+"""
+        
+        if status['positions']:
+            for token in status['positions']:
+                message += f"• {token[:8]}...\n"
+        else:
+            message += "• None\n"
+        
+        message += "\n━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        message += "Commands:\n"
+        message += "/autostop - Stop trading\n"
+        message += "/positions - Manage positions"
+        
+        await update.message.reply_text(message, parse_mode=None)
+    
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show help menu with all commands"""
-        message = """❓ *HELP & COMMANDS*
+        message = """❓ HELP & COMMANDS
 
-*💰 Wallet:*
+💰 WALLET:
 /wallet - Your wallet info
 /balance - Check balance
 /deposit - Deposit instructions
 /export_wallet - Export private keys
 
-*📊 Analysis:*
+📊 ANALYSIS:
 /analyze <token> - AI analysis
 /ai <token> - Quick analysis
 /trending - Viral tokens
 /community <token> - Ratings
 
-*💰 Trading:*
+💰 TRADING:
 /buy <token> <amount>
 /sell <token> <amount>
 /snipe <token>
 /positions - Open trades
 
-*👥 Social:*
+🧠 ELITE FEATURES:
+/track <wallet> - Track wallet performance
+/rankings - Top performing wallets
+/autostart - Start auto-trading
+/autostop - Stop auto-trading
+/autostatus - Check auto-trade status
+
+👥 SOCIAL:
 /leaderboard - Top traders
 /copy <trader_id> - Copy trader
 /stop_copy - Stop copying
 
-*🎮 Stats:*
+🎮 STATS:
 /stats - Your performance
 /rewards - Points & tier
 
-*⚙️ Settings:*
+⚙️ SETTINGS:
 /settings - Configure bot
 
-*Platform fee: 0.5% per trade*
+Platform fee: 0.5% per trade
 """
         keyboard = [
             [
@@ -1884,6 +2136,13 @@ Use /settings command to modify these settings
         app.add_handler(CommandHandler("snipe", self.snipe_command))
         app.add_handler(CommandHandler("snipe_enable", self.snipe_enable_command))
         app.add_handler(CommandHandler("snipe_disable", self.snipe_disable_command))
+        
+        # 🧠 ELITE COMMANDS
+        app.add_handler(CommandHandler("track", self.track_wallet_command))
+        app.add_handler(CommandHandler("rankings", self.rankings_command))
+        app.add_handler(CommandHandler("autostart", self.autostart_command))
+        app.add_handler(CommandHandler("autostop", self.autostop_command))
+        app.add_handler(CommandHandler("autostatus", self.autostatus_command))
         
         app.add_handler(CommandHandler("community", self.community_command))
         app.add_handler(CommandHandler("rate_token", self.rate_token_command))
