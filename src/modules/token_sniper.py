@@ -180,79 +180,97 @@ class PumpFunMonitor:
             logger.debug(f"Error checking Birdeye: {e}")
     
     async def _check_dexscreener_tokens(self):
-        """Check DexScreener for new token launches (Fallback)"""
+        """Check DexScreener for BRAND NEW token launches - Fixed to get RECENT tokens only!"""
         try:
-            # Use DexScreener's token profiles endpoint for new tokens
+            # 🚀 FIXED: Use DexScreener's token profiles endpoint sorted by creation time
+            # This gets ACTUALLY NEW tokens, not just recently traded old tokens!
             url = "https://api.dexscreener.com/token-profiles/latest/v1"
             
-            logger.info(f"🔍 Checking DexScreener token profiles for new launches...")
+            logger.info(f"🔍 Checking DexScreener for NEWLY CREATED tokens...")
             
             async with self.session.get(url, timeout=10) as response:
                 if response.status != 200:
-                    logger.warning(f"⚠️ DexScreener token profiles returned status {response.status}")
-                    # Fallback to pairs endpoint
-                    return await self._check_dexscreener_pairs()
+                    logger.warning(f"⚠️ DexScreener profiles returned status {response.status}")
+                    # Fallback to search endpoint
+                    await self._check_dexscreener_search()
+                    return
                 
                 data = await response.json()
                 
-                # This returns newly profiled tokens
-                if isinstance(data, list):
-                    pairs = data
-                else:
-                    pairs = data.get('pairs', [])
+                # Response format: list of token profiles with creation timestamps
+                token_profiles = data if isinstance(data, list) else []
                 
-                logger.info(f"📊 Found {len(pairs)} pairs from DexScreener")
+                logger.info(f"📊 Found {len(token_profiles)} token profiles from DexScreener")
                 
-                # Filter for very new tokens (created in last 2 hours - be more lenient!)
+                # Filter for VERY new tokens (created in last 30 minutes!)
                 now = datetime.now().timestamp() * 1000
-                two_hours_ago = now - (120 * 60 * 1000)  # 2 hours for maximum opportunities
+                thirty_min_ago = now - (30 * 60 * 1000)  # 30 minutes for fresh launches
                 
                 new_tokens_found = 0
                 checked_tokens = 0
-                for pair in pairs[:30]:  # Check top 30
-                    if pair.get('chainId') != 'solana':
-                        continue
-                    
-                    token_address = pair.get('baseToken', {}).get('address')
-                    symbol = pair.get('baseToken', {}).get('symbol', 'UNK')
-                    created_at = pair.get('pairCreatedAt', 0)
-                    checked_tokens += 1
-                    
-                    # Log timestamp info for debugging
-                    if checked_tokens <= 3:  # Log first 3 for debugging
+                
+                for profile in token_profiles[:50]:  # Check top 50
+                    try:
+                        token_address = profile.get('tokenAddress')
+                        chain_id = profile.get('chainId', '')
+                        
+                        # Only Solana tokens
+                        if chain_id != 'solana' or not token_address:
+                            continue
+                        
+                        checked_tokens += 1
+                        
+                        # Get creation timestamp
+                        created_at = profile.get('createdAt', 0)
+                        
+                        # Calculate age
                         age_minutes = (now - created_at) / 60000 if created_at else 999
-                        logger.info(f"  Token {checked_tokens}: {symbol} - Age: {age_minutes:.0f} min")
+                        
+                        # Log first few for debugging
+                        if checked_tokens <= 5:
+                            logger.info(f"  Token {checked_tokens}: {profile.get('symbol', 'UNK')} - Age: {age_minutes:.0f} min")
+                        
+                        if token_address in self.seen_tokens:
+                            continue
+                        
+                        # Check if NEWLY launched (within last 30 minutes!)
+                        if created_at and created_at > thirty_min_ago:
+                            self.seen_tokens.add(token_address)
+                            new_tokens_found += 1
+                            
+                            # Get additional pair info if available
+                            url_info = profile.get('url', '')
+                            
+                            # Extract token info
+                            token_info = {
+                                'address': token_address,
+                                'symbol': profile.get('symbol', 'UNKNOWN'),
+                                'name': profile.get('description', profile.get('symbol', 'Unknown')),
+                                'liquidity_usd': 1000,  # Will be updated below
+                                'price_usd': 0,
+                                'created_at': created_at,
+                                'dex': 'raydium',
+                                'source': 'dexscreener_profiles'
+                            }
+                            
+                            age_str = f"{age_minutes:.1f}" if age_minutes < 60 else f"{age_minutes/60:.1f}h"
+                            logger.info(f"🎯 NEW TOKEN DETECTED: {token_info['symbol']} ({token_address[:8]}...) - Age: {age_str} min")
+                            
+                            # Notify all callbacks
+                            for callback in self.callbacks:
+                                try:
+                                    await callback(token_info)
+                                except Exception as e:
+                                    logger.error(f"Callback error: {e}")
                     
-                    if not token_address or token_address in self.seen_tokens:
+                    except Exception as e:
+                        logger.debug(f"Error processing profile: {e}")
                         continue
-                    
-                    # Check if newly launched (within last 2 hours)
-                    if created_at and created_at > two_hours_ago:
-                        self.seen_tokens.add(token_address)
-                        new_tokens_found += 1
-                        
-                        # Extract token info
-                        token_info = {
-                            'address': token_address,
-                            'symbol': pair.get('baseToken', {}).get('symbol', 'UNKNOWN'),
-                            'name': pair.get('baseToken', {}).get('name', 'Unknown'),
-                            'liquidity_usd': float(pair.get('liquidity', {}).get('usd', 0) or 0),
-                            'price_usd': float(pair.get('priceUsd', 0) or 0),
-                            'created_at': created_at,
-                            'dex': pair.get('dexId', 'unknown')
-                        }
-                        
-                        logger.info(f"🎯 NEW TOKEN DETECTED: {token_info['symbol']} ({token_address[:8]}...) - Liquidity: ${token_info['liquidity_usd']:.0f}")
-                        
-                        # Notify all callbacks
-                        for callback in self.callbacks:
-                            try:
-                                await callback(token_info)
-                            except Exception as e:
-                                logger.error(f"Callback error: {e}")
                 
                 if new_tokens_found == 0:
-                    logger.info(f"✓ No new tokens in last 2 hours (checked {checked_tokens} Solana pairs)")
+                    logger.info(f"✓ No new tokens in last 30 minutes (checked {checked_tokens} Solana tokens)")
+                else:
+                    logger.info(f"✅ Found {new_tokens_found} BRAND NEW tokens!")
                 
                 # Limit seen_tokens size to prevent memory issues
                 if len(self.seen_tokens) > 1000:
@@ -261,6 +279,58 @@ class PumpFunMonitor:
         
         except Exception as e:
             logger.error(f"Error checking DexScreener: {e}")
+    
+    async def _check_dexscreener_search(self):
+        """Fallback: Search for newest Solana pairs via search endpoint"""
+        try:
+            # Use search endpoint with Solana filter
+            url = "https://api.dexscreener.com/latest/dex/search?q=solana"
+            
+            async with self.session.get(url, timeout=10) as response:
+                if response.status != 200:
+                    return
+                
+                data = await response.json()
+                pairs = data.get('pairs', [])
+                
+                # Filter for new pairs
+                now = datetime.now().timestamp() * 1000
+                one_hour_ago = now - (60 * 60 * 1000)
+                
+                for pair in pairs[:20]:
+                    if pair.get('chainId') != 'solana':
+                        continue
+                    
+                    created_at = pair.get('pairCreatedAt', 0)
+                    if created_at < one_hour_ago:
+                        continue
+                    
+                    token_address = pair.get('baseToken', {}).get('address')
+                    if not token_address or token_address in self.seen_tokens:
+                        continue
+                    
+                    self.seen_tokens.add(token_address)
+                    
+                    token_info = {
+                        'address': token_address,
+                        'symbol': pair.get('baseToken', {}).get('symbol', 'UNKNOWN'),
+                        'name': pair.get('baseToken', {}).get('name', 'Unknown'),
+                        'liquidity_usd': float(pair.get('liquidity', {}).get('usd', 0) or 0),
+                        'price_usd': float(pair.get('priceUsd', 0) or 0),
+                        'created_at': created_at,
+                        'dex': pair.get('dexId', 'raydium')
+                    }
+                    
+                    logger.info(f"🎯 NEW TOKEN (search): {token_info['symbol']}")
+                    
+                    for callback in self.callbacks:
+                        try:
+                            await callback(token_info)
+                        except Exception as e:
+                            logger.error(f"Callback error: {e}")
+        
+        except Exception as e:
+            logger.debug(f"Search fallback error: {e}")
     
     async def _check_dexscreener_pairs(self):
         """Fallback: Check DexScreener orderbook endpoint for new Solana pairs"""

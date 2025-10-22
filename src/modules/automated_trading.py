@@ -112,9 +112,7 @@ class AutomatedTradingEngine:
                 
                 logger.info(f"   ✓ Loaded: {wallet.label or wallet.wallet_address[:8]}... (Score: {wallet.score:.0f})")
             
-            # Update rankings
-            self.wallet_intelligence._calculate_rankings()
-            
+            # Wallets loaded and ready for scanning
             logger.info(f"✅ Loaded {len(tracked_wallets)} wallets for automated trading")
             
         except Exception as e:
