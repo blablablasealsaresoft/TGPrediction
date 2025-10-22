@@ -71,17 +71,54 @@ class AutomatedTradingEngine:
         
         logger.info("🤖 Automated Trading Engine initialized")
     
-    async def start_automated_trading(self, user_id: int, user_keypair, wallet_manager):
+    async def start_automated_trading(self, user_id: int, user_keypair, wallet_manager, db_manager=None):
         """Start automated trading for user"""
         self.is_running = True
         self.user_id = user_id
         self.user_keypair = user_keypair
         self.wallet_manager = wallet_manager
+        self.db = db_manager
         
         logger.info(f"🤖 Automated trading STARTED for user {user_id}")
         
+        # Load tracked wallets from database
+        if self.db:
+            await self._load_tracked_wallets_from_db()
+        
         # Start trading loop in background
         asyncio.create_task(self._automated_trading_loop())
+    
+    async def _load_tracked_wallets_from_db(self):
+        """Load tracked wallets from database into wallet intelligence"""
+        try:
+            tracked_wallets = await self.db.get_tracked_wallets(self.user_id)
+            
+            logger.info(f"📊 Loading {len(tracked_wallets)} tracked wallets from database...")
+            
+            for wallet in tracked_wallets:
+                # Add to wallet intelligence system
+                await self.wallet_intelligence.track_wallet(
+                    wallet.wallet_address,
+                    analyze=False  # Skip analysis for now, use saved metrics
+                )
+                
+                # Update metrics from database
+                metrics = self.wallet_intelligence.tracked_wallets.get(wallet.wallet_address)
+                if metrics:
+                    metrics.total_trades = wallet.total_trades
+                    metrics.profitable_trades = wallet.profitable_trades
+                    metrics.win_rate = wallet.win_rate
+                    metrics.total_pnl = wallet.total_pnl
+                
+                logger.info(f"   ✓ Loaded: {wallet.label or wallet.wallet_address[:8]}... (Score: {wallet.score:.0f})")
+            
+            # Update rankings
+            self.wallet_intelligence._calculate_rankings()
+            
+            logger.info(f"✅ Loaded {len(tracked_wallets)} wallets for automated trading")
+            
+        except Exception as e:
+            logger.error(f"Error loading tracked wallets: {e}")
     
     async def stop_automated_trading(self):
         """Stop automated trading"""
@@ -280,10 +317,45 @@ class AutomatedTradingEngine:
             pnl_sol = position['amount'] * pnl_pct
             self.daily_stats['profit_loss'] += pnl_sol
             
-            logger.info(f"Closed position: {token_mint[:8]}... - Reason: {reason} - PnL: {pnl_sol:+.4f} SOL")
+            logger.info(f"🔄 Closing position: {token_mint[:8]}... - Reason: {reason} - PnL: {pnl_sol:+.4f} SOL")
             
-            # TODO: Execute actual sell transaction
-            # TODO: Send notification to user
+            # Execute actual sell transaction
+            try:
+                SOL_MINT = "So11111111111111111111111111111111111111112"
+                
+                # Get token balance to sell
+                balance = await self.wallet_manager.get_token_balance(self.user_id, token_mint)
+                if balance and balance > 0:
+                    # Convert to lamports
+                    amount_to_sell = int(balance * 1e9)  # Assume 9 decimals
+                    
+                    logger.info(f"💰 Selling {balance:.6f} tokens of {token_mint[:8]}...")
+                    
+                    # Execute swap through Jupiter
+                    result = await self.jupiter.execute_swap_with_jito(
+                        input_mint=token_mint,
+                        output_mint=SOL_MINT,
+                        amount=amount_to_sell,
+                        keypair=self.user_keypair,
+                        slippage_bps=300,  # 3% slippage for sells
+                        tip_amount_lamports=50000,  # 0.00005 SOL tip
+                        priority_fee_lamports=1000000  # Medium priority
+                    )
+                    
+                    if result and result.get('success'):
+                        logger.info(f"✅ Position closed successfully!")
+                        logger.info(f"   Reason: {reason}")
+                        logger.info(f"   PnL: {pnl_sol:+.4f} SOL ({pnl_pct:+.1%})")
+                        logger.info(f"   Signature: {result.get('signature', 'N/A')}")
+                    else:
+                        logger.error(f"❌ Failed to close position: {result}")
+                else:
+                    logger.warning(f"⚠️ No token balance to sell for {token_mint[:8]}")
+                    
+            except Exception as e:
+                logger.error(f"Error executing sell: {e}")
+                # Re-add position if sell failed
+                self.active_positions[token_mint] = position
     
     def get_status(self) -> Dict:
         """Get current trading status"""

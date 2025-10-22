@@ -86,6 +86,7 @@
 - Python 3.9 or higher
 - Telegram account
 - Solana wallet with SOL
+- **NEW:** Helius FREE account (optional but recommended) - 100K requests/day
 
 ### Installation
 
@@ -101,11 +102,24 @@ pip install -r requirements.txt
 python scripts/setup_project.py
 
 # 4. Configure (copy template and edit)
-cp MINIMAL_ENV.txt .env
+cp ENV_CONFIGURATION.txt .env
 # Edit .env with your credentials
 
-# 5. Run bot
+# 5. (RECOMMENDED) Setup Helius RPC for Better Performance
+# Go to https://helius.dev and create FREE account
+# Get your API key and add to .env:
+# HELIUS_API_KEY=your_api_key
+# SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=your_api_key
+
+# 6. Run bot
 python scripts/run_bot.py
+```
+
+### Quick Status Check
+
+```bash
+# Check bot status anytime
+python scripts/bot_status.py
 ```
 
 ### Docker (Alternative)
@@ -236,6 +250,22 @@ See `ENV_CONFIGURATION.txt` for complete elite configuration with all new featur
 ```env
 TELEGRAM_BOT_TOKEN=your_bot_token
 SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+WALLET_ENCRYPTION_KEY=your_encryption_key  # Generated on first run
+```
+
+**Recommended - Helius RPC (FREE 100K requests/day):**
+```env
+HELIUS_API_KEY=your_helius_api_key
+SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=your_helius_api_key
+```
+
+**Optional - Twitter Sentiment Analysis:**
+```env
+TWITTER_API_KEY=your_api_key
+TWITTER_API_SECRET=your_api_secret
+TWITTER_BEARER_TOKEN=your_bearer_token
+TWITTER_CLIENT_ID=your_client_id
+TWITTER_CLIENT_SECRET=your_client_secret
 ```
 
 **Elite features configuration:**
@@ -250,23 +280,26 @@ AUTO_TRADE_MIN_CONFIDENCE=0.75
 
 # Elite Protection (6-layer)
 HONEYPOT_CHECK_ENABLED=true
-MIN_LIQUIDITY_USD=5000.0
+MIN_LIQUIDITY_USD=2000.0  # Optimized for more opportunities
 CHECK_MINT_AUTHORITY=true
 CHECK_FREEZE_AUTHORITY=true
 CHECK_TOP_HOLDERS=true
 TWITTER_HANDLE_CHECK=true
 
 # Elite Sniping with Jito
+SNIPE_ENABLED=true
 SNIPE_USE_JITO=true
 SNIPE_TIP_LAMPORTS=100000
+SNIPE_MIN_LIQUIDITY_SOL=2  # Lowered from 10 for more opportunities
 
-# Risk Management
+# Auto-Sell / Risk Management
 STOP_LOSS_PERCENTAGE=0.15
 TAKE_PROFIT_PERCENTAGE=0.50
 TRAILING_STOP_PERCENTAGE=0.10
+MAX_DAILY_LOSS_SOL=50.0
 ```
 
-See `ENV_CONFIGURATION.txt` for all 50+ configuration options!
+See `ENV_CONFIGURATION.txt` for all 60+ configuration options!
 
 ---
 
@@ -376,6 +409,21 @@ For issues or questions:
 python scripts/run_bot.py
 ```
 
+**Check bot status:**
+```bash
+python scripts/bot_status.py
+```
+
+**Add tracked wallets:**
+```bash
+python scripts/setup_tracked_wallets.py
+```
+
+**Discover affiliated wallets:**
+```bash
+python scripts/discover_affiliated_wallets.py
+```
+
 **Generate wallet:**
 ```bash
 python scripts/generate_wallet.py
@@ -420,7 +468,19 @@ bash scripts/git_setup.sh  # Linux/Mac
 
 ## 🎉 Recent Updates
 
-### Version Elite 1.0 (Latest)
+### Version Elite 2.0 (Latest - October 2025)
+**Major Upgrades:**
+- ✅ **Helius RPC Integration** - 100K requests/day FREE (10-100x faster!)
+- ✅ **Complete Auto-Sell System** - Stop Loss (-15%), Take Profit (+50%), Trailing Stop (10%)
+- ✅ **Twitter Sentiment Analysis** - OAuth 2.0 integration with real-time monitoring
+- ✅ **Affiliated Wallet Detector** - Auto-discover side wallets using FREE RPC
+- ✅ **Database-Backed Wallet Tracking** - Persists across restarts
+- ✅ **Pump.fun + Birdeye Integration** - Multi-source launch detection
+- ✅ **Optimized Sniper** - Lowered to $2,000 min liquidity (5-10x more opportunities!)
+- ✅ **Position Management** - Sniper → Auto-Sell integration complete
+- ✅ **Enhanced Logging** - Full transparency on all operations
+
+### Version Elite 1.0
 - ✅ Added Wallet Intelligence Engine (0-100 scoring)
 - ✅ Added 6-Layer Protection System
 - ✅ Added Automated 24/7 Trading
@@ -430,12 +490,14 @@ bash scripts/git_setup.sh  # Linux/Mac
 - ✅ Multi-route price comparison
 - ✅ Professional risk management
 
-### Commands Added
-- `/track <wallet>` - Wallet intelligence
-- `/rankings` - Top wallets
-- `/autostart` - Auto trading
-- `/autostop` - Stop auto trading
-- `/autostatus` - Check status
+### New Features & Improvements
+- **Auto-Sell:** Fully implemented with Jito MEV protection on sells
+- **Wallet Tracking:** Database-backed, auto-loads on `/autostart`
+- **Helius RPC:** 100,000 free requests/day (no more rate limits!)
+- **Twitter OAuth 2.0:** Full sentiment analysis integration
+- **Affiliated Detection:** Finds related wallets automatically
+- **Multi-Source Detection:** Birdeye + DexScreener + Pump.fun APIs
+- **Optimized Filters:** $2K minimum (vs $10K) for more opportunities
 
 ---
 

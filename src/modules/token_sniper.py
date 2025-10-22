@@ -15,9 +15,11 @@ ELITE FEATURES:
 import asyncio
 import logging
 import hashlib
+import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Set
 import aiohttp
+import websockets
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -29,7 +31,7 @@ class SnipeSettings:
     user_id: int
     enabled: bool = False
     max_buy_amount: float = 0.1  # SOL
-    min_liquidity: float = 10000  # USD
+    min_liquidity: float = 2000  # USD - Lower for more opportunities!
     min_ai_confidence: float = 0.65  # 65%
     max_daily_snipes: int = 10
     only_strong_buy: bool = True  # Only buy if AI says "strong_buy"
@@ -43,15 +45,17 @@ class SnipeSettings:
 class PumpFunMonitor:
     """
     Monitors pump.fun for new token launches
-    Uses DexScreener API + periodic checking
+    Uses official Pump.fun API + WebSocket for real-time detection
     """
     
     def __init__(self):
         self.session = None
         self.seen_tokens: Set[str] = set()
         self.running = False
-        self.check_interval = 30  # seconds
+        self.check_interval = 10  # seconds - check every 10 seconds for faster detection
         self.callbacks = []
+        self.ws = None  # WebSocket connection
+        self.pumpfun_api = "https://frontend-api.pump.fun"
         
     async def start(self):
         """Start monitoring"""
@@ -62,12 +66,17 @@ class PumpFunMonitor:
         self.session = aiohttp.ClientSession()
         logger.info("🎯 Pump.fun monitor started")
         
-        # Start monitoring loop
+        # Start API monitoring loop
         asyncio.create_task(self._monitor_loop())
+        
+        # WebSocket disabled temporarily due to endpoint issues
+        # Will use API polling which is more reliable
     
     async def stop(self):
         """Stop monitoring"""
         self.running = False
+        if self.ws:
+            await self.ws.close()
         if self.session:
             await self.session.close()
         logger.info("🎯 Pump.fun monitor stopped")
@@ -80,42 +89,147 @@ class PumpFunMonitor:
         """Main monitoring loop"""
         while self.running:
             try:
-                await self._check_new_tokens()
+                # Check both Pump.fun API and DexScreener
+                await self._check_pumpfun_tokens()
+                await self._check_dexscreener_tokens()
             except Exception as e:
                 logger.error(f"Monitor loop error: {e}")
             
             await asyncio.sleep(self.check_interval)
     
-    async def _check_new_tokens(self):
-        """Check for new token launches"""
+    async def _check_pumpfun_tokens(self):
+        """Check Birdeye API for new Solana tokens (Most reliable!)"""
         try:
-            # Use DexScreener to find recent Solana tokens
-            url = "https://api.dexscreener.com/latest/dex/tokens/So11111111111111111111111111111111111111112"
+            # Birdeye new listing endpoint - requires no API key for basic usage
+            url = "https://public-api.birdeye.so/defi/token_creation?chain=solana&sort_by=creation_time&sort_type=desc&offset=0&limit=20"
             
-            async with self.session.get(url, timeout=10) as response:
+            logger.info(f"🚀 Checking Birdeye for new tokens...")
+            
+            headers = {
+                'Accept': 'application/json',
+                'X-API-KEY': 'public'  # Use public endpoint
+            }
+            
+            async with self.session.get(url, headers=headers, timeout=10) as response:
                 if response.status != 200:
+                    logger.debug(f"Birdeye returned status {response.status}")
                     return
                 
                 data = await response.json()
-                pairs = data.get('pairs', [])
+                tokens = data.get('data', {}).get('items', [])
                 
-                # Filter for very new tokens (created in last 5 minutes)
+                if not tokens:
+                    tokens = data.get('data', []) if isinstance(data.get('data'), list) else []
+                
+                logger.info(f"📊 Found {len(tokens)} new tokens from Birdeye")
+                
+                new_tokens_found = 0
+                now = datetime.now().timestamp()
+                
+                for token in tokens[:20]:  # Check top 20 newest
+                    try:
+                        token_address = token.get('address') or token.get('mint')
+                        symbol = token.get('symbol', 'UNKNOWN')
+                        name = token.get('name', 'Unknown')
+                        created_timestamp = token.get('creation_time') or token.get('createdAt', 0)
+                        
+                        if not token_address or token_address in self.seen_tokens:
+                            continue
+                        
+                        # Check if created in last 60 minutes
+                        if created_timestamp:
+                            age_seconds = now - created_timestamp if created_timestamp < now * 2 else now - (created_timestamp / 1000)
+                            
+                            if age_seconds < 3600:  # Last hour
+                                self.seen_tokens.add(token_address)
+                                new_tokens_found += 1
+                                
+                                # Get liquidity info
+                                liquidity = float(token.get('liquidity', 0) or 0)
+                                if liquidity == 0:
+                                    liquidity = float(token.get('v24hUSD', 0) or 0) * 10  # Estimate from volume
+                                
+                                # Extract token info
+                                token_info = {
+                                    'address': token_address,
+                                    'symbol': symbol,
+                                    'name': name,
+                                    'liquidity_usd': liquidity,
+                                    'price_usd': float(token.get('price', 0) or 0),
+                                    'created_at': created_timestamp * 1000 if created_timestamp < now * 2 else created_timestamp,
+                                    'dex': 'raydium',
+                                    'source': 'birdeye'
+                                }
+                                
+                                logger.info(f"🎯 NEW TOKEN (Birdeye): {symbol} ({token_address[:8]}...) - Liquidity: ${liquidity:.0f} - Age: {age_seconds/60:.0f}min")
+                                
+                                # Notify all callbacks
+                                for callback in self.callbacks:
+                                    try:
+                                        await callback(token_info)
+                                    except Exception as e:
+                                        logger.error(f"Callback error: {e}")
+                    except Exception as e:
+                        logger.debug(f"Error processing Birdeye token: {e}")
+                        continue
+                
+                if new_tokens_found == 0:
+                    logger.info(f"✓ No new tokens in last hour from Birdeye")
+        
+        except Exception as e:
+            logger.debug(f"Error checking Birdeye: {e}")
+    
+    async def _check_dexscreener_tokens(self):
+        """Check DexScreener for new token launches (Fallback)"""
+        try:
+            # Use DexScreener's token profiles endpoint for new tokens
+            url = "https://api.dexscreener.com/token-profiles/latest/v1"
+            
+            logger.info(f"🔍 Checking DexScreener token profiles for new launches...")
+            
+            async with self.session.get(url, timeout=10) as response:
+                if response.status != 200:
+                    logger.warning(f"⚠️ DexScreener token profiles returned status {response.status}")
+                    # Fallback to pairs endpoint
+                    return await self._check_dexscreener_pairs()
+                
+                data = await response.json()
+                
+                # This returns newly profiled tokens
+                if isinstance(data, list):
+                    pairs = data
+                else:
+                    pairs = data.get('pairs', [])
+                
+                logger.info(f"📊 Found {len(pairs)} pairs from DexScreener")
+                
+                # Filter for very new tokens (created in last 2 hours - be more lenient!)
                 now = datetime.now().timestamp() * 1000
-                five_min_ago = now - (5 * 60 * 1000)
+                two_hours_ago = now - (120 * 60 * 1000)  # 2 hours for maximum opportunities
                 
-                for pair in pairs[:20]:  # Check top 20
+                new_tokens_found = 0
+                checked_tokens = 0
+                for pair in pairs[:30]:  # Check top 30
                     if pair.get('chainId') != 'solana':
                         continue
                     
                     token_address = pair.get('baseToken', {}).get('address')
+                    symbol = pair.get('baseToken', {}).get('symbol', 'UNK')
                     created_at = pair.get('pairCreatedAt', 0)
+                    checked_tokens += 1
+                    
+                    # Log timestamp info for debugging
+                    if checked_tokens <= 3:  # Log first 3 for debugging
+                        age_minutes = (now - created_at) / 60000 if created_at else 999
+                        logger.info(f"  Token {checked_tokens}: {symbol} - Age: {age_minutes:.0f} min")
                     
                     if not token_address or token_address in self.seen_tokens:
                         continue
                     
-                    # Check if newly launched (within last 5 minutes)
-                    if created_at and created_at > five_min_ago:
+                    # Check if newly launched (within last 2 hours)
+                    if created_at and created_at > two_hours_ago:
                         self.seen_tokens.add(token_address)
+                        new_tokens_found += 1
                         
                         # Extract token info
                         token_info = {
@@ -128,7 +242,7 @@ class PumpFunMonitor:
                             'dex': pair.get('dexId', 'unknown')
                         }
                         
-                        logger.info(f"🎯 NEW TOKEN DETECTED: {token_info['symbol']} ({token_address[:8]}...)")
+                        logger.info(f"🎯 NEW TOKEN DETECTED: {token_info['symbol']} ({token_address[:8]}...) - Liquidity: ${token_info['liquidity_usd']:.0f}")
                         
                         # Notify all callbacks
                         for callback in self.callbacks:
@@ -137,13 +251,118 @@ class PumpFunMonitor:
                             except Exception as e:
                                 logger.error(f"Callback error: {e}")
                 
+                if new_tokens_found == 0:
+                    logger.info(f"✓ No new tokens in last 2 hours (checked {checked_tokens} Solana pairs)")
+                
                 # Limit seen_tokens size to prevent memory issues
                 if len(self.seen_tokens) > 1000:
                     # Keep only recent 500
                     self.seen_tokens = set(list(self.seen_tokens)[-500:])
         
         except Exception as e:
-            logger.error(f"Error checking new tokens: {e}")
+            logger.error(f"Error checking DexScreener: {e}")
+    
+    async def _check_dexscreener_pairs(self):
+        """Fallback: Check DexScreener orderbook endpoint for new Solana pairs"""
+        try:
+            # Get newest pairs on Solana
+            url = "https://api.dexscreener.com/orders/v1/solana?sort=createdAt&order=desc"
+            
+            logger.info(f"🔍 Checking DexScreener orderbook...")
+            
+            async with self.session.get(url, timeout=10) as response:
+                if response.status != 200:
+                    logger.debug(f"DexScreener orderbook returned {response.status}")
+                    return
+                
+                data = await response.json()
+                pairs = data if isinstance(data, list) else []
+                
+                logger.info(f"📊 Found {len(pairs)} pairs from orderbook")
+                
+                # Process new pairs
+                new_found = 0
+                for pair in pairs[:15]:
+                    token_address = pair.get('tokenAddress') or pair.get('baseToken', {}).get('address')
+                    if token_address and token_address not in self.seen_tokens:
+                        symbol = pair.get('baseToken', {}).get('symbol', 'UNK')
+                        liquidity = float(pair.get('liquidity', {}).get('usd', 0) or 0)
+                        
+                        if liquidity >= 100:  # Min $100 liquidity
+                            logger.info(f"🎯 Found pair: {symbol} - ${liquidity:.0f}")
+                            new_found += 1
+                
+                logger.info(f"✓ Processed {new_found} new pairs from orderbook")
+        
+        except Exception as e:
+            logger.debug(f"Error checking orderbook: {e}")
+    
+    async def _websocket_monitor(self):
+        """Monitor Pump.fun WebSocket for REAL-TIME new token alerts"""
+        while self.running:
+            try:
+                logger.info("🌐 Connecting to Pump.fun WebSocket...")
+                
+                # Pump.fun WebSocket endpoint
+                ws_url = "wss://pumpportal.fun/api/data"
+                
+                async with websockets.connect(ws_url, ping_interval=30) as websocket:
+                    logger.info("✅ Connected to Pump.fun WebSocket!")
+                    
+                    # Subscribe to new token creation events
+                    subscribe_msg = {
+                        "method": "subscribeNewToken"
+                    }
+                    await websocket.send(json.dumps(subscribe_msg))
+                    logger.info("📡 Subscribed to new token events")
+                    
+                    # Listen for messages
+                    async for message in websocket:
+                        try:
+                            data = json.loads(message)
+                            
+                            # Handle new token event
+                            if data.get('txType') == 'create':
+                                token_address = data.get('mint')
+                                symbol = data.get('symbol', 'UNKNOWN')
+                                name = data.get('name', 'Unknown')
+                                
+                                if token_address and token_address not in self.seen_tokens:
+                                    self.seen_tokens.add(token_address)
+                                    
+                                    # Build token info
+                                    token_info = {
+                                        'address': token_address,
+                                        'symbol': symbol,
+                                        'name': name,
+                                        'liquidity_usd': 1000,  # Estimate for new launches
+                                        'price_usd': 0,
+                                        'created_at': datetime.now().timestamp() * 1000,
+                                        'dex': 'pump.fun',
+                                        'source': 'pump.fun_websocket'
+                                    }
+                                    
+                                    logger.info(f"⚡ INSTANT PUMP.FUN LAUNCH: {symbol} ({token_address[:8]}...)")
+                                    
+                                    # Notify callbacks immediately
+                                    for callback in self.callbacks:
+                                        try:
+                                            await callback(token_info)
+                                        except Exception as e:
+                                            logger.error(f"Callback error: {e}")
+                        
+                        except json.JSONDecodeError:
+                            logger.debug(f"Non-JSON WebSocket message: {message}")
+                        except Exception as e:
+                            logger.error(f"Error processing WebSocket message: {e}")
+            
+            except websockets.exceptions.WebSocketException as e:
+                logger.warning(f"⚠️ WebSocket disconnected: {e}")
+                logger.info("🔄 Reconnecting in 10 seconds...")
+                await asyncio.sleep(10)
+            except Exception as e:
+                logger.error(f"WebSocket error: {e}")
+                await asyncio.sleep(10)
 
 
 class AutoSniper:
@@ -164,6 +383,7 @@ class AutoSniper:
         self.jupiter = jupiter_client
         self.protection = protection_system  # Elite protection system
         self.monitor = PumpFunMonitor()
+        self.auto_trader = None  # Will be set when auto-trading starts
         
         # User settings: user_id -> SnipeSettings
         self.user_settings: Dict[int, SnipeSettings] = {}
@@ -177,6 +397,11 @@ class AutoSniper:
         self.min_snipe_interval = 60  # seconds between snipes per user
         
         logger.info("🎯 Elite Auto-Sniper initialized")
+    
+    def register_auto_trader(self, auto_trader):
+        """Register automated trading engine for position management"""
+        self.auto_trader = auto_trader
+        logger.info("🎯 Auto-trader registered with sniper for position tracking")
     
     async def start(self):
         """Start the sniper"""
@@ -373,6 +598,19 @@ class AutoSniper:
                     'timestamp': datetime.now(),
                     'success': True
                 })
+                
+                # 🎯 Register position with auto-trader for stop loss/take profit tracking
+                if self.auto_trader and self.auto_trader.is_running:
+                    entry_price = result.get('output_amount', 0) / settings.max_buy_amount if settings.max_buy_amount > 0 else 0
+                    self.auto_trader.active_positions[token_info['address']] = {
+                        'token_mint': token_info['address'],
+                        'token_symbol': token_info['symbol'],
+                        'entry_price': entry_price,
+                        'amount': settings.max_buy_amount,
+                        'entry_time': datetime.now(),
+                        'source': 'AUTO_SNIPE'
+                    }
+                    logger.info(f"📊 Position registered for auto-management (Stop Loss: 15%, Take Profit: 50%)")
                 
                 # TODO: Send notification to user via Telegram
                 

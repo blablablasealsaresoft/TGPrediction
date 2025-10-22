@@ -102,8 +102,12 @@ class TwitterMonitor:
     Monitor Twitter for token mentions and sentiment
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, bearer_token: Optional[str] = None, 
+                 client_id: Optional[str] = None, client_secret: Optional[str] = None):
         self.api_key = api_key
+        self.bearer_token = bearer_token
+        self.client_id = client_id
+        self.client_secret = client_secret
         self.session: Optional[aiohttp.ClientSession] = None
         self.sentiment_analyzer = SentimentAnalyzer()
         
@@ -215,7 +219,9 @@ class TwitterMonitor:
             from functools import partial
             
             # Initialize Twitter API client
-            client = tweepy.Client(bearer_token=self.api_key)
+            # Use bearer_token if available, otherwise fall back to api_key
+            auth_token = self.bearer_token or self.api_key
+            client = tweepy.Client(bearer_token=auth_token)
             
             # Build search query
             query = " OR ".join(keywords)
@@ -624,10 +630,18 @@ class SocialMediaAggregator:
     def __init__(
         self,
         twitter_api_key: Optional[str] = None,
+        twitter_bearer_token: Optional[str] = None,
+        twitter_client_id: Optional[str] = None,
+        twitter_client_secret: Optional[str] = None,
         reddit_credentials: Optional[Dict] = None,
         discord_token: Optional[str] = None
     ):
-        self.twitter = TwitterMonitor(twitter_api_key)
+        self.twitter = TwitterMonitor(
+            api_key=twitter_api_key,
+            bearer_token=twitter_bearer_token,
+            client_id=twitter_client_id,
+            client_secret=twitter_client_secret
+        )
         self.reddit = RedditMonitor(
             reddit_credentials.get('client_id') if reddit_credentials else None,
             reddit_credentials.get('client_secret') if reddit_credentials else None

@@ -10,17 +10,17 @@
 # ============================================================================
 
 # Telegram Bot Token (get from @BotFather)
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+TELEGRAM_BOT_TOKEN=8455438652:AAFvrxM6GFZ91BwoohvMCezhsj7N16YFju0
 
 # Admin Telegram User ID (get from @userinfobot)
-ADMIN_CHAT_ID=your_telegram_user_id
+ADMIN_CHAT_ID=6594416344
 
 # Solana RPC URLs (use paid RPC for better performance)
 SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 SOLANA_WS_URL=wss://api.mainnet-beta.solana.com
 
 # Optional: Your wallet private key in base58 format (for platform fees)
-WALLET_PRIVATE_KEY=
+WALLET_PRIVATE_KEY=2KBD49gknMGpsVSJWuUFbTPLsVLd4kMEN8n8cBERvJFML8sBzavGqpHH14mYUwDWYHZ6EdTx1DzHxto6PUsUVpke
 
 
 # ============================================================================
@@ -216,7 +216,7 @@ POINTS_PER_RATING=5
 PLATFORM_FEE_PERCENTAGE=0.005
 
 # Fee collection wallet
-FEE_COLLECTION_WALLET=
+FEE_COLLECTION_WALLET=4164wKUM9HJyqXc9yrj24LKvy8BwxjzDazg4FSMycfR5
 
 
 # ============================================================================

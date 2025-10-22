@@ -98,9 +98,12 @@ class RevolutionaryTradingBot:
         self.community_intel = CommunityIntelligence()
         self.rewards = RewardSystem()
         
-        # Sentiment analysis
+        # Sentiment analysis with full Twitter OAuth 2.0 credentials
         self.sentiment_analyzer = SocialMediaAggregator(
             twitter_api_key=os.getenv('TWITTER_API_KEY'),
+            twitter_bearer_token=os.getenv('TWITTER_BEARER_TOKEN'),
+            twitter_client_id=os.getenv('TWITTER_CLIENT_ID'),
+            twitter_client_secret=os.getenv('TWITTER_CLIENT_SECRET'),
             reddit_credentials={
                 'client_id': os.getenv('REDDIT_CLIENT_ID'),
                 'client_secret': os.getenv('REDDIT_CLIENT_SECRET')
@@ -229,25 +232,25 @@ Use /wallet to manage your wallet
         # Get trading stats
         stats = await self.db.get_user_stats(user_id, days=30)
         
-        message = f"""💰 *YOUR TRADING WALLET*
+        message = f"""💰 <b>YOUR TRADING WALLET</b>
 
-🔐 *Address:*
-`{wallet_address}`
+🔐 <b>Address:</b>
+<code>{wallet_address}</code>
 
-💵 *Balance:*
+💵 <b>Balance:</b>
 {balance:.6f} SOL
 
-📊 *Trading Stats (30 days):*
+📊 <b>Trading Stats (30 days):</b>
 Total Trades: {stats['total_trades']}
 Win Rate: {stats['win_rate']:.1f}%
 Total PnL: {stats['total_pnl']:+.4f} SOL
 
-*Commands:*
+<b>Commands:</b>
 /deposit - Fund your wallet
 /balance - Check balance
 /export_wallet - Export private keys
 
-⚠️ *Security:*
+⚠️ <b>Security:</b>
 • Your wallet is encrypted and secure
 • Never share your wallet info
 • This is YOUR personal trading wallet
@@ -270,7 +273,7 @@ Total PnL: {stats['total_pnl']:+.4f} SOL
         
         await update.message.reply_text(
             message,
-            parse_mode='Markdown',
+            parse_mode='HTML',
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
@@ -1224,30 +1227,31 @@ Points: *{rewards['points']}*
         
         if not strategies:
             message = """
-📚 *STRATEGY MARKETPLACE*
+📚 <b>STRATEGY MARKETPLACE</b>
 
 No strategies available yet!
 
-*Want to share your strategy?*
+<b>Want to share your strategy?</b>
 Earn SOL by publishing successful strategies!
 
 Command: /publish_strategy
 """
-            await update.message.reply_text(message, parse_mode='Markdown')
+            await update.message.reply_text(message, parse_mode='HTML')
             return
         
-        message = "📚 *TOP STRATEGIES*\n\n"
+        message = "📚 <b>TOP STRATEGIES</b>\n\n"
         
         for i, strategy in enumerate(strategies[:5], 1):
-            message += f"{i}. *{strategy['name']}*\n"
+            stars = '⭐' * int(strategy['rating'])
+            message += f"{i}. <b>{strategy['name']}</b>\n"
             message += f"   Creator: User {strategy['creator_id']}\n"
-            message += f"   Rating: {'⭐' * int(strategy['rating'])} ({strategy['rating']:.1f}/5)\n"
+            message += f"   Rating: {stars} ({strategy['rating']:.1f}/5)\n"
             message += f"   Win Rate: {strategy['performance']['win_rate']:.1f}%\n"
             message += f"   Price: {strategy['price']} SOL\n"
             message += f"   Purchases: {strategy['purchases']}\n"
             message += f"   /buy_strategy {strategy['id']}\n\n"
         
-        await update.message.reply_text(message, parse_mode='Markdown')
+        await update.message.reply_text(message, parse_mode='HTML')
     
     async def track_wallet_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -1386,12 +1390,16 @@ Use /rankings to see top wallets!
                 self.elite_protection
             )
         
-        # Start automated trading
+        # Start automated trading (with database for loading tracked wallets)
         await self.auto_trader.start_automated_trading(
             user_id,
             user_keypair,
-            self.wallet_manager
+            self.wallet_manager,
+            self.db  # Pass database manager to load tracked wallets
         )
+        
+        # 🎯 Register auto-trader with sniper for position tracking
+        self.sniper.register_auto_trader(self.auto_trader)
         
         message = """🤖 AUTOMATED TRADING STARTED!
 
