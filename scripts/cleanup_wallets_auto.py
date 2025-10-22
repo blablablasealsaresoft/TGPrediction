@@ -1,6 +1,7 @@
 """
-Clean up tracked wallets - Keep only top performers
-Reduces from 558 wallets to top 100-150 based on performance
+Auto cleanup tracked wallets - Keep only top 150 performers
+Reduces from 558 wallets to top 150 based on performance
+NO CONFIRMATION - Runs automatically!
 """
 
 import asyncio
@@ -13,7 +14,7 @@ from datetime import datetime
 
 async def cleanup_wallets():
     print("="*80)
-    print(">>> WALLET CLEANUP TOOL")
+    print(">>> AUTOMATIC WALLET CLEANUP")
     print("="*80)
     
     db = DatabaseManager("sqlite+aiosqlite:///trading_bot.db")
@@ -36,38 +37,19 @@ async def cleanup_wallets():
     # Analyze wallets
     print(f"\n[ANALYZING] Wallet performance...")
     
-    # Group wallets by category
-    with_trades = []
-    without_trades = []
-    bulk_imports = []
-    old_wallets = []
-    
-    for wallet in all_wallets:
-        if wallet.total_trades > 0:
-            with_trades.append(wallet)
-        else:
-            without_trades.append(wallet)
-        
-        if 'Bulk import' in (wallet.label or ''):
-            bulk_imports.append(wallet)
-        
-        # Check if wallet is from old tracking (before bulk import)
-        if wallet.score < 70:
-            old_wallets.append(wallet)
+    with_trades = sum(1 for w in all_wallets if w.total_trades > 0)
+    without_trades = sum(1 for w in all_wallets if w.total_trades == 0)
+    bulk_imports = sum(1 for w in all_wallets if 'Bulk import' in (w.label or ''))
+    low_score = sum(1 for w in all_wallets if w.score < 70)
     
     print(f"\n[ANALYSIS]")
-    print(f"   Wallets with trading history: {len(with_trades)}")
-    print(f"   Wallets with NO trades: {len(without_trades)}")
-    print(f"   Bulk imported wallets: {len(bulk_imports)}")
-    print(f"   Low score wallets: {len(old_wallets)}")
-    
-    # Strategy: Keep top 150 by performance
-    print(f"\n[STRATEGY] Keep top 150 wallets based on:")
-    print(f"   1. Trading activity (total_trades)")
-    print(f"   2. Win rate")
-    print(f"   3. Score")
+    print(f"   Wallets with trading history: {with_trades}")
+    print(f"   Wallets with NO trades: {without_trades}")
+    print(f"   Bulk imported wallets: {bulk_imports}")
+    print(f"   Low score wallets: {low_score}")
     
     # Sort wallets by performance
+    # Priority: total_trades > win_rate > score
     sorted_wallets = sorted(
         all_wallets,
         key=lambda w: (
@@ -85,10 +67,10 @@ async def cleanup_wallets():
     
     print(f"\n[PLAN]")
     print(f"   Keep: {len(to_keep)} top performers")
-    print(f"   Remove: {len(to_remove)} low performers")
+    print(f"   Disable: {len(to_remove)} low performers")
     
-    # Show some examples of what will be removed
-    print(f"\n[SAMPLE] Wallets to be removed (first 10):")
+    # Show some examples
+    print(f"\n[SAMPLE] Wallets to be disabled (first 10):")
     for i, wallet in enumerate(to_remove[:10], 1):
         addr = wallet.wallet_address or 'Unknown'
         label = wallet.label or 'N/A'
@@ -96,20 +78,14 @@ async def cleanup_wallets():
         score = wallet.score
         print(f"   {i}. {addr[:8]}... - {label} - {trades} trades - Score: {score:.0f}")
     
-    # Confirm
-    print(f"\n[CONFIRMATION]")
-    response = input(f"Remove {len(to_remove)} wallets? (yes/no): ").strip().lower()
+    # AUTO-CONFIRM - No user input needed
+    print(f"\n[AUTO-CONFIRM] Proceeding with cleanup...")
     
-    if response != 'yes':
-        print(f"\n[CANCELLED] No wallets removed.")
-        return
-    
-    # Remove wallets
-    print(f"\n[REMOVING] Disabling {len(to_remove)} wallets...")
+    # Disable wallets
+    print(f"\n[PROCESSING] Disabling {len(to_remove)} wallets...")
     
     removed = 0
     
-    # Batch update in one session
     try:
         async with db.async_session() as session:
             for wallet in to_remove:
@@ -136,6 +112,7 @@ async def cleanup_wallets():
     
     except Exception as e:
         print(f"  [ERROR] Batch update failed: {e}")
+        return
     
     # Final count
     remaining = await db.get_tracked_wallets(user_id)
@@ -151,12 +128,14 @@ async def cleanup_wallets():
     
     print(f"\n[PERFORMANCE] Expected improvements:")
     print(f"   + Scan time: 7-10 seconds (was 35-40 seconds)")
-    print(f"   + RPC usage: 9,000/hour (was 33,000/hour)")
+    print(f"   + RPC usage: ~{len(active) * 60}/hour (was ~{558 * 60}/hour)")
     print(f"   + Trade signals: 15-30/day (was 50-100/day)")
     print(f"   + Much easier to monitor!")
     
     print(f"\n[NEXT] Restart bot to apply changes:")
     print(f"   python scripts/run_bot.py")
+    
+    print(f"\n[TIP] You can re-enable wallets later if needed via Telegram")
 
 if __name__ == '__main__':
     asyncio.run(cleanup_wallets())
