@@ -240,6 +240,17 @@ sol/
 └── Docker files          # Containerization
 ```
 
+## 🧠 Architecture Overview
+
+- **Database-backed state.** Trades, open positions, tracked traders, follower relationships, sniper snapshots, and per-user risk settings are all persisted through SQLAlchemy models so restarts never lose context (`Trade`, `Position`, `TrackedWallet`, `UserSettings`, `SnipeRun`).
+- **Centralized execution core.** Every buy/sell goes through `TradeExecutionService`, which enforces balance checks, user risk limits, elite protection, Jito routing, persistence, and follow-on copy trades for subscribers.
+- **Social marketplace & copy trading.** `SocialTradingMarketplace` hydrates trader profiles and active copy settings from the database, tracks performance, and fans out follower trades through the shared executor.
+- **Auto-sniper with resume support.** `AutoSniper` records AI decisions and outcomes, reloads user sniper preferences from `UserSettings`, and restores pending snipes from `SnipeRun` so maintenance windows do not drop signals.
+- **Automated trading telemetry.** Batched wallet scans reuse cached transaction data, honor user risk controls, and publish metrics through `BotMonitor` for operational visibility.
+- **Sentiment-driven intelligence.** The AI strategy engine fuses quantitative signals with live social/community sentiment to justify recommendations surfaced in Telegram responses and sniper scoring.
+- **Graceful lifecycle management.** `RevolutionaryTradingBot.start()` runs inside an async application that waits on a shutdown event, while `BotRunner` wires OS signal handlers so polling and background tasks stop cleanly.
+- **Hardened key management.** Wallet encryption requires a supplied Fernet key, and `scripts/rotate_wallet_key.py` provides generate/dry-run/rotate flows for professional deployments.
+
 ---
 
 ## ⚙️ Configuration
