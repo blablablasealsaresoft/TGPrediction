@@ -5,8 +5,8 @@ Database module for tracking trades, profits, and wallet performance
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean
+from typing import List, Dict, Optional, Tuple
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import select, func, and_, or_
@@ -34,6 +34,10 @@ class Trade(Base):
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
     success = Column(Boolean)
     error_message = Column(String, nullable=True)
+
+    # Context
+    context = Column(String, default="manual", index=True)
+    metadata_json = Column(Text, nullable=True)
     
     # PnL tracking
     pnl_sol = Column(Float, nullable=True)
@@ -69,46 +73,69 @@ class UserWallet(Base):
 class TrackedWallet(Base):
     """Tracked wallet for copy trading"""
     __tablename__ = 'tracked_wallets'
-    
+
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, index=True)
     wallet_address = Column(String, index=True)
     label = Column(String)
     added_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Performance metrics
     total_trades = Column(Integer, default=0)
     profitable_trades = Column(Integer, default=0)
     win_rate = Column(Float, default=0.0)
     total_pnl = Column(Float, default=0.0)
     score = Column(Float, default=0.0)
-    
+
     # Copy trading
     copy_enabled = Column(Boolean, default=False)
     copy_amount_sol = Column(Float, default=0.1)
     last_checked = Column(DateTime, nullable=True)
 
+    # Trader profile metadata
+    is_trader = Column(Boolean, default=False, index=True)
+    trader_tier = Column(String, default='bronze')
+    followers = Column(Integer, default=0)
+    reputation_score = Column(Float, default=0.0)
+    strategies_shared = Column(Integer, default=0)
+    total_profit_shared = Column(Float, default=0.0)
+    is_verified = Column(Boolean, default=False)
+
+    # Copy relationship metadata
+    copy_trader_id = Column(Integer, nullable=True, index=True)
+    copy_percentage = Column(Float, default=100.0)
+    copy_started_at = Column(DateTime, nullable=True)
+    copy_max_daily_trades = Column(Integer, default=10)
+    copy_total_trades = Column(Integer, default=0)
+    copy_total_profit = Column(Float, default=0.0)
+
 
 class Position(Base):
     """Open trading position"""
     __tablename__ = 'positions'
-    
+
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, index=True)
     position_id = Column(String, unique=True, index=True)
     token_mint = Column(String, index=True)
     token_symbol = Column(String)
-    
+
+    # Token metadata
+    token_decimals = Column(Integer, default=9)
+
     # Entry
     entry_price = Column(Float)
     entry_amount_sol = Column(Float)
     entry_amount_tokens = Column(Float)
+    entry_amount_raw = Column(Integer, default=0)
     entry_signature = Column(String)
     entry_timestamp = Column(DateTime, default=datetime.utcnow)
-    
+
     # Exit
     exit_price = Column(Float, nullable=True)
     exit_amount_sol = Column(Float, nullable=True)
+    exit_amount_tokens = Column(Float, nullable=True)
+    exit_amount_raw = Column(Integer, nullable=True)
     exit_signature = Column(String, nullable=True)
     exit_timestamp = Column(DateTime, nullable=True)
     
@@ -116,6 +143,10 @@ class Position(Base):
     is_open = Column(Boolean, default=True, index=True)
     pnl_sol = Column(Float, nullable=True)
     pnl_percentage = Column(Float, nullable=True)
+
+    # Provenance / metadata
+    source = Column(String, default="manual", index=True)
+    metadata_json = Column(Text, nullable=True)
     
     # Stop loss / Take profit
     stop_loss_percentage = Column(Float, nullable=True)
@@ -152,7 +183,34 @@ class UserSettings(Base):
     snipe_only_strong_buy = Column(Boolean, default=True)
     snipe_daily_used = Column(Integer, default=0)
     snipe_last_reset = Column(DateTime, default=datetime.utcnow)
-    
+    snipe_last_timestamp = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SnipeRun(Base):
+    """Snapshot of sniper AI decisions and execution state"""
+    __tablename__ = 'snipe_runs'
+
+    id = Column(Integer, primary_key=True)
+    snipe_id = Column(String, unique=True, index=True)
+    user_id = Column(Integer, index=True)
+    token_mint = Column(String, index=True)
+    token_symbol = Column(String)
+    amount_sol = Column(Float, default=0.0)
+
+    status = Column(String, index=True, default='ANALYZED')
+    ai_confidence = Column(Float, nullable=True)
+    ai_recommendation = Column(String, nullable=True)
+    ai_snapshot = Column(Text, nullable=True)
+    context_json = Column(Text, nullable=True)
+
+    decision_timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    triggered_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    is_manual = Column(Boolean, default=False)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -263,7 +321,10 @@ class DatabaseManager:
         """Get user's tracked wallets"""
         async with self.async_session() as session:
             query = select(TrackedWallet).where(
-                TrackedWallet.user_id == user_id
+                and_(
+                    TrackedWallet.user_id == user_id,
+                    TrackedWallet.copy_trader_id.is_(None)
+                )
             ).order_by(TrackedWallet.score.desc())
             result = await session.execute(query)
             return result.scalars().all()
@@ -278,12 +339,233 @@ class DatabaseManager:
             query = select(TrackedWallet).where(TrackedWallet.id == wallet_id)
             result = await session.execute(query)
             wallet = result.scalar_one_or_none()
-            
+
             if wallet:
                 for key, value in metrics.items():
                     setattr(wallet, key, value)
                 wallet.last_checked = datetime.utcnow()
                 await session.commit()
+
+    async def upsert_trader_profile(
+        self,
+        user_id: int,
+        username: str,
+        metadata: Optional[Dict] = None
+    ) -> TrackedWallet:
+        """Create or update a trader profile in tracked wallets"""
+        metadata = metadata or {}
+        async with self.async_session() as session:
+            query = select(TrackedWallet).where(
+                and_(
+                    TrackedWallet.user_id == user_id,
+                    TrackedWallet.is_trader == True
+                )
+            )
+            result = await session.execute(query)
+            profile = result.scalar_one_or_none()
+
+            if not profile:
+                profile = TrackedWallet(
+                    user_id=user_id,
+                    wallet_address=metadata.get('wallet_address', f'trader:{user_id}'),
+                    label=username,
+                    is_trader=True,
+                    trader_tier=metadata.get('trader_tier', 'bronze'),
+                    followers=metadata.get('followers', 0),
+                    reputation_score=metadata.get('reputation_score', 0.0),
+                    strategies_shared=metadata.get('strategies_shared', 0),
+                    total_profit_shared=metadata.get('total_profit_shared', 0.0),
+                    is_verified=metadata.get('is_verified', False)
+                )
+                session.add(profile)
+            else:
+                profile.label = username
+                for key, value in metadata.items():
+                    if hasattr(profile, key):
+                        setattr(profile, key, value)
+
+            await session.commit()
+            await session.refresh(profile)
+            return profile
+
+    async def get_trader_profiles(self) -> List[TrackedWallet]:
+        """Return all trader profiles"""
+        async with self.async_session() as session:
+            query = select(TrackedWallet).where(TrackedWallet.is_trader == True)
+            result = await session.execute(query)
+            return result.scalars().all()
+
+    async def get_trader_profile(self, user_id: int) -> Optional[TrackedWallet]:
+        """Return a specific trader profile"""
+        async with self.async_session() as session:
+            query = select(TrackedWallet).where(
+                and_(
+                    TrackedWallet.user_id == user_id,
+                    TrackedWallet.is_trader == True
+                )
+            )
+            result = await session.execute(query)
+            return result.scalar_one_or_none()
+
+    async def update_trader_profile(self, user_id: int, updates: Dict) -> Optional[TrackedWallet]:
+        """Update trader profile fields"""
+        async with self.async_session() as session:
+            query = select(TrackedWallet).where(
+                and_(
+                    TrackedWallet.user_id == user_id,
+                    TrackedWallet.is_trader == True
+                )
+            )
+            result = await session.execute(query)
+            profile = result.scalar_one_or_none()
+
+            if not profile:
+                return None
+
+            for key, value in updates.items():
+                if hasattr(profile, key):
+                    setattr(profile, key, value)
+
+            await session.commit()
+            await session.refresh(profile)
+            return profile
+
+    async def increment_trader_followers(self, user_id: int, delta: int) -> Optional[TrackedWallet]:
+        """Increment a trader's follower count"""
+        async with self.async_session() as session:
+            query = select(TrackedWallet).where(
+                and_(
+                    TrackedWallet.user_id == user_id,
+                    TrackedWallet.is_trader == True
+                )
+            )
+            result = await session.execute(query)
+            profile = result.scalar_one_or_none()
+
+            if not profile:
+                return None
+
+            profile.followers = max(0, (profile.followers or 0) + delta)
+
+            await session.commit()
+            await session.refresh(profile)
+            return profile
+
+    async def set_copy_relationship(
+        self,
+        follower_id: int,
+        trader_id: int,
+        settings: Dict
+    ) -> Tuple[TrackedWallet, bool]:
+        """Enable or create a copy relationship"""
+        async with self.async_session() as session:
+            query = select(TrackedWallet).where(
+                and_(
+                    TrackedWallet.user_id == follower_id,
+                    TrackedWallet.copy_trader_id == trader_id
+                )
+            )
+            result = await session.execute(query)
+            relationship = result.scalar_one_or_none()
+            activated = False
+            now = datetime.utcnow()
+
+            if not relationship:
+                relationship = TrackedWallet(
+                    user_id=follower_id,
+                    wallet_address=settings.get('wallet_address', f'copy:{trader_id}'),
+                    label=settings.get('label', f'Copy {trader_id}'),
+                    copy_trader_id=trader_id,
+                    copy_enabled=True,
+                    copy_amount_sol=settings.get('max_copy_amount', 0.1),
+                    copy_percentage=settings.get('copy_percentage', 100.0),
+                    copy_max_daily_trades=settings.get('max_daily_trades', 10),
+                    copy_started_at=now
+                )
+                session.add(relationship)
+                activated = True
+            else:
+                previously_enabled = bool(relationship.copy_enabled)
+                relationship.copy_enabled = True
+                relationship.copy_started_at = relationship.copy_started_at or now
+                activated = not previously_enabled
+
+            relationship.copy_amount_sol = settings.get('max_copy_amount', relationship.copy_amount_sol)
+            relationship.copy_percentage = settings.get('copy_percentage', relationship.copy_percentage or 100.0)
+            relationship.copy_max_daily_trades = settings.get(
+                'max_daily_trades',
+                relationship.copy_max_daily_trades
+            )
+            relationship.last_checked = now
+
+            await session.commit()
+            await session.refresh(relationship)
+            return relationship, activated
+
+    async def disable_copy_relationship(self, follower_id: int, trader_id: int) -> bool:
+        """Disable an active copy relationship"""
+        async with self.async_session() as session:
+            query = select(TrackedWallet).where(
+                and_(
+                    TrackedWallet.user_id == follower_id,
+                    TrackedWallet.copy_trader_id == trader_id
+                )
+            )
+            result = await session.execute(query)
+            relationship = result.scalar_one_or_none()
+
+            if not relationship:
+                return False
+
+            was_enabled = bool(relationship.copy_enabled)
+            relationship.copy_enabled = False
+            await session.commit()
+            return was_enabled
+
+    async def get_copy_relationships(
+        self,
+        follower_id: Optional[int] = None,
+        only_enabled: bool = True
+    ) -> List[TrackedWallet]:
+        """Return copy relationships for a follower or all"""
+        async with self.async_session() as session:
+            query = select(TrackedWallet).where(TrackedWallet.copy_trader_id.isnot(None))
+
+            if follower_id is not None:
+                query = query.where(TrackedWallet.user_id == follower_id)
+
+            if only_enabled:
+                query = query.where(TrackedWallet.copy_enabled == True)
+
+            result = await session.execute(query)
+            return result.scalars().all()
+
+    async def update_copy_relationship(
+        self,
+        follower_id: int,
+        trader_id: int,
+        updates: Dict
+    ):
+        """Update fields on a copy relationship"""
+        async with self.async_session() as session:
+            query = select(TrackedWallet).where(
+                and_(
+                    TrackedWallet.user_id == follower_id,
+                    TrackedWallet.copy_trader_id == trader_id
+                )
+            )
+            result = await session.execute(query)
+            relationship = result.scalar_one_or_none()
+
+            if not relationship:
+                return
+
+            for key, value in updates.items():
+                if hasattr(relationship, key):
+                    setattr(relationship, key, value)
+
+            await session.commit()
+
     
     async def open_position(self, position_data: Dict) -> Position:
         """Open new trading position"""
@@ -366,7 +648,7 @@ class DatabaseManager:
             query = select(UserSettings).where(UserSettings.user_id == user_id)
             result = await session.execute(query)
             user_settings = result.scalar_one_or_none()
-            
+
             if not user_settings:
                 user_settings = UserSettings(user_id=user_id, **settings)
                 session.add(user_settings)
@@ -374,9 +656,83 @@ class DatabaseManager:
                 for key, value in settings.items():
                     setattr(user_settings, key, value)
                 user_settings.updated_at = datetime.utcnow()
-            
+
             await session.commit()
-    
+
+    async def get_all_user_settings(self) -> List[UserSettings]:
+        """Return all user settings records"""
+        async with self.async_session() as session:
+            query = select(UserSettings)
+            result = await session.execute(query)
+            return result.scalars().all()
+
+    async def upsert_snipe_run(self, run_data: Dict) -> SnipeRun:
+        """Create or update a sniper run snapshot"""
+        async with self.async_session() as session:
+            query = select(SnipeRun).where(SnipeRun.snipe_id == run_data['snipe_id'])
+            result = await session.execute(query)
+            run = result.scalar_one_or_none()
+
+            if run:
+                for key, value in run_data.items():
+                    setattr(run, key, value)
+                run.updated_at = datetime.utcnow()
+            else:
+                run = SnipeRun(**run_data)
+                session.add(run)
+
+            await session.commit()
+            await session.refresh(run)
+            return run
+
+    async def update_snipe_run(self, snipe_id: str, updates: Dict) -> Optional[SnipeRun]:
+        """Update sniper run state"""
+        if not updates:
+            updates = {}
+
+        async with self.async_session() as session:
+            query = select(SnipeRun).where(SnipeRun.snipe_id == snipe_id)
+            result = await session.execute(query)
+            run = result.scalar_one_or_none()
+
+            if not run:
+                return None
+
+            for key, value in updates.items():
+                setattr(run, key, value)
+
+            run.updated_at = datetime.utcnow()
+            await session.commit()
+            await session.refresh(run)
+            return run
+
+    async def get_active_snipe_runs(self) -> List[SnipeRun]:
+        """Return snipes that are still awaiting execution"""
+        async with self.async_session() as session:
+            query = select(SnipeRun).where(
+                SnipeRun.status.in_(['MONITORING', 'EXECUTING'])
+            ).order_by(SnipeRun.decision_timestamp.asc())
+            result = await session.execute(query)
+            return result.scalars().all()
+
+    async def get_recent_snipe_runs(
+        self,
+        user_id: Optional[int] = None,
+        limit: int = 50
+    ) -> List[SnipeRun]:
+        """Fetch recent sniper decisions"""
+        async with self.async_session() as session:
+            query = select(SnipeRun)
+
+            if user_id is not None:
+                query = query.where(SnipeRun.user_id == user_id)
+
+            query = query.order_by(SnipeRun.decision_timestamp.desc(), SnipeRun.updated_at.desc()).limit(limit)
+            result = await session.execute(query)
+            runs = list(result.scalars().all())
+            runs.reverse()  # Oldest first for chronological presentation
+            return runs
+
     async def get_daily_pnl(self, user_id: int) -> float:
         """Get today's PnL"""
         async with self.async_session() as session:

@@ -40,6 +40,7 @@ class SnipeSettings:
     # Limits
     daily_snipes_used: int = 0
     last_reset: datetime = None
+    last_snipe_at: datetime = None
 
 
 class PumpFunMonitor:
@@ -578,21 +579,38 @@ class AutoSniper:
     - Professional risk management
     """
     
-    def __init__(self, ai_manager, wallet_manager, jupiter_client, protection_system=None):
+    def __init__(
+        self,
+        ai_manager,
+        wallet_manager,
+        jupiter_client,
+        database_manager=None,
+        protection_system=None,
+        trade_executor=None,
+        sentiment_aggregator=None,
+        community_intel=None,
+    ):
         self.ai_manager = ai_manager
         self.wallet_manager = wallet_manager
         self.jupiter = jupiter_client
         self.protection = protection_system  # Elite protection system
         self.monitor = PumpFunMonitor()
         self.auto_trader = None  # Will be set when auto-trading starts
-        
+        self.trade_executor = trade_executor
+        self.sentiment_aggregator = sentiment_aggregator
+        self.community_intel = community_intel
+
         # User settings: user_id -> SnipeSettings
         self.user_settings: Dict[int, SnipeSettings] = {}
-        
+        self.db = database_manager
+        self._settings_loaded = False
+        self._state_restored = False
+
         # Elite features
         self.active_snipes: Dict[str, Dict] = {}  # snipe_id -> snipe_data
         self.snipe_results: List[Dict] = []
-        
+        self._history_limit = 200
+
         # Rate limiting
         self.last_snipe = {}  # user_id -> timestamp
         self.min_snipe_interval = 60  # seconds between snipes per user
@@ -603,7 +621,373 @@ class AutoSniper:
         """Register automated trading engine for position management"""
         self.auto_trader = auto_trader
         logger.info("🎯 Auto-trader registered with sniper for position tracking")
-    
+
+    def _generate_snipe_id(self, user_id: int, token_mint: str) -> str:
+        """Generate deterministic snipe identifier for persistence"""
+        base = f"{user_id}:{token_mint}:{datetime.utcnow().timestamp()}"
+        return hashlib.md5(base.encode()).hexdigest()[:12]
+
+    def _json_dumps(self, payload: Optional[Dict]) -> Optional[str]:
+        """Serialize payload to JSON while handling datetimes"""
+        if payload is None:
+            return None
+
+        def _default(obj):
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            return str(obj)
+
+        try:
+            return json.dumps(payload, default=_default)
+        except Exception:
+            logger.debug("Failed to serialize payload for snipe snapshot", exc_info=True)
+            return None
+
+    def _json_loads(self, payload: Optional[str]) -> Dict:
+        """Best-effort JSON loader"""
+        if not payload:
+            return {}
+
+        try:
+            return json.loads(payload)
+        except (TypeError, json.JSONDecodeError):
+            logger.debug("Failed to load JSON payload for snipe snapshot: %s", payload)
+            return {}
+
+    def _build_history_entry(self, run) -> Optional[Dict]:
+        """Normalize snipe run data for in-memory history cache"""
+
+        if not run:
+            return None
+
+        if isinstance(run, dict):
+            getter = run.get
+        else:
+            getter = lambda key: getattr(run, key, None)
+
+        timestamp = getter('decision_timestamp') or getter('triggered_at') or getter('completed_at')
+        if isinstance(timestamp, str):
+            try:
+                timestamp = datetime.fromisoformat(timestamp)
+            except ValueError:
+                timestamp = datetime.utcnow()
+        if not timestamp:
+            timestamp = datetime.utcnow()
+
+        status = getter('status') or ('EXECUTED' if getter('success') else 'UNKNOWN')
+        confidence = getter('ai_confidence')
+        if confidence is None:
+            confidence = getter('confidence')
+
+        recommendation = getter('ai_recommendation')
+        if recommendation is None:
+            recommendation = getter('recommendation')
+
+        context = None
+        if isinstance(run, dict):
+            context = run.get('context')
+            if not context:
+                context = self._json_loads(run.get('context_json'))
+            analysis = run.get('analysis') or self._json_loads(run.get('ai_snapshot'))
+        else:
+            context = self._json_loads(getter('context_json'))
+            analysis = self._json_loads(getter('ai_snapshot'))
+
+        entry = {
+            'snipe_id': getter('snipe_id'),
+            'user_id': getter('user_id'),
+            'token': getter('token_symbol') or getter('token') or 'UNKNOWN',
+            'token_mint': getter('token_mint'),
+            'amount': getter('amount_sol') if getter('amount_sol') is not None else getter('amount'),
+            'confidence': confidence,
+            'timestamp': timestamp,
+            'status': status,
+            'success': bool(getter('success')) if getter('success') is not None else status in {'EXECUTED', 'FILLED', 'COMPLETED'},
+            'recommendation': recommendation,
+            'analysis': analysis,
+            'context': context,
+        }
+
+        return entry
+
+    def _update_history_cache(self, entry: Optional[Dict]):
+        """Insert or refresh a snipe history entry in memory"""
+        if not entry:
+            return
+
+        snipe_id = entry.get('snipe_id')
+        if snipe_id:
+            for idx, existing in enumerate(self.snipe_results):
+                if existing.get('snipe_id') == snipe_id:
+                    self.snipe_results[idx] = entry
+                    break
+            else:
+                self.snipe_results.append(entry)
+        else:
+            self.snipe_results.append(entry)
+
+        if len(self.snipe_results) > self._history_limit:
+            self.snipe_results = self.snipe_results[-self._history_limit:]
+
+        self.snipe_results.sort(key=lambda item: item.get('timestamp') or datetime.utcnow())
+
+    def _update_history_cache_from_record(self, run):
+        entry = self._build_history_entry(run)
+        self._update_history_cache(entry)
+
+    async def _refresh_snipe_history_cache(self):
+        if not self.db:
+            return
+
+        runs = await self.db.get_recent_snipe_runs(limit=self._history_limit)
+        entries = []
+        for run in runs:
+            entry = self._build_history_entry(run)
+            if entry:
+                entries.append(entry)
+
+        entries.sort(key=lambda item: item.get('timestamp') or datetime.utcnow())
+        self.snipe_results = entries[-self._history_limit:]
+
+    async def _restore_active_snipes(self):
+        if not self.db or self._state_restored:
+            return
+
+        active_runs = await self.db.get_active_snipe_runs()
+        for run in active_runs:
+            if not getattr(run, 'is_manual', False):
+                continue
+
+            if run.snipe_id in self.active_snipes:
+                continue
+
+            context = self._json_loads(getattr(run, 'context_json', None))
+            state = {
+                'user_id': run.user_id,
+                'token_mint': run.token_mint,
+                'amount_sol': run.amount_sol,
+                'status': run.status or 'MONITORING',
+                'created_at': run.decision_timestamp or datetime.utcnow(),
+                'checks_passed': context.get('checks_passed', False)
+            }
+
+            for key, value in context.items():
+                state.setdefault(key, value)
+
+            self.active_snipes[run.snipe_id] = state
+
+            if state['status'] == 'MONITORING':
+                asyncio.create_task(self._monitor_manual_snipe(run.snipe_id))
+
+        self._state_restored = True
+
+    async def _persist_manual_snipe_state(
+        self,
+        snipe_id: str,
+        user_id: int,
+        token_mint: str,
+        amount: float
+    ):
+        context = {
+            'checks_passed': False,
+            'source': 'MANUAL'
+        }
+
+        if not self.db:
+            entry = {
+                'snipe_id': snipe_id,
+                'user_id': user_id,
+                'token': 'UNKNOWN',
+                'token_mint': token_mint,
+                'amount': amount,
+                'timestamp': datetime.utcnow(),
+                'status': 'MONITORING',
+                'success': False,
+                'context': context
+            }
+            self._update_history_cache(entry)
+            return
+
+        record = {
+            'snipe_id': snipe_id,
+            'user_id': user_id,
+            'token_mint': token_mint,
+            'token_symbol': 'UNKNOWN',
+            'amount_sol': amount,
+            'status': 'MONITORING',
+            'decision_timestamp': datetime.utcnow(),
+            'is_manual': True,
+            'context_json': self._json_dumps(context)
+        }
+
+        run = await self.db.upsert_snipe_run(record)
+        self._update_history_cache_from_record(run)
+
+    async def _record_ai_decision(
+        self,
+        snipe_id: str,
+        user_id: int,
+        token_info: Dict,
+        settings: SnipeSettings,
+        token_data: Dict,
+        ai_analysis: Dict
+    ):
+        snapshot = {
+            'token_data': token_data,
+            'analysis': ai_analysis
+        }
+
+        entry = {
+            'snipe_id': snipe_id,
+            'user_id': user_id,
+            'token': token_info.get('symbol', 'UNKNOWN'),
+            'token_mint': token_info['address'],
+            'amount': settings.max_buy_amount,
+            'confidence': ai_analysis.get('confidence'),
+            'timestamp': datetime.utcnow(),
+            'status': 'ANALYZED',
+            'success': False,
+            'recommendation': ai_analysis.get('action'),
+            'analysis': snapshot,
+            'context': {'source': 'AUTO'}
+        }
+
+        if not self.db:
+            self._update_history_cache(entry)
+            return
+
+        record = {
+            'snipe_id': snipe_id,
+            'user_id': user_id,
+            'token_mint': token_info['address'],
+            'token_symbol': token_info.get('symbol', 'UNKNOWN'),
+            'amount_sol': settings.max_buy_amount,
+            'status': 'ANALYZED',
+            'ai_confidence': ai_analysis.get('confidence'),
+            'ai_recommendation': ai_analysis.get('action'),
+            'ai_snapshot': self._json_dumps(snapshot),
+            'decision_timestamp': datetime.utcnow(),
+            'is_manual': False,
+            'context_json': self._json_dumps({'source': 'AUTO'})
+        }
+
+        run = await self.db.upsert_snipe_run(record)
+        self._update_history_cache_from_record(run)
+
+    async def _update_snipe_record(
+        self,
+        snipe_id: str,
+        *,
+        status: Optional[str] = None,
+        confidence: Optional[float] = None,
+        recommendation: Optional[str] = None,
+        triggered_at: Optional[datetime] = None,
+        completed_at: Optional[datetime] = None,
+        context: Optional[Dict] = None,
+        analysis: Optional[Dict] = None
+    ):
+        if self.db:
+            updates = {}
+            if status is not None:
+                updates['status'] = status
+            if confidence is not None:
+                updates['ai_confidence'] = confidence
+            if recommendation is not None:
+                updates['ai_recommendation'] = recommendation
+            if triggered_at is not None:
+                updates['triggered_at'] = triggered_at
+            if completed_at is not None:
+                updates['completed_at'] = completed_at
+            if context is not None:
+                updates['context_json'] = self._json_dumps(context)
+            if analysis is not None:
+                updates['ai_snapshot'] = self._json_dumps(analysis)
+
+            run = await self.db.update_snipe_run(snipe_id, updates)
+            if run:
+                self._update_history_cache_from_record(run)
+            return
+
+        entry = next((item for item in self.snipe_results if item.get('snipe_id') == snipe_id), None)
+        if not entry:
+            entry = {
+                'snipe_id': snipe_id,
+                'timestamp': datetime.utcnow(),
+            }
+
+        if status is not None:
+            entry['status'] = status
+            entry['success'] = status in {'EXECUTED', 'FILLED', 'COMPLETED'}
+        if confidence is not None:
+            entry['confidence'] = confidence
+        if recommendation is not None:
+            entry['recommendation'] = recommendation
+        if triggered_at is not None:
+            entry['triggered_at'] = triggered_at
+        if completed_at is not None:
+            entry['completed_at'] = completed_at
+        if context is not None:
+            entry['context'] = context
+        if analysis is not None:
+            entry['analysis'] = analysis
+
+        self._update_history_cache(entry)
+    async def load_persistent_settings(self) -> Dict[int, SnipeSettings]:
+        """Load sniper settings from the database"""
+        if not self.db:
+            logger.warning("🎯 No database manager provided; sniper settings persistence disabled")
+            return self.user_settings
+
+        if self._settings_loaded:
+            return self.user_settings
+
+        records = await self.db.get_all_user_settings()
+
+        for record in records:
+            settings = self._settings_from_record(record)
+            self.user_settings[record.user_id] = settings
+            if settings.last_snipe_at:
+                self.last_snipe[record.user_id] = settings.last_snipe_at.timestamp()
+
+        await self._restore_active_snipes()
+        await self._refresh_snipe_history_cache()
+
+        self._settings_loaded = True
+        logger.info("🎯 Loaded %d sniper profiles from database", len(self.user_settings))
+        return self.user_settings
+
+    def _settings_from_record(self, record) -> SnipeSettings:
+        """Convert database record into runtime sniper settings"""
+        return SnipeSettings(
+            user_id=record.user_id,
+            enabled=bool(record.snipe_enabled),
+            max_buy_amount=record.snipe_max_amount or 0.1,
+            min_liquidity=record.snipe_min_liquidity or 10000.0,
+            min_ai_confidence=record.snipe_min_confidence or 0.65,
+            max_daily_snipes=record.snipe_max_daily or 10,
+            only_strong_buy=bool(record.snipe_only_strong_buy),
+            daily_snipes_used=record.snipe_daily_used or 0,
+            last_reset=record.snipe_last_reset,
+            last_snipe_at=record.snipe_last_timestamp
+        )
+
+    async def _persist_user_settings(self, settings: SnipeSettings):
+        """Persist sniper settings for a user"""
+        if not self.db:
+            return
+
+        await self.db.update_user_settings(settings.user_id, {
+            'snipe_enabled': settings.enabled,
+            'snipe_max_amount': settings.max_buy_amount,
+            'snipe_min_liquidity': settings.min_liquidity,
+            'snipe_min_confidence': settings.min_ai_confidence,
+            'snipe_max_daily': settings.max_daily_snipes,
+            'snipe_only_strong_buy': settings.only_strong_buy,
+            'snipe_daily_used': settings.daily_snipes_used,
+            'snipe_last_reset': settings.last_reset or datetime.utcnow(),
+            'snipe_last_timestamp': settings.last_snipe_at
+        })
+
     async def start(self):
         """Start the sniper"""
         await self.monitor.start()
@@ -615,31 +999,64 @@ class AutoSniper:
         await self.monitor.stop()
         logger.info("🎯 Auto-sniper stopped")
     
-    def enable_snipe(self, user_id: int, settings: Dict = None):
+    async def enable_snipe(self, user_id: int, settings: Dict = None):
         """Enable auto-snipe for a user"""
-        if user_id not in self.user_settings:
-            self.user_settings[user_id] = SnipeSettings(
+        if self.db and not self._settings_loaded:
+            await self.load_persistent_settings()
+
+        user_settings = self.user_settings.get(user_id)
+
+        if not user_settings and self.db:
+            record = await self.db.get_user_settings(user_id)
+            if record:
+                user_settings = self._settings_from_record(record)
+
+        if not user_settings:
+            user_settings = SnipeSettings(
                 user_id=user_id,
                 last_reset=datetime.now()
             )
-        
-        self.user_settings[user_id].enabled = True
-        
-        # Update settings if provided
+
+        user_settings.enabled = True
+
         if settings:
             for key, value in settings.items():
-                if hasattr(self.user_settings[user_id], key):
-                    setattr(self.user_settings[user_id], key, value)
-        
+                if hasattr(user_settings, key):
+                    setattr(user_settings, key, value)
+
+        if not user_settings.last_reset:
+            user_settings.last_reset = datetime.now()
+
+        self.user_settings[user_id] = user_settings
+        if user_settings.last_snipe_at:
+            self.last_snipe[user_id] = user_settings.last_snipe_at.timestamp()
+        else:
+            self.last_snipe.pop(user_id, None)
+        await self._persist_user_settings(user_settings)
+
         logger.info(f"🎯 Auto-snipe enabled for user {user_id}")
-        return self.user_settings[user_id]
-    
-    def disable_snipe(self, user_id: int):
+        return user_settings
+
+    async def disable_snipe(self, user_id: int):
         """Disable auto-snipe for a user"""
-        if user_id in self.user_settings:
-            self.user_settings[user_id].enabled = False
-            logger.info(f"🎯 Auto-snipe disabled for user {user_id}")
-    
+        if self.db and not self._settings_loaded:
+            await self.load_persistent_settings()
+
+        user_settings = self.user_settings.get(user_id)
+
+        if not user_settings and self.db:
+            record = await self.db.get_user_settings(user_id)
+            if record:
+                user_settings = self._settings_from_record(record)
+
+        if not user_settings:
+            return
+
+        user_settings.enabled = False
+        self.user_settings[user_id] = user_settings
+        await self._persist_user_settings(user_settings)
+        logger.info(f"🎯 Auto-snipe disabled for user {user_id}")
+
     def get_settings(self, user_id: int) -> Optional[SnipeSettings]:
         """Get user's snipe settings"""
         return self.user_settings.get(user_id)
@@ -677,13 +1094,18 @@ class AutoSniper:
         - Jito-powered execution
         - Real-time notifications
         """
-        settings = self.user_settings[user_id]
-        
+        settings = self.user_settings.get(user_id)
+
+        if not settings:
+            logger.debug(f"No sniper settings configured for user {user_id}")
+            return
+
         # Reset daily counter if needed
         if settings.last_reset and (datetime.now() - settings.last_reset).days >= 1:
             settings.daily_snipes_used = 0
             settings.last_reset = datetime.now()
-        
+            await self._persist_user_settings(settings)
+
         # Check daily limit
         if settings.daily_snipes_used >= settings.max_daily_snipes:
             logger.debug(f"User {user_id} hit daily snipe limit")
@@ -715,6 +1137,34 @@ class AutoSniper:
                 logger.warning(f"⛔ Token failed elite safety checks (risk: {safety_result['risk_score']:.1f}/100)")
                 return
         
+        sentiment_snapshot = None
+        community_signal = None
+
+        if self.sentiment_aggregator:
+            try:
+                sentiment_snapshot = await self.sentiment_aggregator.analyze_token_sentiment(
+                    token_info['address'],
+                    token_info.get('symbol', 'TOKEN')
+                )
+            except Exception as exc:
+                logger.debug("Failed to enrich sniper signal with social sentiment: %s", exc)
+                sentiment_snapshot = None
+
+        if self.community_intel:
+            try:
+                community_signal = await self.community_intel.get_community_signal(token_info['address'])
+            except Exception as exc:
+                logger.debug("Failed to fetch community intelligence: %s", exc)
+                community_signal = None
+
+        if settings.require_social:
+            total_mentions = 0
+            if sentiment_snapshot:
+                total_mentions = sentiment_snapshot.get('total_mentions', 0) or 0
+            if total_mentions == 0:
+                logger.debug("Skipping snipe due to missing social momentum for user %s", user_id)
+                return
+
         # Prepare token data for AI analysis
         token_data = {
             'address': token_info['address'],
@@ -730,53 +1180,142 @@ class AutoSniper:
             'market_cap': token_info['liquidity_usd'] * 2,
             'age_hours': 0.1,  # Very new
             'social_mentions': 0,  # Too new
-            'sentiment_score': 50  # Neutral
+            'sentiment_score': 50,  # Neutral
+            'social_score': 50,
+            'community_score': 0,
         }
-        
+
+        if sentiment_snapshot:
+            token_data['sentiment_score'] = sentiment_snapshot.get('sentiment_score', token_data['sentiment_score'])
+            token_data['social_mentions'] = sentiment_snapshot.get('total_mentions', token_data['social_mentions'])
+            token_data['social_score'] = sentiment_snapshot.get('social_score', token_data['social_score'])
+
+        if community_signal:
+            token_data['community_score'] = community_signal.get('community_score', token_data['community_score'])
+
+        snipe_id = self._generate_snipe_id(user_id, token_info['address'])
+
         # Run AI analysis
         logger.info(f"🎯 Running AI analysis for user {user_id} on {token_info['symbol']}")
-        ai_analysis = await self.ai_manager.analyze_opportunity(token_data, balance)
-        
+        ai_analysis = await self.ai_manager.analyze_opportunity(
+            token_data,
+            balance,
+            sentiment_snapshot=sentiment_snapshot,
+            community_signal=community_signal
+        )
+
         # Check AI recommendation
         action = ai_analysis['action']
         confidence = ai_analysis['confidence']
-        
+
         logger.info(f"🎯 AI says: {action} with {confidence:.1%} confidence")
-        
+
+        await self._record_ai_decision(
+            snipe_id,
+            user_id,
+            token_info,
+            settings,
+            token_data,
+            ai_analysis
+        )
+
         # Check if meets criteria
         if settings.only_strong_buy and action != 'strong_buy':
             logger.debug(f"Not strong_buy: {action}")
+            await self._update_snipe_record(
+                snipe_id,
+                status='SKIPPED',
+                confidence=confidence,
+                recommendation=action,
+                completed_at=datetime.utcnow(),
+                context={
+                    'reason': 'not_strong_buy',
+                    'required_action': 'strong_buy',
+                    'actual_action': action,
+                    'source': 'AUTO'
+                }
+            )
             return
-        
+
         if confidence < settings.min_ai_confidence:
             logger.debug(f"Confidence too low: {confidence:.1%} < {settings.min_ai_confidence:.1%}")
+            await self._update_snipe_record(
+                snipe_id,
+                status='SKIPPED',
+                confidence=confidence,
+                recommendation=action,
+                completed_at=datetime.utcnow(),
+                context={
+                    'reason': 'confidence_below_threshold',
+                    'required': settings.min_ai_confidence,
+                    'confidence': confidence,
+                    'source': 'AUTO'
+                }
+            )
             return
-        
+
         # Execute elite snipe with Jito protection!
         logger.info(f"🎯 EXECUTING ELITE SNIPE for user {user_id}: {token_info['symbol']}")
-        
+
         try:
             # Get user's keypair
             user_keypair = await self.wallet_manager.get_user_keypair(user_id)
             if not user_keypair:
                 logger.error(f"Could not get keypair for user {user_id}")
+                await self._update_snipe_record(
+                    snipe_id,
+                    status='FAILED',
+                    confidence=confidence,
+                    recommendation=action,
+                    completed_at=datetime.utcnow(),
+                    context={'error': 'missing_keypair', 'source': 'AUTO'}
+                )
                 return
-            
-            # Execute swap with Jito bundle for MEV protection
+
             amount_lamports = int(settings.max_buy_amount * 1e9)
             SOL_MINT = "So11111111111111111111111111111111111111112"
-            
-            # 🚀 ELITE FEATURE: Execute with Jito bundle
-            result = await self.jupiter.execute_swap_with_jito(
-                input_mint=SOL_MINT,
-                output_mint=token_info['address'],
-                amount=amount_lamports,
-                keypair=user_keypair,
-                slippage_bps=100,  # 1% slippage for snipes
-                tip_amount_lamports=100000,  # 0.0001 SOL tip
-                priority_fee_lamports=2000000  # High priority
+
+            trigger_time = datetime.utcnow()
+            await self._update_snipe_record(
+                snipe_id,
+                status='EXECUTING',
+                confidence=confidence,
+                recommendation=action,
+                triggered_at=trigger_time,
+                context={'source': 'AUTO'}
             )
-            
+
+            execution_metadata = {
+                'snipe_id': snipe_id,
+                'ai_confidence': confidence,
+                'token_symbol': token_info.get('symbol'),
+                'source': 'AUTO',
+            }
+
+            if self.trade_executor:
+                result = await self.trade_executor.execute_buy(
+                    user_id,
+                    token_info['address'],
+                    settings.max_buy_amount,
+                    token_symbol=token_info.get('symbol'),
+                    reason='auto_sniper',
+                    context='sniper_auto',
+                    execution_mode='jito',
+                    priority_fee_lamports=2_000_000,
+                    tip_lamports=100_000,
+                    metadata=execution_metadata,
+                )
+            else:
+                result = await self.jupiter.execute_swap_with_jito(
+                    input_mint=SOL_MINT,
+                    output_mint=token_info['address'],
+                    amount=amount_lamports,
+                    keypair=user_keypair,
+                    slippage_bps=100,
+                    tip_amount_lamports=100000,
+                    priority_fee_lamports=2000000,
+                )
+
             if result and result.get('success'):
                 logger.info(f"✅ ELITE SNIPE EXECUTED!")
                 logger.info(f"   Token: {token_info['symbol']}")
@@ -784,25 +1323,38 @@ class AutoSniper:
                 logger.info(f"   AI Confidence: {confidence:.1%}")
                 logger.info(f"   Protection: Jito Bundle")
                 logger.info(f"   Bundle ID: {result.get('bundle_id', 'N/A')}")
-                
+
                 # Update counters
                 settings.daily_snipes_used += 1
-                self.last_snipe[user_id] = datetime.now().timestamp()
-                
-                # Record snipe result
-                self.snipe_results.append({
-                    'user_id': user_id,
-                    'token': token_info['symbol'],
-                    'token_mint': token_info['address'],
-                    'amount': settings.max_buy_amount,
-                    'confidence': confidence,
-                    'timestamp': datetime.now(),
-                    'success': True
-                })
-                
+                now_ts = datetime.utcnow()
+                settings.last_snipe_at = now_ts
+                self.last_snipe[user_id] = now_ts.timestamp()
+                await self._persist_user_settings(settings)
+
+                tokens_received = result.get('amount_tokens') or 0.0
+                price = result.get('price') or (
+                    settings.max_buy_amount / tokens_received if tokens_received else None
+                )
+
+                await self._update_snipe_record(
+                    snipe_id,
+                    status='EXECUTED',
+                    confidence=confidence,
+                    recommendation=action,
+                    completed_at=now_ts,
+                    context={
+                        'bundle_id': result.get('bundle_id'),
+                        'amount_tokens': tokens_received,
+                        'price': price,
+                        'position_id': result.get('position_id'),
+                        'signature': result.get('signature'),
+                        'source': 'AUTO'
+                    }
+                )
+
                 # 🎯 Register position with auto-trader for stop loss/take profit tracking
                 if self.auto_trader and self.auto_trader.is_running:
-                    entry_price = result.get('output_amount', 0) / settings.max_buy_amount if settings.max_buy_amount > 0 else 0
+                    entry_price = price or 0
                     self.auto_trader.active_positions[token_info['address']] = {
                         'token_mint': token_info['address'],
                         'token_symbol': token_info['symbol'],
@@ -824,13 +1376,32 @@ class AutoSniper:
                 }
             else:
                 logger.error(f"❌ Snipe failed: {result.get('error', 'Unknown error')}")
+                await self._update_snipe_record(
+                    snipe_id,
+                    status='FAILED',
+                    confidence=confidence,
+                    recommendation=action,
+                    completed_at=datetime.utcnow(),
+                    context={
+                        'error': result.get('error', 'Unknown error'),
+                        'source': 'AUTO'
+                    }
+                )
                 return {
                     'success': False,
                     'error': result.get('error', 'Unknown error')
                 }
-        
+
         except Exception as e:
             logger.error(f"Snipe execution error: {e}")
+            await self._update_snipe_record(
+                snipe_id,
+                status='FAILED',
+                confidence=confidence,
+                recommendation=action,
+                completed_at=datetime.utcnow(),
+                context={'error': str(e), 'source': 'AUTO'}
+            )
             return {
                 'success': False,
                 'error': str(e)
@@ -852,12 +1423,38 @@ class AutoSniper:
             'created_at': datetime.now(),
             'checks_passed': False
         }
-        
+
+        try:
+            asyncio.create_task(
+                self._persist_manual_snipe_state(snipe_id, user_id, token_mint, amount)
+            )
+        except RuntimeError:
+            if self.db:
+                asyncio.run(
+                    self._persist_manual_snipe_state(snipe_id, user_id, token_mint, amount)
+                )
+            else:
+                # Fallback to synchronous cache update when no loop is running
+                self._update_history_cache({
+                    'snipe_id': snipe_id,
+                    'user_id': user_id,
+                    'token': 'UNKNOWN',
+                    'token_mint': token_mint,
+                    'amount': amount,
+                    'timestamp': datetime.utcnow(),
+                    'status': 'MONITORING',
+                    'success': False,
+                    'context': {'checks_passed': False, 'source': 'MANUAL'}
+                })
+
         logger.info(f"🎯 Manual snipe {snipe_id} setup for {token_mint[:8]}... with {amount} SOL")
-        
+
         # Start monitoring in background
-        asyncio.create_task(self._monitor_manual_snipe(snipe_id))
-        
+        try:
+            asyncio.create_task(self._monitor_manual_snipe(snipe_id))
+        except RuntimeError:
+            logger.warning("Unable to schedule manual snipe monitor without an active event loop")
+
         return {
             'snipe_id': snipe_id,
             'status': 'ACTIVE',
@@ -885,6 +1482,19 @@ class AutoSniper:
         # Timeout
         snipe['status'] = 'TIMEOUT'
         logger.warning(f"⏱️ Manual snipe {snipe_id} timed out")
+
+        await self._update_snipe_record(
+            snipe_id,
+            status='TIMEOUT',
+            completed_at=datetime.utcnow(),
+            context={
+                'checks_passed': snipe.get('checks_passed', False),
+                'source': 'MANUAL',
+                'timeout': True
+            }
+        )
+
+        self.active_snipes.pop(snipe_id, None)
     
     def get_snipe_history(self, user_id: int = None, limit: int = 20) -> List[Dict]:
         """Get snipe history for user or all"""

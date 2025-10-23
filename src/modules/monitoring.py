@@ -5,8 +5,9 @@ Tracks bot health, performance, and sends alerts
 
 import asyncio
 import logging
+from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from telegram import Bot
 from telegram.error import TelegramError
 
@@ -27,10 +28,13 @@ class BotMonitor:
         self.failed_trades = 0
         self.errors: List[Dict] = []
         self.last_heartbeat = datetime.utcnow()
-        
+
         # Alerts
         self.alert_cooldown: Dict[str, datetime] = {}
         self.alert_cooldown_seconds = 300  # 5 minutes
+
+        # Custom metrics storage (rolling window per metric name)
+        self.metrics: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     
     def record_request(self):
         """Record an API request"""
@@ -64,6 +68,33 @@ class BotMonitor:
     def update_heartbeat(self):
         """Update heartbeat timestamp"""
         self.last_heartbeat = datetime.utcnow()
+
+    def record_metric(
+        self,
+        name: str,
+        value: float,
+        *,
+        tags: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Record a numeric metric sample with optional tags."""
+
+        sample = {
+            'timestamp': datetime.utcnow(),
+            'value': value,
+            'tags': tags or {},
+        }
+
+        metric_samples = self.metrics[name]
+        metric_samples.append(sample)
+
+        # Keep the last 200 samples per metric to avoid unbounded growth
+        if len(metric_samples) > 200:
+            del metric_samples[:-200]
+
+    def get_metric_samples(self, name: str) -> List[Dict[str, Any]]:
+        """Return recent metric samples for external reporting."""
+
+        return list(self.metrics.get(name, ()))
     
     async def send_alert(self, alert_type: str, message: str):
         """Send alert to admin"""

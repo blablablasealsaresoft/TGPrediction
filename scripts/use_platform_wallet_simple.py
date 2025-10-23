@@ -20,10 +20,10 @@ async def main():
     admin_id = int(os.getenv('ADMIN_CHAT_ID'))
     wallet_key = os.getenv('WALLET_PRIVATE_KEY')
     rpc_url = os.getenv('SOLANA_RPC_URL')
-    
+
     keypair = Keypair.from_base58_string(wallet_key)
     public_key = str(keypair.pubkey())
-    
+
     client = AsyncClient(rpc_url)
     db = DatabaseManager()
     encryption = WalletEncryption()
@@ -42,7 +42,7 @@ async def main():
         await session.commit()
     
     # Add platform wallet
-    encrypted = encryption.encrypt(wallet_key.encode())
+    encrypted = encryption.encrypt_private_key(bytes(keypair))
     
     async with db.async_session() as session:
         wallet = UserWallet(

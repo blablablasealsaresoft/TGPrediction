@@ -47,9 +47,9 @@ Decrypt only when needed for signing
 
 **Master Encryption Key:**
 - Stored in environment variable: `WALLET_ENCRYPTION_KEY`
-- Generated automatically on first run
-- Must be kept secret
-- Backs up all user wallets
+- Must be provisioned before the bot starts (Fernet 32-byte key)
+- Generate with `python scripts/rotate_wallet_key.py --generate-new-key` or your KMS
+- Must be kept secret and backed up securely
 
 ### 3. Trading Flow
 ```
@@ -169,13 +169,15 @@ db = DatabaseManager()
 Base.metadata.create_all(db.engine)
 ```
 
-### 3. Set Encryption Key (Optional)
+### 3. Set Encryption Key (Required)
 Add to your `.env` file:
 ```bash
-WALLET_ENCRYPTION_KEY=<generate_one_or_let_bot_generate>
+WALLET_ENCRYPTION_KEY=<fernet_key_from_rotate_wallet_key_or_kms>
 ```
 
-If not set, bot generates one automatically (check logs for the key to save).
+Use `python scripts/rotate_wallet_key.py --generate-new-key` to print a compliant
+key or pull the value from your hardware-backed KMS/secret manager. The bot will
+exit during startup if the key is missing or invalid.
 
 ### 4. Start Bot
 ```bash
