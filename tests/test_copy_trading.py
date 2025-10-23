@@ -364,7 +364,10 @@ class CopyTradingTester:
         logger.info("\n" + "="*60)
         logger.info("🚀 COPY TRADING & SOCIAL MARKETPLACE TEST")
         logger.info("="*60 + "\n")
-        
+
+        await self.db.init_db()
+        await self.social_marketplace.initialize()
+
         results = {}
         
         # Test 1: Trader registration

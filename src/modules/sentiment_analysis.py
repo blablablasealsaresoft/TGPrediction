@@ -681,28 +681,36 @@ class SocialMediaAggregator:
         twitter_weight = 0.5
         reddit_weight = 0.3
         discord_weight = 0.2
-        
+
         aggregated_sentiment = (
-            twitter_data['sentiment_score'] * twitter_weight +
-            reddit_data['sentiment_score'] * reddit_weight +
-            discord_data['sentiment_score'] * discord_weight
+            twitter_data.get('sentiment_score', 50) * twitter_weight +
+            reddit_data.get('sentiment_score', 50) * reddit_weight +
+            discord_data.get('sentiment_score', 50) * discord_weight
         )
-        
+
         # Calculate overall social score (0-100)
         social_score = self._calculate_social_score(
             twitter_data,
             reddit_data,
             discord_data
         )
-        
+
+        total_mentions = (
+            twitter_data.get('mentions', 0)
+            + reddit_data.get('posts', 0)
+            + reddit_data.get('comments', 0)
+            + discord_data.get('mentions', 0)
+        )
+
         result = {
             'sentiment_score': aggregated_sentiment,
             'social_score': social_score,
             'twitter': twitter_data,
             'reddit': reddit_data,
             'discord': discord_data,
-            'viral_potential': twitter_data['viral_potential'],
+            'viral_potential': twitter_data.get('viral_potential', 0.0),
             'overall_recommendation': self._get_recommendation(social_score, aggregated_sentiment),
+            'total_mentions': total_mentions,
             'last_updated': datetime.utcnow()
         }
         
@@ -765,19 +773,28 @@ class SocialMediaAggregator:
         - Influencer engagement
         """
         # Mention score (0-40 points)
-        total_mentions = twitter['mentions'] + reddit['posts'] + discord['mentions']
+        total_mentions = (
+            twitter.get('mentions', 0)
+            + reddit.get('posts', 0)
+            + reddit.get('comments', 0)
+            + discord.get('mentions', 0)
+        )
         mention_score = min(total_mentions / 100 * 40, 40)
-        
+
         # Sentiment score (0-30 points)
-        avg_sentiment = (twitter['sentiment_score'] + reddit['sentiment_score'] + discord['sentiment_score']) / 3
+        avg_sentiment = (
+            twitter.get('sentiment_score', 50)
+            + reddit.get('sentiment_score', 50)
+            + discord.get('sentiment_score', 50)
+        ) / 3
         sentiment_score = avg_sentiment / 100 * 30
-        
+
         # Viral score (0-20 points)
-        viral_score = twitter['viral_potential'] * 20
-        
+        viral_score = twitter.get('viral_potential', 0) * 20
+
         # Influencer score (0-10 points)
-        influencer_score = min(twitter['influencer_mentions'] / 5 * 10, 10)
-        
+        influencer_score = min(twitter.get('influencer_mentions', 0) / 5 * 10, 10)
+
         return mention_score + sentiment_score + viral_score + influencer_score
     
     def _get_recommendation(self, social_score: float, sentiment: float) -> str:

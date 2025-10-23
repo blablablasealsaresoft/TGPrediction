@@ -54,6 +54,7 @@ from src.modules.wallet_manager import UserWalletManager
 from src.modules.token_sniper import AutoSniper, SnipeSettings
 from src.modules.jupiter_client import JupiterClient, AntiMEVProtection
 from src.modules.monitoring import BotMonitor, PerformanceTracker
+from src.modules.trade_execution import TradeExecutionService
 from src.config import get_config
 
 # 🚀 ELITE ENHANCEMENTS
@@ -119,20 +120,43 @@ class RevolutionaryTradingBot:
         # 🚀 ELITE SYSTEMS
         self.wallet_intelligence = WalletIntelligenceEngine(self.client)
         self.elite_protection = EliteProtectionSystem(self.client, ProtectionConfig())
-        self.auto_trader = None  # Initialized when user starts auto-trading
-        
-        # 🎯 Auto-Sniper with Elite Protection
-        self.sniper = AutoSniper(
-            self.ai_manager,
-            self.wallet_manager, 
-            self.jupiter,
-            protection_system=self.elite_protection
-        )
-        
-        # Monitoring
+
+        # Monitoring & performance tracking
         self.monitor = BotMonitor(None, admin_chat_id=int(os.getenv('ADMIN_CHAT_ID', 0)))
         self.performance = PerformanceTracker()
-        
+
+        # Centralized trade execution
+        self.trade_executor = TradeExecutionService(
+            self.db,
+            self.wallet_manager,
+            self.jupiter,
+            protection=self.elite_protection,
+            monitor=self.monitor,
+            social_marketplace=self.social_marketplace,
+            rewards=self.rewards
+        )
+
+        # Share executor with marketplace for copy trades
+        self.social_marketplace.attach_trade_executor(self.trade_executor)
+
+        # Automated trading engine is created on demand
+        self.auto_trader = None
+
+        # 🎯 Auto-Sniper with Elite Protection and centralized execution
+        self.sniper = AutoSniper(
+            self.ai_manager,
+            self.wallet_manager,
+            self.jupiter,
+            database_manager=self.db,
+            protection_system=self.elite_protection,
+            trade_executor=self.trade_executor,
+            sentiment_aggregator=self.sentiment_analyzer,
+            community_intel=self.community_intel,
+        )
+
+        # Shutdown coordination
+        self._stop_event: Optional[asyncio.Event] = None
+
         logger.info("🚀 Revolutionary Trading Bot initialized!")
         logger.info("🔐 Individual user wallets enabled")
         logger.info("🎯 Elite Auto-sniper ready")
@@ -329,20 +353,115 @@ After depositing, use /balance to check your new balance
     async def balance_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Quick balance check"""
         user_id = update.effective_user.id
-        
+
         balance = await self.wallet_manager.get_user_balance(user_id)
         wallet_address = await self.wallet_manager.get_user_wallet_address(user_id)
-        
+
         if not wallet_address:
             await update.message.reply_text("❌ No wallet found. Use /start")
             return
-        
+
         await update.message.reply_text(
             f"💰 *Your Balance:* {balance:.6f} SOL\n\n"
             f"Wallet: `{wallet_address[:8]}...{wallet_address[-8:]}`",
             parse_mode='Markdown'
         )
-    
+
+    async def buy_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Execute a manual buy using the user's wallet"""
+        user_id = update.effective_user.id
+
+        if not context.args or len(context.args) < 2:
+            await update.message.reply_text(
+                "Usage: /buy <token_mint> <amount_sol>"
+            )
+            return
+
+        token_mint = context.args[0]
+
+        try:
+            amount_sol = float(context.args[1])
+        except ValueError:
+            await update.message.reply_text("Amount must be a number (SOL)")
+            return
+
+        token_symbol = context.args[2] if len(context.args) >= 3 else None
+
+        progress_message = await update.message.reply_text("⏳ Executing buy order...")
+
+        result = await self.trade_executor.execute_buy(
+            user_id,
+            token_mint,
+            amount_sol,
+            token_symbol=token_symbol,
+            reason='manual_command',
+            context='manual_command'
+        )
+
+        if result.get('success'):
+            message = (
+                "✅ *BUY EXECUTED*\n\n"
+                f"Token: `{token_mint[:8]}...`\n"
+                f"Amount: {amount_sol:.4f} SOL\n"
+                f"Received: {result.get('amount_tokens', 0):.4f} tokens\n"
+                f"Price: {result.get('price', 0) or 0:.6f} SOL/token\n"
+                f"Signature: `{(result.get('signature') or '')[:16]}...`"
+            )
+        else:
+            message = f"❌ Buy failed: {result.get('error', 'Unknown error')}"
+
+        await progress_message.edit_text(message, parse_mode='Markdown')
+
+    async def sell_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Execute a manual sell for an open position"""
+        user_id = update.effective_user.id
+
+        if not context.args:
+            await update.message.reply_text(
+                "Usage: /sell <token_mint> [amount_tokens|all]"
+            )
+            return
+
+        token_mint = context.args[0]
+        amount_tokens = None
+
+        if len(context.args) >= 2:
+            amount_arg = context.args[1].lower()
+            if amount_arg == 'all':
+                amount_tokens = None
+            else:
+                try:
+                    amount_tokens = float(context.args[1])
+                except ValueError:
+                    await update.message.reply_text(
+                        "Amount must be numeric or 'all'"
+                    )
+                    return
+
+        progress_message = await update.message.reply_text("⏳ Executing sell order...")
+
+        result = await self.trade_executor.execute_sell(
+            user_id,
+            token_mint,
+            amount_tokens=amount_tokens,
+            reason='manual_command',
+            context='manual_command'
+        )
+
+        if result.get('success'):
+            message = (
+                "✅ *SELL EXECUTED*\n\n"
+                f"Token: `{token_mint[:8]}...`\n"
+                f"Tokens sold: {result.get('amount_tokens', 0):.4f}\n"
+                f"Received: {result.get('amount_sol', 0):.4f} SOL\n"
+                f"PnL: {result.get('pnl', 0):+.4f} SOL\n"
+                f"Signature: `{(result.get('signature') or '')[:16]}...`"
+            )
+        else:
+            message = f"❌ Sell failed: {result.get('error', 'Unknown error')}"
+
+        await progress_message.edit_text(message, parse_mode='Markdown')
+
     async def export_wallet_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         🔐 EXPORT PRIVATE KEY
@@ -428,24 +547,50 @@ After depositing, use /balance to check your new balance
         try:
             # Get token data (implement actual data fetching)
             token_data = await self._fetch_token_data(token_mint)
-            
-            # Get portfolio value
-            portfolio_value = await self._get_portfolio_value(user_id)
-            
-            # 🔥 AI ANALYSIS
-            ai_analysis = await self.ai_manager.analyze_opportunity(
-                token_data,
-                portfolio_value
-            )
-            
+
             # 🔥 SENTIMENT ANALYSIS
             sentiment = await self.sentiment_analyzer.analyze_token_sentiment(
                 token_mint,
                 token_data.get('symbol', 'UNKNOWN')
             )
-            
+
             # 🔥 COMMUNITY INTELLIGENCE
             community_signal = await self.community_intel.get_community_signal(token_mint)
+
+            enriched_token_data = dict(token_data)
+            if sentiment:
+                enriched_token_data['sentiment_score'] = sentiment.get(
+                    'sentiment_score',
+                    enriched_token_data.get('sentiment_score', 50)
+                )
+                enriched_token_data['social_mentions'] = sentiment.get(
+                    'total_mentions',
+                    enriched_token_data.get('social_mentions', 0)
+                )
+                enriched_token_data['social_score'] = sentiment.get(
+                    'social_score',
+                    enriched_token_data.get('social_score', 0)
+                )
+
+            if community_signal:
+                enriched_token_data['community_score'] = community_signal.get(
+                    'community_score',
+                    enriched_token_data.get('community_score', 0)
+                )
+
+            enriched_token_data.setdefault('social_score', enriched_token_data.get('sentiment_score', 0))
+            enriched_token_data.setdefault('community_score', 0.0)
+
+            # Get portfolio value
+            portfolio_value = await self._get_portfolio_value(user_id)
+
+            # 🔥 AI ANALYSIS
+            ai_analysis = await self.ai_manager.analyze_opportunity(
+                enriched_token_data,
+                portfolio_value,
+                sentiment_snapshot=sentiment,
+                community_signal=community_signal
+            )
             
             # Build comprehensive analysis
             ml_pred = ai_analysis.get('ml_prediction', {})
@@ -470,16 +615,18 @@ Key Factors: {key_factors_text}
 """
             
             # Check if sentiment data is available
-            twitter_mentions = sentiment.get('twitter', {}).get('mentions', 0)
-            if twitter_mentions > 0:
+            twitter_mentions = sentiment.get('twitter', {}).get('mentions', 0) if sentiment else 0
+            total_mentions = sentiment.get('total_mentions', 0) if sentiment else 0
+            if sentiment and (twitter_mentions > 0 or total_mentions > 0):
                 message += f"""Score: {sentiment['sentiment_score']:.1f}/100
+Social Mentions: {total_mentions}
 Twitter Mentions: {twitter_mentions}
-Viral Potential: {sentiment['viral_potential']:.1%}
+Viral Potential: {sentiment.get('viral_potential', 0):.1%}
 Going Viral: {"🔥 YES" if sentiment.get('twitter', {}).get('trending', False) else "No"}
 """
             else:
-                message += """⚠️ Not Available (API keys required)
-Configure TWITTER_API_KEY in .env for real-time sentiment
+                message += """No recent social chatter detected
+Connect Twitter/Reddit/Discord APIs for live data
 
 """
             
@@ -492,6 +639,16 @@ Flags: {community_signal['flag_count']}
 Sentiment: {community_signal['sentiment'].upper()}
 
 """
+
+            social_context = ai_analysis.get('social_context')
+            if social_context:
+                message += "\n*📡 SOCIAL & COMMUNITY IMPACT:*\n"
+                message += (
+                    f"Composite Bias: {social_context['label'].replace('_', ' ').title()} "
+                    f"({social_context['score'] * 100:.0f}/100)\n"
+                )
+                for insight in social_context.get('insights', [])[:3]:
+                    message += f"• {insight}\n"
             
             # Escape special characters in reasoning
             reasoning_text = str(ai_analysis['reasoning']).replace('|', '\\|').replace('_', '\\_')
@@ -686,32 +843,43 @@ Select amount per trade:
         if len(context.args) < 1:
             # Show who user is copying
             follower_id = update.effective_user.id
-            
+
             # Check active copies
-            if follower_id not in self.social_marketplace.active_copies:
+            user_copies = self.social_marketplace.active_copies.get(follower_id, {})
+            active_traders = [
+                trader_id
+                for trader_id, copy_settings in user_copies.items()
+                if copy_settings.get('enabled')
+            ]
+
+            if not active_traders:
                 await update.message.reply_text(
                     "You're not copying anyone.\n\n"
                     "Use /leaderboard to find traders to copy!"
                 )
                 return
-            
-            copy_settings = self.social_marketplace.active_copies[follower_id]
-            trader_id = copy_settings['trader_id']
-            trader = await self.social_marketplace.get_trader_profile(trader_id)
-            
-            if trader:
-                message = f"""👥 *STOP COPY TRADING*
 
-You're currently copying: *{trader.username}*
+            lines = []
+            for trader_id in active_traders:
+                trader = await self.social_marketplace.get_trader_profile(trader_id)
+                copy_settings = user_copies.get(trader_id, {})
+                trader_name = trader.username if trader else f"Trader {trader_id}"
+                max_amount = copy_settings.get('max_copy_amount', 0) or 0
+                lines.append(
+                    f"*{trader_name}* (ID: {trader_id})\n"
+                    f"Total copied: {copy_settings.get('total_copied', 0)} trades\n"
+                    f"Max per trade: {max_amount:.4f} SOL\n"
+                )
 
-Total copied: {copy_settings['total_copied']} trades
-Total profit: {copy_settings.get('total_profit', 0):+.4f} SOL
+            message = """👥 *ACTIVE COPY TRADES*
 
-Use: `/stop_copy {trader_id}` to stop
-"""
-                await update.message.reply_text(message, parse_mode='Markdown')
+{details}
+Use `/stop_copy <trader_id>` to stop copying a trader.
+""".format(details="\n".join(lines))
+
+            await update.message.reply_text(message, parse_mode='Markdown')
             return
-        
+
         try:
             trader_id = int(context.args[0])
             follower_id = update.effective_user.id
@@ -845,9 +1013,9 @@ Manual snipe:
         
         # Enable snipe
         await self.db.update_user_settings(user_id, {'snipe_enabled': True})
-        
+
         # Enable in sniper
-        self.sniper.enable_snipe(user_id)
+        await self.sniper.enable_snipe(user_id)
         
         message = """✅ AUTO-SNIPE ENABLED!
 
@@ -883,9 +1051,9 @@ Keep sufficient SOL balance for snipes!
         
         # Disable snipe
         await self.db.update_user_settings(user_id, {'snipe_enabled': False})
-        
+
         # Disable in sniper
-        self.sniper.disable_snipe(user_id)
+        await self.sniper.disable_snipe(user_id)
         
         await update.message.reply_text(
             "❌ AUTO-SNIPE DISABLED\n\n"
@@ -1707,7 +1875,9 @@ Use /rankings to see top wallets!
                 config,
                 self.wallet_intelligence,
                 self.jupiter,
-                self.elite_protection
+                self.elite_protection,
+                trade_executor=self.trade_executor,
+                monitor=self.monitor,
             )
         
         # Start automated trading (with database for loading tracked wallets)
@@ -2144,12 +2314,12 @@ Click *Get Started* to fund your trading wallet then:
             # Toggle
             new_status = not current_status
             await self.db.update_user_settings(user_id, {'snipe_enabled': new_status})
-            
+
             if new_status:
-                self.sniper.enable_snipe(user_id)
+                await self.sniper.enable_snipe(user_id)
                 status_msg = "✅ AUTO-SNIPE ENABLED!\n\nMonitoring new launches..."
             else:
-                self.sniper.disable_snipe(user_id)
+                await self.sniper.disable_snipe(user_id)
                 status_msg = "❌ AUTO-SNIPE DISABLED\n\nNo longer monitoring."
             
             await query.edit_message_text(status_msg, parse_mode=None)
@@ -2296,8 +2466,8 @@ Use /settings command to modify these settings
 /community <token> - Community ratings
 
 *💰 Trading Commands:*
-/buy <token> <amount> - Buy tokens
-/sell <token> <amount> - Sell tokens
+/buy <token_mint> <amount_sol> - Swap SOL into a token
+/sell <token_mint> [amount_tokens|all] - Exit an open position
 /snipe <token> - Snipe new launch
 /positions - View open positions
 
@@ -2362,54 +2532,18 @@ Use /settings command to modify these settings
         action: str
     ) -> Dict:
         """Execute AI-recommended trade using user's personal wallet"""
-        
+
+        if action != 'buy':
+            return {'success': False, 'error': 'Sell not implemented for AI trades yet'}
+
         try:
-            # 🔐 Get user's personal keypair
-            user_keypair = await self.wallet_manager.get_user_keypair(user_id)
-            
-            if not user_keypair:
-                return {'success': False, 'error': 'User wallet not found'}
-            
-            # Check user has sufficient balance
-            balance = await self.wallet_manager.get_user_balance(user_id)
-            if balance < amount:
-                return {
-                    'success': False,
-                    'error': f'Insufficient balance. You have {balance:.4f} SOL, need {amount:.4f} SOL'
-                }
-            
-            if action == 'buy':
-                async with self.jupiter:
-                    result = await self.jupiter.execute_swap(
-                        'So11111111111111111111111111111111111111112',  # SOL
-                        token_mint,
-                        int(amount * 1e9),  # Convert to lamports
-                        user_keypair  # 🔐 Use user's own wallet!
-                    )
-            else:
-                # Sell logic
-                result = {'success': False, 'error': 'Sell not implemented'}
-            
-            # Record trade
-            if result['success']:
-                await self.db.add_trade({
-                    'user_id': user_id,
-                    'signature': result['signature'],
-                    'trade_type': action,
-                    'token_mint': token_mint,
-                    'amount_sol': amount,
-                    'success': True
-                })
-                
-                # Award points
-                await self.rewards.award_points(
-                    user_id,
-                    REWARD_POINTS['successful_trade'],
-                    'Successful trade'
-                )
-            
-            return result
-            
+            return await self.trade_executor.execute_buy(
+                user_id,
+                token_mint,
+                amount,
+                reason='ai_signal',
+                context='ai_signal'
+            )
         except Exception as e:
             logger.error(f"Trade execution error: {e}")
             return {'success': False, 'error': str(e)}
@@ -2438,26 +2572,38 @@ Use /settings command to modify these settings
     async def _load_sniper_settings(self):
         """Load enabled sniper settings from database"""
         try:
-            # Get all user settings from database
-            # For now, we'll enable snipers as users activate them
-            logger.info("🎯 Sniper settings loaded from database")
+            loaded = await self.sniper.load_persistent_settings()
+            logger.info(
+                "🎯 Sniper settings loaded from database (%d profiles)",
+                len(loaded)
+            )
         except Exception as e:
             logger.error(f"Error loading sniper settings: {e}")
     
-    async def start(self):
+    async def start(self, shutdown_event: Optional[asyncio.Event] = None):
         """Start the bot (async version for runner script)"""
         # Initialize database tables
         await self.db.init_db()
-        
+
+        # Load persisted social trading state
+        await self.social_marketplace.initialize()
+
         # 🎯 Start auto-sniper monitoring
         await self.sniper.start()
         logger.info("🎯 Auto-sniper monitoring started")
-        
+
         # Load enabled snipers from database
         await self._load_sniper_settings()
-        
+
+        if shutdown_event is not None:
+            if shutdown_event.is_set():
+                shutdown_event.clear()
+            self._stop_event = shutdown_event
+        else:
+            self._stop_event = asyncio.Event()
+
         app = Application.builder().token(os.getenv('TELEGRAM_BOT_TOKEN')).build()
-        
+
         # Register all commands with aliases
         app.add_handler(CommandHandler("start", self.start_command))
         
@@ -2467,6 +2613,10 @@ Use /settings command to modify these settings
         app.add_handler(CommandHandler("balance", self.balance_command))
         app.add_handler(CommandHandler("export_wallet", self.export_wallet_command))
         app.add_handler(CommandHandler("export_keys", self.export_wallet_command))  # Alias
+
+        # Trading commands
+        app.add_handler(CommandHandler("buy", self.buy_command))
+        app.add_handler(CommandHandler("sell", self.sell_command))
         
         # Analysis commands (with short aliases)
         app.add_handler(CommandHandler("ai_analyze", self.ai_analyze_command))
@@ -2537,22 +2687,26 @@ Use /settings command to modify these settings
         await app.initialize()
         await app.start()
         await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
-        
+
         logger.info("Bot is now listening for commands...")
-        
-        # Keep running until stopped
-        while True:
-            await asyncio.sleep(1)
-    
+
+        if self._stop_event is not None:
+            await self._stop_event.wait()
+            logger.info("Shutdown signal received; stopping bot loop")
+
     async def stop(self):
         """Stop the bot gracefully"""
+        if self._stop_event and not self._stop_event.is_set():
+            self._stop_event.set()
+
         if hasattr(self, 'app') and self.app:
             logger.info("Stopping bot...")
             try:
                 # Stop sniper first
                 await self.sniper.stop()
-                
-                await self.app.updater.stop()
+
+                if getattr(self.app, "updater", None):
+                    await self.app.updater.stop()
                 await self.app.stop()
                 await self.app.shutdown()
                 logger.info("Bot stopped successfully")

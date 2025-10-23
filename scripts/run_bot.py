@@ -54,10 +54,7 @@ class BotRunner:
             self.bot = RevolutionaryTradingBot()
             
             # Start bot (this should be implemented in main.py)
-            await self.bot.start()
-            
-            # Wait for shutdown signal
-            await self.shutdown_event.wait()
+            await self.bot.start(self.shutdown_event)
             
         except KeyboardInterrupt:
             logger.info("Keyboard interrupt received")

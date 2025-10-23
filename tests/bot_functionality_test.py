@@ -57,6 +57,7 @@ class BotFunctionalityTester:
             self.wallet_manager = UserWalletManager(self.db, self.client)
             self.ai_manager = AIStrategyManager()
             self.social_marketplace = SocialTradingMarketplace(self.db)
+            await self.social_marketplace.initialize()
             self.community_intel = CommunityIntelligence()
             self.rewards = RewardSystem()
             
@@ -357,16 +358,44 @@ class BotFunctionalityTester:
                 'market_cap': 1000000,
                 'age_hours': 48,
                 'social_mentions': 50,
-                'sentiment_score': 65
+                'sentiment_score': 65,
+                'social_score': 70,
+                'community_score': 60
             }
-            
+
             # Get portfolio value
             portfolio_value = 1.0  # Mock value
-            
+
+            sentiment_snapshot = {
+                'sentiment_score': 72,
+                'social_score': 78,
+                'total_mentions': 120,
+                'viral_potential': 0.45,
+                'overall_recommendation': 'buy',
+                'twitter': {'mentions': 80, 'trending': True, 'sentiment_score': 74, 'influencer_mentions': 2},
+                'reddit': {'posts': 20, 'comments': 15, 'sentiment_score': 68},
+                'discord': {'mentions': 5, 'sentiment_score': 70}
+            }
+
+            community_signal = {
+                'community_score': 68,
+                'avg_rating': 4.2,
+                'total_ratings': 18,
+                'flag_count': 1,
+                'sentiment': 'positive'
+            }
+
+            token_data['sentiment_score'] = sentiment_snapshot['sentiment_score']
+            token_data['social_mentions'] = sentiment_snapshot['total_mentions']
+            token_data['social_score'] = sentiment_snapshot['social_score']
+            token_data['community_score'] = community_signal['community_score']
+
             # Run AI analysis
             ai_analysis = await self.ai_manager.analyze_opportunity(
                 token_data,
-                portfolio_value
+                portfolio_value,
+                sentiment_snapshot=sentiment_snapshot,
+                community_signal=community_signal
             )
             
             if ai_analysis and 'action' in ai_analysis:
