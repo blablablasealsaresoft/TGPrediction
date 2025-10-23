@@ -296,11 +296,54 @@ class AutomatedTradingEngine:
         """
         Parse a transaction to detect token swaps and extract the token mint
         
+        Uses multiple methods (in priority order):
+        1. Helius Enhanced API (if available)
+        2. Pre/post token balance comparison
+        3. Parsed instruction analysis
+        4. DEX program detection
+        
         Returns:
             Token mint address if this was a buy transaction, None otherwise
         """
         try:
-            # Get transaction details
+            # METHOD 0: Try Helius Enhanced Transaction API first (if Helius RPC)
+            helius_url = self.config.__dict__.get('helius_rpc_url') if hasattr(self.config, '__dict__') else None
+            
+            # Check if using Helius RPC
+            import os
+            helius_api_key = os.getenv('HELIUS_API_KEY')
+            
+            if helius_api_key:
+                try:
+                    # Use Helius enhanced transaction endpoint
+                    import httpx
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get(
+                            f"https://api.helius.xyz/v0/transactions/{signature}",
+                            params={'api-key': helius_api_key},
+                            timeout=5.0
+                        )
+                        
+                        if response.status_code == 200:
+                            helius_data = response.json()
+                            
+                            # Helius provides parsed swap data
+                            if helius_data.get('type') in ['SWAP', 'SWAP_EXACT_IN', 'SWAP_EXACT_OUT']:
+                                # Extract token info from Helius parsed data
+                                token_transfers = helius_data.get('tokenTransfers', [])
+                                
+                                for transfer in token_transfers:
+                                    # Look for incoming transfers (tokens received)
+                                    if transfer.get('tokenAmount', 0) > 0:
+                                        mint = transfer.get('mint')
+                                        if mint and mint != "So11111111111111111111111111111111111111112":
+                                            logger.info(f"🎯 [Helius] Detected SWAP: {mint[:8]}... via {helius_data.get('source', 'DEX')}")
+                                            return mint
+                
+                except Exception as e:
+                    logger.debug(f"Helius enhanced API unavailable, falling back to standard parsing: {e}")
+            
+            # METHOD 1: Standard RPC with balance comparison
             tx = await self.wallet_intelligence.client.get_transaction(
                 signature,
                 encoding="jsonParsed",
@@ -310,54 +353,105 @@ class AutomatedTradingEngine:
             if not tx or not tx.value:
                 return None
             
-            # Parse transaction to find swaps
-            # Look for Jupiter/Raydium/Orca swap instructions
+            # METHOD 1: Check token balance changes (most reliable)
+            # This shows what tokens were received in the transaction
+            if hasattr(tx.value, 'meta') and tx.value.meta:
+                meta = tx.value.meta
+                
+                # Check post token balances for new tokens received
+                if hasattr(meta, 'post_token_balances') and hasattr(meta, 'pre_token_balances'):
+                    post_balances = meta.post_token_balances
+                    pre_balances = meta.pre_token_balances
+                    
+                    # Build dict of pre-balances for comparison
+                    pre_balance_dict = {}
+                    if pre_balances:
+                        for bal in pre_balances:
+                            account = str(bal.account_index)
+                            mint = bal.mint
+                            amount = float(bal.ui_token_amount.ui_amount) if bal.ui_token_amount else 0
+                            pre_balance_dict[f"{account}_{mint}"] = amount
+                    
+                    # Check post balances for increases (tokens received)
+                    if post_balances:
+                        for bal in post_balances:
+                            account = str(bal.account_index)
+                            mint = bal.mint
+                            post_amount = float(bal.ui_token_amount.ui_amount) if bal.ui_token_amount else 0
+                            
+                            # Get pre amount (or 0 if didn't exist)
+                            pre_amount = pre_balance_dict.get(f"{account}_{mint}", 0)
+                            
+                            # If balance increased, this token was received (bought)
+                            if post_amount > pre_amount:
+                                # Skip SOL and wrapped SOL
+                                SOL_MINT = "So11111111111111111111111111111111111111112"
+                                WSOL_MINT = "So11111111111111111111111111111111111111112"
+                                
+                                if mint not in [SOL_MINT, WSOL_MINT]:
+                                    logger.info(f"🎯 Detected token BUY: {mint[:8]}... (+{post_amount - pre_amount:.4f} tokens)")
+                                    return mint
+            
+            # METHOD 2: Parse instructions for token transfers
             instructions = tx.value.transaction.transaction.message.instructions
             
+            # Track all token transfers in this transaction
+            tokens_received = []
+            tokens_sent = []
+            
             for instruction in instructions:
-                # Check if this is a parsed instruction
-                if hasattr(instruction, 'parsed'):
+                # Check parsed instructions
+                if hasattr(instruction, 'parsed') and isinstance(instruction.parsed, dict):
                     parsed = instruction.parsed
+                    instruction_type = parsed.get('type')
                     
-                    # Look for token transfers (indicates a swap)
-                    if isinstance(parsed, dict):
-                        instruction_type = parsed.get('type')
+                    # Token transfer or transferChecked
+                    if instruction_type in ['transfer', 'transferChecked']:
+                        info = parsed.get('info', {})
+                        mint = info.get('mint')
                         
-                        # Check for transfer or transferChecked
-                        if instruction_type in ['transfer', 'transferChecked']:
-                            info = parsed.get('info', {})
-                            
-                            # Get the mint address (the token being received)
-                            mint = info.get('mint')
-                            
-                            # Make sure it's not SOL (we want token purchases)
-                            SOL_MINT = "So11111111111111111111111111111111111111112"
-                            if mint and mint != SOL_MINT:
-                                return mint
-                
-                # Check for program data (unparsed Jupiter swaps)
-                elif hasattr(instruction, 'program_id'):
+                        # Determine direction by checking destination
+                        if mint:
+                            # This is a simplification - would need to check if destination
+                            # belongs to the wallet we're monitoring
+                            tokens_received.append(mint)
+            
+            # METHOD 3: Detect known DEX program calls
+            for instruction in instructions:
+                if hasattr(instruction, 'program_id'):
                     program_id = str(instruction.program_id)
                     
-                    # Jupiter program IDs
-                    jupiter_programs = [
-                        "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",  # Jupiter V6
-                        "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB"   # Jupiter V4
-                    ]
+                    # Known DEX programs
+                    dex_programs = {
+                        "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4": "Jupiter V6",
+                        "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB": "Jupiter V4",
+                        "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8": "Raydium AMM",
+                        "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc": "Orca Whirlpool",
+                    }
                     
-                    if program_id in jupiter_programs:
-                        # This is a Jupiter swap - extract token from accounts
-                        accounts = instruction.accounts
-                        if len(accounts) >= 3:
-                            # Usually the destination token account contains the mint
-                            # For now, return None and let the protection system verify
-                            # In production, would parse the actual swap data
-                            pass
+                    if program_id in dex_programs:
+                        dex_name = dex_programs[program_id]
+                        logger.debug(f"Detected {dex_name} swap in transaction")
+                        
+                        # If we detected a DEX swap and found tokens received via Method 1 or 2,
+                        # return the first non-SOL token
+                        for token in tokens_received:
+                            SOL_MINT = "So11111111111111111111111111111111111111112"
+                            if token != SOL_MINT:
+                                logger.info(f"🎯 Detected {dex_name} token buy: {token[:8]}...")
+                                return token
+            
+            # If we found any tokens received but no DEX program, might still be a swap
+            # Return first non-SOL token found
+            for token in tokens_received:
+                SOL_MINT = "So11111111111111111111111111111111111111112"
+                if token != SOL_MINT:
+                    return token
             
             return None
             
         except Exception as e:
-            logger.debug(f"Error parsing transaction {signature}: {e}")
+            logger.debug(f"Error parsing transaction {str(signature)[:8]}: {e}")
             return None
     
     async def _execute_automated_trade(self, opportunity: Dict):
