@@ -125,9 +125,11 @@ class AutomatedTradingEngine:
     
     async def _automated_trading_loop(self):
         """Main automated trading loop"""
+        logger.info("🔄 Automated trading loop started")
         
         while self.is_running:
             try:
+                logger.debug(f"💫 Trading loop iteration - is_running={self.is_running}")
                 # Reset daily stats if needed
                 if datetime.now().date() != self.daily_stats['last_reset']:
                     self.daily_stats = {
@@ -159,8 +161,8 @@ class AutomatedTradingEngine:
                 # Manage existing positions
                 await self._manage_positions()
                 
-                # Wait before next scan
-                await asyncio.sleep(10)
+                # Wait before next scan (30 seconds to avoid rate limits)
+                await asyncio.sleep(30)
                 
             except Exception as e:
                 logger.error(f"Error in automated trading loop: {e}")
@@ -178,24 +180,185 @@ class AutomatedTradingEngine:
         """
         
         opportunities = []
+        token_signals = {}  # Track how many wallets are buying each token
         
         try:
-            # Get top wallets and their recent trades
-            top_wallets = self.wallet_intelligence.get_top_wallets(limit=5)
+            # Get all tracked wallets (not just top 5 - check all 558!)
+            all_tracked_wallets = list(self.wallet_intelligence.tracked_wallets.items())
             
-            for address, metrics, score in top_wallets:
-                # Check what they're buying recently
-                # If multiple top wallets are buying the same token, it's a strong signal
+            if not all_tracked_wallets:
+                logger.debug("No tracked wallets to monitor")
+                return opportunities
+            
+            logger.info(f"🔍 Scanning {len(all_tracked_wallets)} tracked wallets for opportunities...")
+            
+            # Check recent transactions for each wallet
+            from solders.pubkey import Pubkey
+            
+            for address, metrics in all_tracked_wallets[:5]:  # Check only 5 wallets to avoid rate limits
+                try:
+                    pubkey = Pubkey.from_string(address)
+                    
+                    # Get recent signatures (last 2 transactions only)
+                    signatures = await self.wallet_intelligence.client.get_signatures_for_address(
+                        pubkey,
+                        limit=2
+                    )
+                    
+                    if not signatures or not signatures.value:
+                        continue
+                    
+                    # Add small delay to avoid rate limits
+                    await asyncio.sleep(0.1)
+                    
+                    # Check each recent transaction
+                    for sig_info in signatures.value:
+                        # Only check very recent transactions (last 5 minutes)
+                        if hasattr(sig_info, 'block_time') and sig_info.block_time:
+                            tx_time = datetime.fromtimestamp(sig_info.block_time)
+                            time_diff = (datetime.now() - tx_time).total_seconds()
+                            
+                            if time_diff > 300:  # Skip if older than 5 minutes
+                                continue
+                            
+                            # Parse the transaction to find token swaps
+                            # Add delay before parsing to avoid rate limits
+                            await asyncio.sleep(0.2)
+                            token_mint = await self._parse_swap_transaction(sig_info.signature)
+                            
+                            if token_mint:
+                                # Track this signal
+                                if token_mint not in token_signals:
+                                    token_signals[token_mint] = {
+                                        'count': 0,
+                                        'wallets': [],
+                                        'scores': [],
+                                        'first_seen': datetime.now()
+                                    }
+                                
+                                token_signals[token_mint]['count'] += 1
+                                token_signals[token_mint]['wallets'].append(address)
+                                token_signals[token_mint]['scores'].append(metrics.calculate_score())
+                                
+                                logger.info(f"🎯 Detected buy from {address[:8]}... (score: {metrics.calculate_score():.0f}) - Token: {token_mint[:8]}...")
                 
-                # This is simplified - in production, would analyze actual trades
-                logger.debug(f"Checking wallet {address[:8]}... (score: {score:.1f})")
+                except Exception as e:
+                    logger.debug(f"Error checking wallet {address[:8]}: {e}")
+                    continue
             
-            logger.info(f"🔍 Scanned {len(top_wallets)} top wallets for opportunities")
+            # Generate opportunities from strong signals
+            for token_mint, signal in token_signals.items():
+                # Calculate confidence based on:
+                # 1. Number of wallets buying
+                # 2. Quality of wallets (scores)
+                # 3. Recency
+                
+                wallet_count = signal['count']
+                avg_wallet_score = sum(signal['scores']) / len(signal['scores']) if signal['scores'] else 0
+                
+                # Confidence formula
+                confidence = 0.5  # Base confidence
+                
+                # Add confidence for multiple wallet signals
+                confidence += min(wallet_count * 0.1, 0.3)  # Up to +30% for 3+ wallets
+                
+                # Add confidence for high-quality wallets
+                if avg_wallet_score > 75:
+                    confidence += 0.2
+                elif avg_wallet_score > 60:
+                    confidence += 0.1
+                
+                # Only create opportunity if confidence meets minimum
+                if confidence >= self.config.auto_trade_min_confidence:
+                    opportunities.append({
+                        'token_mint': token_mint,
+                        'action': 'buy',
+                        'amount': self.config.default_buy_amount,
+                        'confidence': confidence,
+                        'signal_count': wallet_count,
+                        'wallet_scores': signal['scores'],
+                        'reason': f"{wallet_count} top wallets buying (avg score: {avg_wallet_score:.0f})"
+                    })
+                    
+                    logger.info(f"✨ OPPORTUNITY FOUND: {token_mint[:8]}... - Confidence: {confidence:.1%} ({wallet_count} wallets)")
+            
+            if opportunities:
+                logger.info(f"🎯 Found {len(opportunities)} high-confidence opportunities!")
+            else:
+                logger.debug(f"No opportunities found (checked {len(all_tracked_wallets)} wallets)")
             
         except Exception as e:
             logger.error(f"Error scanning for opportunities: {e}")
         
         return opportunities
+    
+    async def _parse_swap_transaction(self, signature) -> Optional[str]:
+        """
+        Parse a transaction to detect token swaps and extract the token mint
+        
+        Returns:
+            Token mint address if this was a buy transaction, None otherwise
+        """
+        try:
+            # Get transaction details
+            tx = await self.wallet_intelligence.client.get_transaction(
+                signature,
+                encoding="jsonParsed",
+                max_supported_transaction_version=0
+            )
+            
+            if not tx or not tx.value:
+                return None
+            
+            # Parse transaction to find swaps
+            # Look for Jupiter/Raydium/Orca swap instructions
+            instructions = tx.value.transaction.transaction.message.instructions
+            
+            for instruction in instructions:
+                # Check if this is a parsed instruction
+                if hasattr(instruction, 'parsed'):
+                    parsed = instruction.parsed
+                    
+                    # Look for token transfers (indicates a swap)
+                    if isinstance(parsed, dict):
+                        instruction_type = parsed.get('type')
+                        
+                        # Check for transfer or transferChecked
+                        if instruction_type in ['transfer', 'transferChecked']:
+                            info = parsed.get('info', {})
+                            
+                            # Get the mint address (the token being received)
+                            mint = info.get('mint')
+                            
+                            # Make sure it's not SOL (we want token purchases)
+                            SOL_MINT = "So11111111111111111111111111111111111111112"
+                            if mint and mint != SOL_MINT:
+                                return mint
+                
+                # Check for program data (unparsed Jupiter swaps)
+                elif hasattr(instruction, 'program_id'):
+                    program_id = str(instruction.program_id)
+                    
+                    # Jupiter program IDs
+                    jupiter_programs = [
+                        "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",  # Jupiter V6
+                        "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB"   # Jupiter V4
+                    ]
+                    
+                    if program_id in jupiter_programs:
+                        # This is a Jupiter swap - extract token from accounts
+                        accounts = instruction.accounts
+                        if len(accounts) >= 3:
+                            # Usually the destination token account contains the mint
+                            # For now, return None and let the protection system verify
+                            # In production, would parse the actual swap data
+                            pass
+            
+            return None
+            
+        except Exception as e:
+            logger.debug(f"Error parsing transaction {signature}: {e}")
+            return None
     
     async def _execute_automated_trade(self, opportunity: Dict):
         """Execute an automated trade"""

@@ -1391,15 +1391,26 @@ Use /rankings to see top wallets!
             )
         
         # Start automated trading (with database for loading tracked wallets)
-        await self.auto_trader.start_automated_trading(
-            user_id,
-            user_keypair,
-            self.wallet_manager,
-            self.db  # Pass database manager to load tracked wallets
-        )
-        
-        # 🎯 Register auto-trader with sniper for position tracking
-        self.sniper.register_auto_trader(self.auto_trader)
+        try:
+            logger.info(f"🎯 Starting automated trading for user {user_id}...")
+            await self.auto_trader.start_automated_trading(
+                user_id,
+                user_keypair,
+                self.wallet_manager,
+                self.db  # Pass database manager to load tracked wallets
+            )
+            logger.info(f"✅ Automated trading successfully started for user {user_id}")
+            
+            # 🎯 Register auto-trader with sniper for position tracking
+            self.sniper.register_auto_trader(self.auto_trader)
+            
+        except Exception as e:
+            logger.error(f"❌ ERROR starting automated trading: {e}", exc_info=True)
+            await update.message.reply_text(
+                f"❌ Error starting automated trading:\n{str(e)}\n\n"
+                "Please contact support if this persists."
+            )
+            return
         
         message = """🤖 AUTOMATED TRADING STARTED!
 
