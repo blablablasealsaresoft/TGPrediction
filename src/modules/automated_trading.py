@@ -16,7 +16,10 @@ FEATURES:
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from types import SimpleNamespace
+from typing import Dict, List, Optional, Tuple, Set
+
+from solders.pubkey import Pubkey
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -55,12 +58,22 @@ class AutomatedTradingEngine:
     - Auto stop losses and take profits
     """
     
-    def __init__(self, config: TradingConfig, wallet_intelligence, jupiter_client, protection_system):
+    def __init__(
+        self,
+        config: TradingConfig,
+        wallet_intelligence,
+        jupiter_client,
+        protection_system,
+        trade_executor=None,
+        monitor=None,
+    ):
         self.config = config
         self.wallet_intelligence = wallet_intelligence
         self.jupiter = jupiter_client
         self.protection = protection_system
-        
+        self.trade_executor = trade_executor
+        self.monitor = monitor
+
         self.active_positions: Dict[str, Dict] = {}
         self.daily_stats = {
             'trades': 0,
@@ -68,9 +81,21 @@ class AutomatedTradingEngine:
             'last_reset': datetime.now().date()
         }
         self.is_running = False
-        
+
+        # Cache the last processed signature per wallet so we do not
+        # re-process historical activity every scan.
+        self._wallet_last_signature: Dict[str, str] = {}
+
+        # Cache decoded transactions to avoid hammering the RPC endpoint.
+        self._transaction_cache: Dict[str, Dict[str, object]] = {}
+        self._transaction_cache_ttl = timedelta(minutes=10)
+
+        # User risk configuration cache (refreshes periodically)
+        self._user_settings: Optional[SimpleNamespace] = None
+        self._settings_loaded_at: Optional[datetime] = None
+
         logger.info("🤖 Automated Trading Engine initialized")
-    
+
     async def start_automated_trading(self, user_id: int, user_keypair, wallet_manager, db_manager=None):
         """Start automated trading for user"""
         self.is_running = True
@@ -78,7 +103,10 @@ class AutomatedTradingEngine:
         self.user_keypair = user_keypair
         self.wallet_manager = wallet_manager
         self.db = db_manager
-        
+
+        if self.db:
+            await self._get_user_settings(force_refresh=True)
+
         logger.info(f"🤖 Automated trading STARTED for user {user_id}")
         
         # Load tracked wallets from database
@@ -130,6 +158,8 @@ class AutomatedTradingEngine:
         while self.is_running:
             try:
                 logger.debug(f"💫 Trading loop iteration - is_running={self.is_running}")
+                settings = await self._get_user_settings()
+
                 # Reset daily stats if needed
                 if datetime.now().date() != self.daily_stats['last_reset']:
                     self.daily_stats = {
@@ -145,7 +175,22 @@ class AutomatedTradingEngine:
                     await asyncio.sleep(60)
                     continue
                 
-                if abs(self.daily_stats['profit_loss']) >= self.config.max_daily_loss_sol:
+                if self.db:
+                    daily_pnl = await self.db.get_daily_pnl(self.user_id)
+                    self.daily_stats['profit_loss'] = daily_pnl
+
+                    if settings.daily_loss_limit_sol > 0 and daily_pnl <= -settings.daily_loss_limit_sol:
+                        logger.warning(
+                            "Daily loss limit reached (%.4f <= -%.4f SOL) - pausing trading",
+                            daily_pnl,
+                            settings.daily_loss_limit_sol,
+                        )
+                        await asyncio.sleep(300)
+                        continue
+                elif (
+                    settings.daily_loss_limit_sol > 0
+                    and abs(self.daily_stats['profit_loss']) >= settings.daily_loss_limit_sol
+                ):
                     logger.warning("Daily loss limit reached - pausing trading")
                     await asyncio.sleep(300)
                     continue
@@ -156,10 +201,10 @@ class AutomatedTradingEngine:
                 # Execute high-confidence opportunities
                 for opp in opportunities:
                     if opp['confidence'] >= self.config.auto_trade_min_confidence:
-                        await self._execute_automated_trade(opp)
-                
+                        await self._execute_automated_trade(opp, settings)
+
                 # Manage existing positions
-                await self._manage_positions()
+                await self._manage_positions(settings)
                 
                 # Wait before next scan (30 seconds to avoid rate limits)
                 await asyncio.sleep(30)
@@ -185,67 +230,90 @@ class AutomatedTradingEngine:
         try:
             # Get all tracked wallets (not just top 5 - check all 558!)
             all_tracked_wallets = list(self.wallet_intelligence.tracked_wallets.items())
-            
+
             if not all_tracked_wallets:
                 logger.debug("No tracked wallets to monitor")
                 return opportunities
-            
-            logger.info(f"🔍 Scanning {len(all_tracked_wallets)} tracked wallets for opportunities...")
-            
-            # Check recent transactions for each wallet
-            from solders.pubkey import Pubkey
-            
-            for address, metrics in all_tracked_wallets[:5]:  # Check only 5 wallets to avoid rate limits
-                try:
-                    pubkey = Pubkey.from_string(address)
-                    
-                    # Get recent signatures (last 2 transactions only)
-                    signatures = await self.wallet_intelligence.client.get_signatures_for_address(
-                        pubkey,
-                        limit=2
-                    )
-                    
-                    if not signatures or not signatures.value:
+
+            wallet_count = len(all_tracked_wallets)
+            logger.info(f"🔍 Scanning {wallet_count} tracked wallets for opportunities...")
+
+            scan_started = datetime.now()
+            rpc_requests = 0
+            wallets_with_activity: Set[str] = set()
+
+            batch_size = 20
+
+            for batch_start in range(0, wallet_count, batch_size):
+                batch = all_tracked_wallets[batch_start: batch_start + batch_size]
+
+                signature_tasks = [
+                    self._fetch_recent_signatures(address)
+                    for address, _ in batch
+                ]
+
+                batch_results = await asyncio.gather(*signature_tasks, return_exceptions=True)
+
+                for (address, metrics), result in zip(batch, batch_results):
+                    if isinstance(result, Exception):
+                        logger.debug(f"Error retrieving signatures for {address[:8]}: {result}")
                         continue
-                    
-                    # Add small delay to avoid rate limits
-                    await asyncio.sleep(0.1)
-                    
-                    # Check each recent transaction
-                    for sig_info in signatures.value:
-                        # Only check very recent transactions (last 5 minutes)
+
+                    rpc_requests += result['rpc_calls']
+                    signatures = result['signatures']
+
+                    if not signatures:
+                        continue
+
+                    newest_signature: Optional[str] = None
+                    last_processed = self._wallet_last_signature.get(address)
+
+                    for sig_info in signatures:
+                        sig_value = getattr(sig_info, 'signature', None)
+                        sig_str = str(sig_value) if sig_value else None
+
+                        if not sig_str:
+                            continue
+
+                        if newest_signature is None:
+                            newest_signature = sig_str
+
+                        if sig_str == last_processed:
+                            break
+
                         if hasattr(sig_info, 'block_time') and sig_info.block_time:
                             tx_time = datetime.fromtimestamp(sig_info.block_time)
-                            time_diff = (datetime.now() - tx_time).total_seconds()
-                            
-                            if time_diff > 300:  # Skip if older than 5 minutes
+                            if (datetime.now() - tx_time).total_seconds() > 300:
                                 continue
-                            
-                            # Parse the transaction to find token swaps
-                            # Add delay before parsing to avoid rate limits
-                            await asyncio.sleep(0.2)
-                            token_mint = await self._parse_swap_transaction(sig_info.signature)
-                            
-                            if token_mint:
-                                # Track this signal
-                                if token_mint not in token_signals:
-                                    token_signals[token_mint] = {
-                                        'count': 0,
-                                        'wallets': [],
-                                        'scores': [],
-                                        'first_seen': datetime.now()
-                                    }
-                                
-                                token_signals[token_mint]['count'] += 1
-                                token_signals[token_mint]['wallets'].append(address)
-                                token_signals[token_mint]['scores'].append(metrics.calculate_score())
-                                
-                                logger.info(f"🎯 Detected buy from {address[:8]}... (score: {metrics.calculate_score():.0f}) - Token: {token_mint[:8]}...")
-                
-                except Exception as e:
-                    logger.debug(f"Error checking wallet {address[:8]}: {e}")
-                    continue
-            
+
+                        token_mint, tx_rpc_calls = await self._parse_swap_transaction(sig_str)
+                        rpc_requests += tx_rpc_calls
+
+                        if token_mint:
+                            wallets_with_activity.add(address)
+
+                            if token_mint not in token_signals:
+                                token_signals[token_mint] = {
+                                    'count': 0,
+                                    'wallets': [],
+                                    'scores': [],
+                                    'first_seen': datetime.now()
+                                }
+
+                            token_signals[token_mint]['count'] += 1
+                            token_signals[token_mint]['wallets'].append(address)
+                            token_signals[token_mint]['scores'].append(metrics.calculate_score())
+
+                            logger.info(
+                                f"🎯 Detected buy from {address[:8]}... (score: {metrics.calculate_score():.0f}) - Token: {token_mint[:8]}..."
+                            )
+
+                    if newest_signature:
+                        self._wallet_last_signature[address] = newest_signature
+
+                # Brief pause between batches to remain within rate limits
+                await asyncio.sleep(0.05)
+
             # Generate opportunities from strong signals
             for token_mint, signal in token_signals.items():
                 # Calculate confidence based on:
@@ -281,21 +349,68 @@ class AutomatedTradingEngine:
                     })
                     
                     logger.info(f"✨ OPPORTUNITY FOUND: {token_mint[:8]}... - Confidence: {confidence:.1%} ({wallet_count} wallets)")
-            
+
             if opportunities:
                 logger.info(f"🎯 Found {len(opportunities)} high-confidence opportunities!")
             else:
                 logger.debug(f"No opportunities found (checked {len(all_tracked_wallets)} wallets)")
-            
+
+            scan_duration = (datetime.now() - scan_started).total_seconds()
+            if self.monitor:
+                self.monitor.record_metric(
+                    'automated_trader.scan_duration_seconds',
+                    scan_duration,
+                    tags={'wallets_total': wallet_count}
+                )
+                self.monitor.record_metric(
+                    'automated_trader.rpc_requests',
+                    rpc_requests,
+                    tags={'wallets_with_activity': len(wallets_with_activity)}
+                )
+                self.monitor.record_metric(
+                    'automated_trader.opportunities_found',
+                    len(opportunities),
+                )
+
         except Exception as e:
             logger.error(f"Error scanning for opportunities: {e}")
-        
+
         return opportunities
-    
-    async def _parse_swap_transaction(self, signature) -> Optional[str]:
+
+    async def _fetch_recent_signatures(self, address: str, limit: int = 3) -> Dict[str, object]:
+        """Fetch recent signatures for an address with monitoring instrumentation."""
+
+        rpc_calls = 0
+
+        try:
+            pubkey = Pubkey.from_string(address)
+        except Exception as exc:
+            logger.debug(f"Invalid wallet address {address[:8]}: {exc}")
+            return {'signatures': [], 'rpc_calls': rpc_calls}
+
+        try:
+            if self.monitor:
+                self.monitor.record_request()
+
+            signatures = await self.wallet_intelligence.client.get_signatures_for_address(
+                pubkey,
+                limit=limit
+            )
+            rpc_calls += 1
+
+            return {
+                'signatures': signatures.value if signatures and signatures.value else [],
+                'rpc_calls': rpc_calls
+            }
+
+        except Exception as exc:
+            logger.debug(f"Error fetching signatures for {address[:8]}: {exc}")
+            return {'signatures': [], 'rpc_calls': rpc_calls}
+
+    async def _parse_swap_transaction(self, signature: str) -> Tuple[Optional[str], int]:
         """
         Parse a transaction to detect token swaps and extract the token mint
-        
+
         Uses multiple methods (in priority order):
         1. Helius Enhanced API (if available)
         2. Pre/post token balance comparison
@@ -303,21 +418,31 @@ class AutomatedTradingEngine:
         4. DEX program detection
         
         Returns:
-            Token mint address if this was a buy transaction, None otherwise
+            Tuple of (token mint address if this was a buy transaction, RPC call count)
         """
+        rpc_calls = 0
+
+        cached = self._transaction_cache.get(signature)
+        if cached:
+            cached_at = cached.get('timestamp')
+            if cached_at and (datetime.now() - cached_at) < self._transaction_cache_ttl:
+                return cached.get('mint'), rpc_calls
+            # Cache expired, remove so we refresh
+            self._transaction_cache.pop(signature, None)
+
         try:
             # METHOD 0: Try Helius Enhanced Transaction API first (if Helius RPC)
-            helius_url = self.config.__dict__.get('helius_rpc_url') if hasattr(self.config, '__dict__') else None
-            
-            # Check if using Helius RPC
             import os
             helius_api_key = os.getenv('HELIUS_API_KEY')
-            
+
             if helius_api_key:
                 try:
                     # Use Helius enhanced transaction endpoint
                     import httpx
                     async with httpx.AsyncClient() as client:
+                        if self.monitor:
+                            self.monitor.record_request()
+                        rpc_calls += 1
                         response = await client.get(
                             f"https://api.helius.xyz/v0/transactions/{signature}",
                             params={'api-key': helius_api_key},
@@ -338,20 +463,31 @@ class AutomatedTradingEngine:
                                         mint = transfer.get('mint')
                                         if mint and mint != "So11111111111111111111111111111111111111112":
                                             logger.info(f"🎯 [Helius] Detected SWAP: {mint[:8]}... via {helius_data.get('source', 'DEX')}")
-                                            return mint
-                
+                                            self._transaction_cache[signature] = {
+                                                'timestamp': datetime.now(),
+                                                'mint': mint
+                                            }
+                                            return mint, rpc_calls
+
                 except Exception as e:
                     logger.debug(f"Helius enhanced API unavailable, falling back to standard parsing: {e}")
-            
+
             # METHOD 1: Standard RPC with balance comparison
+            if self.monitor:
+                self.monitor.record_request()
             tx = await self.wallet_intelligence.client.get_transaction(
                 signature,
                 encoding="jsonParsed",
                 max_supported_transaction_version=0
             )
-            
+            rpc_calls += 1
+
             if not tx or not tx.value:
-                return None
+                self._transaction_cache[signature] = {
+                    'timestamp': datetime.now(),
+                    'mint': None
+                }
+                return None, rpc_calls
             
             # METHOD 1: Check token balance changes (most reliable)
             # This shows what tokens were received in the transaction
@@ -390,7 +526,11 @@ class AutomatedTradingEngine:
                                 
                                 if mint not in [SOL_MINT, WSOL_MINT]:
                                     logger.info(f"🎯 Detected token BUY: {mint[:8]}... (+{post_amount - pre_amount:.4f} tokens)")
-                                    return mint
+                                    self._transaction_cache[signature] = {
+                                        'timestamp': datetime.now(),
+                                        'mint': mint
+                                    }
+                                    return mint, rpc_calls
             
             # METHOD 2: Parse instructions for token transfers
             instructions = tx.value.transaction.transaction.message.instructions
@@ -432,71 +572,123 @@ class AutomatedTradingEngine:
                     if program_id in dex_programs:
                         dex_name = dex_programs[program_id]
                         logger.debug(f"Detected {dex_name} swap in transaction")
-                        
+
                         # If we detected a DEX swap and found tokens received via Method 1 or 2,
                         # return the first non-SOL token
                         for token in tokens_received:
                             SOL_MINT = "So11111111111111111111111111111111111111112"
                             if token != SOL_MINT:
                                 logger.info(f"🎯 Detected {dex_name} token buy: {token[:8]}...")
-                                return token
+                                self._transaction_cache[signature] = {
+                                    'timestamp': datetime.now(),
+                                    'mint': token
+                                }
+                                return token, rpc_calls
             
             # If we found any tokens received but no DEX program, might still be a swap
             # Return first non-SOL token found
             for token in tokens_received:
                 SOL_MINT = "So11111111111111111111111111111111111111112"
                 if token != SOL_MINT:
-                    return token
+                    self._transaction_cache[signature] = {
+                        'timestamp': datetime.now(),
+                        'mint': token
+                    }
+                    return token, rpc_calls
             
-            return None
+            self._transaction_cache[signature] = {
+                'timestamp': datetime.now(),
+                'mint': None
+            }
+            return None, rpc_calls
             
         except Exception as e:
             logger.debug(f"Error parsing transaction {str(signature)[:8]}: {e}")
-            return None
+            self._transaction_cache[signature] = {
+                'timestamp': datetime.now(),
+                'mint': None
+            }
+            return None, rpc_calls
     
-    async def _execute_automated_trade(self, opportunity: Dict):
+    async def _execute_automated_trade(self, opportunity: Dict, settings: Optional[SimpleNamespace] = None):
         """Execute an automated trade"""
-        
+
         try:
             token_mint = opportunity.get('token_mint')
             action = opportunity.get('action', 'buy')
             amount = opportunity.get('amount', self.config.default_buy_amount)
             confidence = opportunity.get('confidence', 0.0)
-            
+
+            if settings is None:
+                settings = await self._get_user_settings()
+
             logger.info(f"🎯 Executing automated trade: {action} {amount} SOL of {token_mint[:8]}... (confidence: {confidence:.1%})")
-            
+
             # Run protection checks
             if action == 'buy':
                 protection_result = await self.protection.comprehensive_token_check(token_mint)
-                
+
                 if not protection_result['is_safe']:
                     logger.warning(f"⚠️ Token failed safety checks, skipping trade")
                     return
-            
-            # Execute trade via Jupiter with Jito protection
-            SOL_MINT = "So11111111111111111111111111111111111111112"
-            
+
+            if not self.trade_executor:
+                logger.error("Trade executor is not configured for automated trading")
+                return
+
+            amount = min(amount, settings.max_trade_size_sol)
+            if amount <= 0:
+                logger.debug("Configured max trade size prevents automated trade for user %s", self.user_id)
+                return
+
+            metadata = {
+                'opportunity': opportunity.get('source'),
+                'confidence': confidence,
+                'wallet_signal': opportunity.get('wallet_address'),
+            }
+
             if action == 'buy':
-                result = await self.jupiter.execute_swap_with_jito(
-                    input_mint=SOL_MINT,
-                    output_mint=token_mint,
-                    amount=int(amount * 1e9),
-                    keypair=self.user_keypair,
-                    slippage_bps=int(self.config.max_slippage * 10000)
+                result = await self.trade_executor.execute_buy(
+                    self.user_id,
+                    token_mint,
+                    amount,
+                    token_symbol=opportunity.get('token_symbol'),
+                    reason='automated_trader',
+                    context='auto_trader',
+                    execution_mode='jito',
+                    metadata=metadata,
                 )
             else:
-                # Sell logic
-                result = {'success': False, 'error': 'Sell not implemented'}
-            
+                result = await self.trade_executor.execute_sell(
+                    self.user_id,
+                    token_mint,
+                    token_symbol=opportunity.get('token_symbol'),
+                    reason='automated_trader',
+                    context='auto_trader',
+                    metadata=metadata,
+                )
+
             if result.get('success'):
+                stop_loss_pct = None
+                take_profit_pct = None
+
+                if settings.use_stop_loss and settings.default_stop_loss_percentage:
+                    stop_loss_pct = max(settings.default_stop_loss_percentage, 0.0) / 100.0
+
+                if settings.use_take_profit and settings.default_take_profit_percentage:
+                    take_profit_pct = max(settings.default_take_profit_percentage, 0.0) / 100.0
+
                 # Record position
                 self.active_positions[token_mint] = {
-                    'entry_price': opportunity.get('price', 0),
+                    'entry_price': result.get('price') or opportunity.get('price', 0),
                     'amount': amount,
                     'timestamp': datetime.now(),
-                    'confidence': confidence
+                    'confidence': confidence,
+                    'token_symbol': opportunity.get('token_symbol'),
+                    'stop_loss_pct': stop_loss_pct,
+                    'take_profit_pct': take_profit_pct,
                 }
-                
+
                 # Update stats
                 self.daily_stats['trades'] += 1
                 
@@ -507,15 +699,18 @@ class AutomatedTradingEngine:
         except Exception as e:
             logger.error(f"Error executing automated trade: {e}")
     
-    async def _manage_positions(self):
+    async def _manage_positions(self, settings: Optional[SimpleNamespace] = None):
         """
         📊 MANAGE OPEN POSITIONS
-        
+
         - Check stop losses
         - Check take profits
         - Implement trailing stops
         """
-        
+
+        if settings is None:
+            settings = await self._get_user_settings()
+
         for token_mint, position in list(self.active_positions.items()):
             try:
                 # Get current price
@@ -526,19 +721,27 @@ class AutomatedTradingEngine:
                 
                 entry_price = position['entry_price']
                 pnl_pct = (current_price - entry_price) / entry_price if entry_price > 0 else 0
-                
+
                 # Check stop loss
-                if pnl_pct <= -self.config.stop_loss_percentage:
+                stop_loss_pct = position.get('stop_loss_pct')
+                if stop_loss_pct is None and settings.use_stop_loss and settings.default_stop_loss_percentage:
+                    stop_loss_pct = max(settings.default_stop_loss_percentage, 0.0) / 100.0
+
+                if stop_loss_pct is not None and pnl_pct <= -stop_loss_pct:
                     logger.info(f"🛑 Stop loss triggered for {token_mint[:8]}... (PnL: {pnl_pct:.1%})")
                     await self._close_position(token_mint, "STOP_LOSS", pnl_pct)
                     continue
-                
+
                 # Check take profit
-                if pnl_pct >= self.config.take_profit_percentage:
+                take_profit_pct = position.get('take_profit_pct')
+                if take_profit_pct is None and settings.use_take_profit and settings.default_take_profit_percentage:
+                    take_profit_pct = max(settings.default_take_profit_percentage, 0.0) / 100.0
+
+                if take_profit_pct is not None and pnl_pct >= take_profit_pct:
                     logger.info(f"💰 Take profit triggered for {token_mint[:8]}... (PnL: {pnl_pct:.1%})")
                     await self._close_position(token_mint, "TAKE_PROFIT", pnl_pct)
                     continue
-                
+
                 # Implement trailing stop
                 if pnl_pct > 0:
                     if 'highest_price' not in position:
@@ -571,47 +774,93 @@ class AutomatedTradingEngine:
             # Calculate P&L
             pnl_sol = position['amount'] * pnl_pct
             self.daily_stats['profit_loss'] += pnl_sol
-            
+
             logger.info(f"🔄 Closing position: {token_mint[:8]}... - Reason: {reason} - PnL: {pnl_sol:+.4f} SOL")
-            
-            # Execute actual sell transaction
+
+            if not self.trade_executor:
+                logger.error("Trade executor is not configured for automated exit")
+                self.active_positions[token_mint] = position
+                return
+
             try:
-                SOL_MINT = "So11111111111111111111111111111111111111112"
-                
-                # Get token balance to sell
-                balance = await self.wallet_manager.get_token_balance(self.user_id, token_mint)
-                if balance and balance > 0:
-                    # Convert to lamports
-                    amount_to_sell = int(balance * 1e9)  # Assume 9 decimals
-                    
-                    logger.info(f"💰 Selling {balance:.6f} tokens of {token_mint[:8]}...")
-                    
-                    # Execute swap through Jupiter
-                    result = await self.jupiter.execute_swap_with_jito(
-                        input_mint=token_mint,
-                        output_mint=SOL_MINT,
-                        amount=amount_to_sell,
-                        keypair=self.user_keypair,
-                        slippage_bps=300,  # 3% slippage for sells
-                        tip_amount_lamports=50000,  # 0.00005 SOL tip
-                        priority_fee_lamports=1000000  # Medium priority
-                    )
-                    
-                    if result and result.get('success'):
-                        logger.info(f"✅ Position closed successfully!")
-                        logger.info(f"   Reason: {reason}")
-                        logger.info(f"   PnL: {pnl_sol:+.4f} SOL ({pnl_pct:+.1%})")
-                        logger.info(f"   Signature: {result.get('signature', 'N/A')}")
-                    else:
-                        logger.error(f"❌ Failed to close position: {result}")
+                result = await self.trade_executor.execute_sell(
+                    self.user_id,
+                    token_mint,
+                    token_symbol=position.get('token_symbol'),
+                    reason=f'auto_trader:{reason}',
+                    context='auto_trader',
+                    metadata={'exit_reason': reason, 'trigger_pnl_pct': pnl_pct},
+                )
+
+                if result and result.get('success'):
+                    logger.info(f"✅ Position closed successfully!")
+                    logger.info(f"   Reason: {reason}")
+                    logger.info(f"   PnL: {result.get('pnl', 0.0):+.4f} SOL")
+                    logger.info(f"   Signature: {result.get('signature', 'N/A')}")
                 else:
-                    logger.warning(f"⚠️ No token balance to sell for {token_mint[:8]}")
-                    
+                    logger.error(f"❌ Failed to close position: {result}")
+                    self.active_positions[token_mint] = position
             except Exception as e:
                 logger.error(f"Error executing sell: {e}")
-                # Re-add position if sell failed
                 self.active_positions[token_mint] = position
-    
+
+    async def _get_user_settings(self, force_refresh: bool = False) -> SimpleNamespace:
+        """Load and cache user risk settings."""
+
+        if not getattr(self, 'user_id', None):
+            return self._default_user_settings()
+
+        if not self.db:
+            return self._default_user_settings()
+
+        now = datetime.utcnow()
+        if (
+            force_refresh
+            or self._user_settings is None
+            or self._settings_loaded_at is None
+            or (now - self._settings_loaded_at) > timedelta(minutes=5)
+        ):
+            record = await self.db.get_user_settings(self.user_id)
+            self._user_settings = self._settings_from_record(record)
+            self._settings_loaded_at = now
+
+        return self._user_settings
+
+    def _settings_from_record(self, record) -> SimpleNamespace:
+        if not record:
+            return self._default_user_settings()
+
+        return SimpleNamespace(
+            max_trade_size_sol=
+                record.max_trade_size_sol if record.max_trade_size_sol is not None else 1.0,
+            daily_loss_limit_sol=
+                record.daily_loss_limit_sol if record.daily_loss_limit_sol is not None else 5.0,
+            slippage_percentage=record.slippage_percentage or 5.0,
+            use_stop_loss=(
+                True if getattr(record, 'use_stop_loss', None) is None else bool(record.use_stop_loss)
+            ),
+            default_stop_loss_percentage=(
+                record.default_stop_loss_percentage if record.default_stop_loss_percentage is not None else 10.0
+            ),
+            use_take_profit=(
+                True if getattr(record, 'use_take_profit', None) is None else bool(record.use_take_profit)
+            ),
+            default_take_profit_percentage=(
+                record.default_take_profit_percentage if record.default_take_profit_percentage is not None else 20.0
+            ),
+        )
+
+    def _default_user_settings(self) -> SimpleNamespace:
+        return SimpleNamespace(
+            max_trade_size_sol=1.0,
+            daily_loss_limit_sol=5.0,
+            slippage_percentage=5.0,
+            use_stop_loss=True,
+            default_stop_loss_percentage=10.0,
+            use_take_profit=True,
+            default_take_profit_percentage=20.0,
+        )
+
     def get_status(self) -> Dict:
         """Get current trading status"""
         return {

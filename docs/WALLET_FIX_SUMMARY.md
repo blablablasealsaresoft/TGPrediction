@@ -141,10 +141,10 @@ def execute_trade(user_id, amount):
 ## Important Notes
 
 ⚠️ **Master Encryption Key**
-- Generated on first run
-- Shown in logs
-- **SAVE IT to `.env`**
-- Without it, all wallets are lost!
+- Provision `WALLET_ENCRYPTION_KEY` before starting the bot
+- Generate with `python scripts/rotate_wallet_key.py --generate-new-key` or issue from your KMS
+- **Store it in a secure secret manager** and load via environment variables
+- Without it, encrypted wallets cannot be decrypted!
 
 📋 **Database Migration**
 - New users: Automatic

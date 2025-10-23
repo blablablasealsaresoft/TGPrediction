@@ -12,7 +12,7 @@ UNIQUE DIFFERENTIATORS:
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from enum import Enum
@@ -53,40 +53,110 @@ class SocialTradingMarketplace:
     def __init__(self, database_manager):
         self.db = database_manager
         self.traders: Dict[int, TraderProfile] = {}
-        self.copy_relationships: Dict[int, Set[int]] = {}  # follower_id -> [trader_ids]
-        self.active_copies: Dict[int, Dict] = {}  # user_id -> copy settings
+        self.copy_relationships: Dict[int, Set[int]] = {}  # follower_id -> trader_ids
+        self.active_copies: Dict[int, Dict[int, Dict]] = {}  # follower_id -> trader_id -> settings
         self.leaderboard_cache: List[TraderProfile] = []
         self.last_leaderboard_update = datetime.utcnow()
-    
+        self._initialized = False
+        self._init_lock = asyncio.Lock()
+        self.trade_executor = None
+
+    async def initialize(self):
+        """Load trader and copy trading state from the database"""
+        async with self._init_lock:
+            if self._initialized:
+                return
+
+            await self._load_traders_from_db()
+            await self._load_copy_relationships()
+            await self._update_leaderboard()
+
+            self._initialized = True
+
+    async def _ensure_initialized(self):
+        if not self._initialized:
+            await self.initialize()
+
+    def attach_trade_executor(self, trade_executor) -> None:
+        """Attach the shared trade execution service for follower trades."""
+        self.trade_executor = trade_executor
+
+    async def _load_traders_from_db(self):
+        self.traders.clear()
+        trader_records = await self.db.get_trader_profiles()
+
+        for record in trader_records:
+            profile = self._record_to_profile(record)
+            self.traders[profile.user_id] = profile
+
+    async def _load_copy_relationships(self):
+        self.copy_relationships.clear()
+        self.active_copies.clear()
+
+        relationships = await self.db.get_copy_relationships(only_enabled=False)
+
+        for rel in relationships:
+            trader_id = rel.copy_trader_id
+            if trader_id is None:
+                continue
+
+            follower_id = rel.user_id
+            self.active_copies.setdefault(follower_id, {})[trader_id] = {
+                'copy_percentage': rel.copy_percentage or 100.0,
+                'max_copy_amount': rel.copy_amount_sol or 0.1,
+                'max_daily_trades': rel.copy_max_daily_trades or 10,
+                'enabled': bool(rel.copy_enabled),
+                'started_at': rel.copy_started_at or datetime.utcnow(),
+                'total_copied': rel.copy_total_trades or 0,
+                'total_profit': rel.copy_total_profit or 0.0
+            }
+
+            if rel.copy_enabled:
+                self.copy_relationships.setdefault(follower_id, set()).add(trader_id)
+
+    def _record_to_profile(self, record) -> TraderProfile:
+        """Convert a tracked wallet record into a trader profile"""
+        tier_key = (record.trader_tier or 'bronze').upper()
+        tier = TraderTier.__members__.get(tier_key, TraderTier.BRONZE)
+
+        return TraderProfile(
+            user_id=record.user_id,
+            username=record.label or f"trader_{record.user_id}",
+            tier=tier,
+            total_trades=record.total_trades or 0,
+            win_rate=record.win_rate or 0.0,
+            total_pnl=record.total_pnl or 0.0,
+            followers=record.followers or 0,
+            reputation_score=record.reputation_score or 0.0,
+            verified=bool(record.is_verified),
+            strategies_shared=record.strategies_shared or 0,
+            total_profit_shared=record.total_profit_shared or 0.0
+        )
+
     async def register_trader(
         self,
         user_id: int,
         username: str
     ) -> TraderProfile:
         """Register a new trader in the marketplace"""
-        
+
+        await self._ensure_initialized()
+
         # Check if already registered
         if user_id in self.traders:
-            return self.traders[user_id]
-        
-        # Create profile
-        profile = TraderProfile(
-            user_id=user_id,
-            username=username,
-            tier=TraderTier.BRONZE,
-            total_trades=0,
-            win_rate=0.0,
-            total_pnl=0.0,
-            followers=0,
-            reputation_score=0.0,
-            verified=False,
-            strategies_shared=0,
-            total_profit_shared=0.0
-        )
-        
+            profile = self.traders[user_id]
+            if profile.username != username:
+                await self.db.update_trader_profile(user_id, {'label': username})
+                profile.username = username
+            return profile
+
+        record = await self.db.upsert_trader_profile(user_id, username)
+        profile = self._record_to_profile(record)
         self.traders[user_id] = profile
+
+        await self._update_leaderboard()
         logger.info(f"Trader registered: {username}")
-        
+
         return profile
     
     async def update_trader_stats(
@@ -95,12 +165,14 @@ class SocialTradingMarketplace:
         trade_result: Dict
     ):
         """Update trader statistics after a trade"""
-        
+
+        await self._ensure_initialized()
+
         if user_id not in self.traders:
             return
-        
+
         profile = self.traders[user_id]
-        
+
         # Update stats
         profile.total_trades += 1
         profile.total_pnl += trade_result.get('pnl', 0)
@@ -111,10 +183,22 @@ class SocialTradingMarketplace:
         
         # Update reputation score
         profile.reputation_score = self._calculate_reputation_score(profile)
-        
+
         # Update tier
         profile.tier = self._calculate_tier(profile)
-        
+
+        # Persist to database
+        await self.db.update_trader_profile(user_id, {
+            'total_trades': profile.total_trades,
+            'total_pnl': profile.total_pnl,
+            'win_rate': profile.win_rate,
+            'reputation_score': profile.reputation_score,
+            'trader_tier': profile.tier.value,
+            'followers': profile.followers,
+            'strategies_shared': profile.strategies_shared,
+            'total_profit_shared': profile.total_profit_shared,
+        })
+
         # Update leaderboard
         await self._update_leaderboard()
     
@@ -182,12 +266,14 @@ class SocialTradingMarketplace:
         """
         settings = {
             'copy_percentage': copy_percentage,
-            'max_copy_amount': max_copy_amount
+            'max_copy_amount': max_copy_amount,
+            'max_daily_trades': 10
         }
         return await self.start_copying_trader(follower_id, trader_id, settings)
     
     async def is_copying(self, follower_id: int, trader_id: int) -> bool:
         """Check if follower is copying a trader"""
+        await self._ensure_initialized()
         if follower_id not in self.copy_relationships:
             return False
         return trader_id in self.copy_relationships[follower_id]
@@ -200,32 +286,34 @@ class SocialTradingMarketplace:
     ) -> bool:
         """
         Determine if a follower should copy a trader's trade
-        
+
         Args:
             follower_id: User who is copying
             trader_id: Trader being copied
             trade_data: Trade information
-        
+
         Returns:
             True if should copy
         """
+        await self._ensure_initialized()
+
         # Check if actively copying
         if not await self.is_copying(follower_id, trader_id):
             return False
-        
+
         # Check copy settings
-        if follower_id not in self.active_copies or trader_id not in self.active_copies[follower_id]:
+        settings = self.active_copies.get(follower_id, {}).get(trader_id)
+
+        if not settings or not settings.get('enabled', False):
             return False
-        
-        settings = self.active_copies[follower_id][trader_id]
-        
+
         # Check if copy amount exceeds max
         copy_percentage = settings.get('copy_percentage', 100) / 100
         copy_amount = trade_data.get('amount_sol', 0) * copy_percentage
-        
+
         if copy_amount > settings.get('max_copy_amount', 1.0):
             return False
-        
+
         return True
     
     async def start_copying_trader(
@@ -236,41 +324,54 @@ class SocialTradingMarketplace:
     ) -> bool:
         """
         Start copying a trader's trades
-        
+
         Args:
             follower_id: User who wants to copy
             trader_id: Trader to copy
             settings: Copy settings (amount per trade, etc.)
         """
+        await self._ensure_initialized()
+
         # Validation
         if trader_id not in self.traders:
             logger.error(f"Trader {trader_id} not found")
             return False
-        
+
         if follower_id == trader_id:
             logger.error("Cannot copy yourself")
             return False
-        
-        # Initialize copy relationship
-        if follower_id not in self.copy_relationships:
-            self.copy_relationships[follower_id] = set()
-        
-        self.copy_relationships[follower_id].add(trader_id)
-        
-        # Store settings
-        self.active_copies[follower_id] = {
-            'trader_id': trader_id,
-            'amount_per_trade': settings.get('amount_per_trade', 0.1),
-            'max_daily_trades': settings.get('max_daily_trades', 10),
+
+        max_copy_amount = settings.get('max_copy_amount', settings.get('amount_per_trade', 0.1))
+        copy_percentage = settings.get('copy_percentage', 100.0)
+        max_daily_trades = settings.get('max_daily_trades', 10)
+
+        relationship, activated = await self.db.set_copy_relationship(
+            follower_id,
+            trader_id,
+            {
+                'max_copy_amount': max_copy_amount,
+                'copy_percentage': copy_percentage,
+                'max_daily_trades': max_daily_trades,
+                'label': settings.get('label', f'Copy {trader_id}')
+            }
+        )
+
+        self.copy_relationships.setdefault(follower_id, set()).add(trader_id)
+        self.active_copies.setdefault(follower_id, {})[trader_id] = {
+            'copy_percentage': relationship.copy_percentage or copy_percentage,
+            'max_copy_amount': relationship.copy_amount_sol or max_copy_amount,
+            'max_daily_trades': relationship.copy_max_daily_trades or max_daily_trades,
             'enabled': True,
-            'started_at': datetime.utcnow(),
-            'total_copied': 0,
-            'total_profit': 0.0
+            'started_at': relationship.copy_started_at or datetime.utcnow(),
+            'total_copied': relationship.copy_total_trades or 0,
+            'total_profit': relationship.copy_total_profit or 0.0
         }
-        
-        # Update follower count
-        self.traders[trader_id].followers += 1
-        
+
+        # Update follower count if this is a new active relationship
+        if activated and trader_id in self.traders:
+            self.traders[trader_id].followers += 1
+            await self.db.increment_trader_followers(trader_id, 1)
+
         logger.info(f"User {follower_id} started copying trader {trader_id}")
         return True
     
@@ -280,17 +381,23 @@ class SocialTradingMarketplace:
         trader_id: int
     ) -> bool:
         """Stop copying a trader"""
-        
+
+        await self._ensure_initialized()
+
+        was_enabled = await self.db.disable_copy_relationship(follower_id, trader_id)
+
         if follower_id in self.copy_relationships:
             self.copy_relationships[follower_id].discard(trader_id)
-        
-        if follower_id in self.active_copies:
-            self.active_copies[follower_id]['enabled'] = False
-        
-        # Update follower count
-        if trader_id in self.traders:
+            if not self.copy_relationships[follower_id]:
+                del self.copy_relationships[follower_id]
+
+        if follower_id in self.active_copies and trader_id in self.active_copies[follower_id]:
+            self.active_copies[follower_id][trader_id]['enabled'] = False
+
+        if was_enabled and trader_id in self.traders:
             self.traders[trader_id].followers = max(0, self.traders[trader_id].followers - 1)
-        
+            await self.db.increment_trader_followers(trader_id, -1)
+
         logger.info(f"User {follower_id} stopped copying trader {trader_id}")
         return True
     
@@ -299,47 +406,181 @@ class SocialTradingMarketplace:
         trader_id: int,
         trade_data: Dict
     ) -> List[Dict]:
-        """
-        Execute copy trades for all followers
-        
-        Returns list of copy trades executed
-        """
-        copy_trades = []
-        
-        # Find all followers
-        followers = [
-            follower_id for follower_id, traders in self.copy_relationships.items()
-            if trader_id in traders
-        ]
-        
-        for follower_id in followers:
-            copy_settings = self.active_copies.get(follower_id, {})
-            
-            if not copy_settings.get('enabled', False):
+        """Backward-compatible wrapper for copy trade execution."""
+
+        return await self.handle_trader_execution(trader_id, trade_data)
+
+    async def handle_trader_execution(
+        self,
+        trader_id: int,
+        trade_data: Dict[str, Any]
+    ) -> List[Dict]:
+        """Propagate trader executions to eligible followers."""
+
+        await self._ensure_initialized()
+
+        trade_type = (trade_data or {}).get('trade_type') or trade_data.get('action') or 'buy'
+        trade_type = trade_type.lower()
+
+        if trade_type == 'buy':
+            return await self._execute_copy_buys(trader_id, trade_data)
+        if trade_type == 'sell':
+            return await self._execute_copy_sells(trader_id, trade_data)
+
+        logger.debug('Unsupported trade type for copy trading: %s', trade_type)
+        return []
+
+    async def _execute_copy_buys(
+        self,
+        trader_id: int,
+        trade_data: Dict[str, Any]
+    ) -> List[Dict]:
+        token_mint = trade_data.get('token_mint')
+        amount_sol = trade_data.get('amount_sol', 0.0)
+
+        if not token_mint or amount_sol <= 0:
+            return []
+
+        results: List[Dict] = []
+
+        for follower_id, traders in list(self.copy_relationships.items()):
+            if trader_id not in traders:
                 continue
-            
-            # Check daily limit
+
+            copy_settings = self.active_copies.get(follower_id, {}).get(trader_id)
+            if not copy_settings or not copy_settings.get('enabled', False):
+                continue
+
             if copy_settings.get('total_copied', 0) >= copy_settings.get('max_daily_trades', 10):
                 continue
-            
-            # Create copy trade
-            copy_trade = {
+
+            percentage = (copy_settings.get('copy_percentage', 100.0) or 0.0) / 100.0
+            base_amount = amount_sol * percentage
+            max_amount = copy_settings.get('max_copy_amount', base_amount)
+            copy_amount = min(base_amount, max_amount)
+
+            if copy_amount <= 0:
+                continue
+
+            entry = {
                 'follower_id': follower_id,
                 'trader_id': trader_id,
-                'token_mint': trade_data['token_mint'],
-                'action': trade_data['action'],
-                'amount': copy_settings['amount_per_trade'],
-                'original_trade': trade_data,
-                'timestamp': datetime.utcnow()
+                'token_mint': token_mint,
+                'token_symbol': trade_data.get('token_symbol'),
+                'amount_sol': copy_amount,
+                'timestamp': datetime.utcnow(),
+                'context': trade_data.get('context'),
             }
-            
-            copy_trades.append(copy_trade)
-            
-            # Update copy stats
-            copy_settings['total_copied'] += 1
-        
-        logger.info(f"Executing {len(copy_trades)} copy trades for trader {trader_id}")
-        return copy_trades
+
+            if not self.trade_executor:
+                entry['status'] = 'pending_executor'
+                results.append(entry)
+                continue
+
+            try:
+                execution = await self.trade_executor.execute_buy(
+                    follower_id,
+                    token_mint,
+                    copy_amount,
+                    token_symbol=trade_data.get('token_symbol'),
+                    reason='copy_trade',
+                    context='copy_trade',
+                    metadata={
+                        'copied_from': trader_id,
+                        'source_position': trade_data.get('position_id'),
+                        'origin_signature': trade_data.get('signature'),
+                    },
+                )
+            except Exception as exc:  # pragma: no cover - defensive
+                execution = {'success': False, 'error': str(exc)}
+
+            entry['execution'] = execution
+            results.append(entry)
+
+            if execution.get('success'):
+                copy_settings['total_copied'] = copy_settings.get('total_copied', 0) + 1
+                await self.db.update_copy_relationship(
+                    follower_id,
+                    trader_id,
+                    {
+                        'copy_total_trades': copy_settings['total_copied']
+                    }
+                )
+
+        if results:
+            logger.info("Executed %d copy buys for trader %s", len(results), trader_id)
+
+        return results
+
+    async def _execute_copy_sells(
+        self,
+        trader_id: int,
+        trade_data: Dict[str, Any]
+    ) -> List[Dict]:
+        token_mint = trade_data.get('token_mint')
+        if not token_mint:
+            return []
+
+        results: List[Dict] = []
+
+        for follower_id, traders in list(self.copy_relationships.items()):
+            if trader_id not in traders:
+                continue
+
+            copy_settings = self.active_copies.get(follower_id, {}).get(trader_id)
+            if not copy_settings or not copy_settings.get('enabled', False):
+                continue
+
+            entry = {
+                'follower_id': follower_id,
+                'trader_id': trader_id,
+                'token_mint': token_mint,
+                'token_symbol': trade_data.get('token_symbol'),
+                'timestamp': datetime.utcnow(),
+                'context': trade_data.get('context'),
+            }
+
+            if not self.trade_executor:
+                entry['status'] = 'pending_executor'
+                results.append(entry)
+                continue
+
+            try:
+                execution = await self.trade_executor.execute_sell(
+                    follower_id,
+                    token_mint,
+                    token_symbol=trade_data.get('token_symbol'),
+                    reason='copy_trade',
+                    context='copy_trade',
+                    metadata={
+                        'copied_from': trader_id,
+                        'source_position': trade_data.get('position_id'),
+                        'origin_signature': trade_data.get('signature'),
+                    },
+                )
+            except Exception as exc:  # pragma: no cover - defensive
+                execution = {'success': False, 'error': str(exc)}
+
+            entry['execution'] = execution
+            results.append(entry)
+
+            if execution.get('success'):
+                pnl = execution.get('pnl') or 0.0
+                copy_settings['total_copied'] = copy_settings.get('total_copied', 0) + 1
+                copy_settings['total_profit'] = copy_settings.get('total_profit', 0.0) + pnl
+                await self.db.update_copy_relationship(
+                    follower_id,
+                    trader_id,
+                    {
+                        'copy_total_trades': copy_settings['total_copied'],
+                        'copy_total_profit': copy_settings['total_profit'],
+                    }
+                )
+
+        if results:
+            logger.info("Executed %d copy sells for trader %s", len(results), trader_id)
+
+        return results
     
     async def get_leaderboard(
         self,
@@ -348,11 +589,12 @@ class SocialTradingMarketplace:
     ) -> List[TraderProfile]:
         """
         Get trader leaderboard
-        
+
         Args:
             tier: Filter by tier
             limit: Number of traders to return
         """
+        await self._ensure_initialized()
         # Update cache if stale
         if (datetime.utcnow() - self.last_leaderboard_update).seconds > 300:
             await self._update_leaderboard()
@@ -378,6 +620,7 @@ class SocialTradingMarketplace:
     
     async def get_trader_profile(self, trader_id: int) -> Optional[TraderProfile]:
         """Get detailed trader profile"""
+        await self._ensure_initialized()
         return self.traders.get(trader_id)
     
     async def search_traders(
@@ -387,7 +630,8 @@ class SocialTradingMarketplace:
         tier: Optional[TraderTier] = None
     ) -> List[TraderProfile]:
         """Search for traders matching criteria"""
-        
+
+        await self._ensure_initialized()
         results = []
         for trader in self.traders.values():
             if trader.win_rate < min_win_rate:

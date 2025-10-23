@@ -7,7 +7,7 @@ Secure encryption of private keys
 import os
 import base58
 import logging
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 from datetime import datetime
 from cryptography.fernet import Fernet
 from solders.keypair import Keypair
@@ -22,23 +22,64 @@ logger = logging.getLogger(__name__)
 class WalletEncryption:
     """Handles encryption/decryption of wallet private keys"""
     
-    def __init__(self):
-        # Get or generate master encryption key
-        self.master_key = self._get_or_create_master_key()
+    def __init__(self, master_key: Optional[Union[str, bytes]] = None):
+        """Initialize wallet encryption helper.
+
+        Args:
+            master_key: Optional override for the Fernet key. When not provided
+                the value is read from ``WALLET_ENCRYPTION_KEY``. The key must
+                be a url-safe base64 encoded 32-byte string as required by
+                :class:`cryptography.fernet.Fernet`.
+        """
+
+        self.master_key = self._load_master_key(master_key)
         self.fernet = Fernet(self.master_key)
-    
-    def _get_or_create_master_key(self) -> bytes:
-        """Get master key from env or generate new one"""
+
+    @staticmethod
+    def generate_key() -> str:
+        """Generate a new wallet encryption key."""
+
+        return Fernet.generate_key().decode()
+
+    @staticmethod
+    def validate_key(key: Union[str, bytes]) -> bytes:
+        """Validate that the provided key is a proper Fernet key."""
+
+        if not key:
+            raise ValueError("Wallet encryption key cannot be empty")
+
+        key_bytes = key if isinstance(key, bytes) else key.encode()
+
+        try:
+            # Instantiating Fernet validates the key structure
+            Fernet(key_bytes)
+        except Exception as exc:  # pragma: no cover - cryptography raises ValueError
+            raise ValueError(
+                "Invalid WALLET_ENCRYPTION_KEY provided. The key must be a "
+                "urlsafe base64-encoded 32-byte string. Generate one with "
+                "WalletEncryption.generate_key() or the rotate_wallet_key.py "
+                "utility."
+            ) from exc
+
+        return key_bytes
+
+    def _load_master_key(self, master_key: Optional[Union[str, bytes]]) -> bytes:
+        """Load the master key from an override or the environment."""
+
+        if master_key is not None:
+            return self.validate_key(master_key)
+
         key_str = os.getenv('WALLET_ENCRYPTION_KEY')
-        
-        if key_str:
-            return key_str.encode()
-        
-        # Generate new key
-        new_key = Fernet.generate_key()
-        logger.warning("Generated new wallet encryption key. Add to .env:")
-        logger.warning(f"WALLET_ENCRYPTION_KEY={new_key.decode()}")
-        return new_key
+        if not key_str:
+            raise RuntimeError(
+                "WALLET_ENCRYPTION_KEY environment variable is required. "
+                "Set it to a Fernet key before starting the bot. Use the "
+                "scripts/rotate_wallet_key.py tool to generate or rotate "
+                "keys and store them securely (for example in a secrets "
+                "manager or HSM)."
+            )
+
+        return self.validate_key(key_str)
     
     def encrypt_private_key(self, private_key_bytes: bytes) -> str:
         """Encrypt private key"""

@@ -83,42 +83,44 @@
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.9 or higher
-- Telegram account
-- Solana wallet with SOL
-- **NEW:** Helius FREE account (optional but recommended) - 100K requests/day
+- Python 3.9 or higher (virtual environments recommended)
+- Telegram bot token from [@BotFather](https://t.me/BotFather)
+- Solana RPC endpoint (Helius, Triton, or self-hosted)
+- Base64-encoded `WALLET_ENCRYPTION_KEY` generated with `scripts/rotate_wallet_key.py`
 
-### Installation
+### Setup
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/YOUR-USERNAME/solana-trading-bot.git
-cd solana-trading-bot
+# 1. Clone the repository
+git clone https://github.com/YOUR-USERNAME/revolutionary-solana-trading-bot.git
+cd revolutionary-solana-trading-bot
 
-# 2. Install dependencies
+# 2. (Recommended) Create a virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# 3. Install dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 
-# 3. Setup project
-python scripts/setup_project.py
-
-# 4. Configure (copy template and edit)
+# 4. Configure environment
 cp ENV_CONFIGURATION.txt .env
-# Edit .env with your credentials
+# Edit .env and populate TELEGRAM_BOT_TOKEN, SOLANA_RPC_URL, WALLET_ENCRYPTION_KEY, etc.
 
-# 5. (RECOMMENDED) Setup Helius RPC for Better Performance
-# Go to https://helius.dev and create FREE account
-# Get your API key and add to .env:
-# HELIUS_API_KEY=your_api_key
-# SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=your_api_key
+# 5. Apply database migrations (creates SQLite db by default)
+python scripts/migrate_database.py
 
-# 6. Run bot
+# 6. Verify encryption key / generate a new one if needed
+python scripts/rotate_wallet_key.py --generate-new-key
+
+# 7. Launch the bot
 python scripts/run_bot.py
 ```
 
-### Quick Status Check
+### Operational checks
 
 ```bash
-# Check bot status anytime
+# Inspect current health/metrics
 python scripts/bot_status.py
 ```
 
@@ -169,8 +171,8 @@ Click Get Started to fund your trading wallet then:
 - `/export_wallet` - Export private keys (secure)
 
 ### 📈 Trading
-- `/buy <token> <amount>` - Buy tokens
-- `/sell <token> <amount>` - Sell tokens
+- `/buy <token_mint> <amount_sol>` - Swap SOL from your bot wallet into a token
+- `/sell <token_mint> [amount_tokens|all]` - Exit an open position (use `all` to close entirely)
 - `/snipe <token>` - Snipe new launch
 - `/positions` - View open positions
 
@@ -214,31 +216,46 @@ Click Get Started to fund your trading wallet then:
 ## 🏗️ Project Structure
 
 ```
-sol/
-├── src/                    # Source code
-│   ├── bot/               # Bot implementations
-│   │   ├── main.py       # Revolutionary bot (primary)
-│   │   └── basic_bot.py  # Basic version
-│   ├── modules/           # Core modules
-│   │   ├── ai_strategy_engine.py
-│   │   ├── social_trading.py
-│   │   ├── sentiment_analysis.py
-│   │   ├── database.py
-│   │   ├── wallet_manager.py
-│   │   ├── jupiter_client.py     # ⚡ Enhanced with Jito
-│   │   ├── token_sniper.py       # 🎯 Elite sniping
-│   │   ├── wallet_intelligence.py  # 🧠 NEW
-│   │   ├── elite_protection.py     # 🛡️ NEW
-│   │   ├── automated_trading.py    # 🤖 NEW
-│   │   └── monitoring.py
-│   └── config.py         # Configuration management
-├── tests/                 # Test suite
-├── scripts/               # Utility scripts
-├── docs/                  # Documentation
-├── enhancements/          # Elite features documentation
-├── config/                # Config templates
-└── Docker files          # Containerization
+.
+├── src/
+│   ├── bot/
+│   │   └── main.py                # Telegram bot entrypoint & lifecycle coordination
+│   └── modules/
+│       ├── ai_strategy_engine.py  # AI-driven scoring with social sentiment context
+│       ├── automated_trading.py   # Background wallet scanner & executor
+│       ├── database.py            # SQLAlchemy models & async session helpers
+│       ├── monitoring.py          # BotMonitor metrics aggregation
+│       ├── sentiment_analysis.py  # Social/community data ingestion
+│       ├── social_trading.py      # Trader marketplace & copy relationships
+│       ├── token_sniper.py        # Auto-sniper orchestration & persistence
+│       ├── trade_execution.py     # Centralized execution, risk checks, copy fanout
+│       └── wallet_manager.py      # Key management, encryption, user wallet utilities
+├── scripts/
+│   ├── run_bot.py                 # CLI launcher used in production
+│   ├── migrate_database.py        # Applies schema migrations / bootstraps DB
+│   ├── rotate_wallet_key.py       # Generate & rotate Fernet encryption keys
+│   └── bot_status.py              # Operational status snapshot
+├── tests/
+│   ├── unit/
+│   │   └── test_trade_execution.py
+│   └── test_copy_trading.py
+├── docs/                          # Supplementary guides & deployment notes
+├── enhancements/                  # Elite feature overviews and executive summaries
+├── ENV_CONFIGURATION.txt          # Annotated environment template
+├── requirements.txt
+└── README.md
 ```
+
+## 🧠 Architecture Overview
+
+- **Database-backed state.** Trades, open positions, tracked traders, follower relationships, sniper snapshots, and per-user risk settings are all persisted through SQLAlchemy models so restarts never lose context (`Trade`, `Position`, `TrackedWallet`, `UserSettings`, `SnipeRun`).
+- **Centralized execution core.** Every buy/sell goes through `TradeExecutionService`, which enforces balance checks, user risk limits, elite protection, Jito routing, persistence, and follow-on copy trades for subscribers.
+- **Social marketplace & copy trading.** `SocialTradingMarketplace` hydrates trader profiles and active copy settings from the database, tracks performance, and fans out follower trades through the shared executor.
+- **Auto-sniper with resume support.** `AutoSniper` records AI decisions and outcomes, reloads user sniper preferences from `UserSettings`, and restores pending snipes from `SnipeRun` so maintenance windows do not drop signals.
+- **Automated trading telemetry.** Batched wallet scans reuse cached transaction data, honor user risk controls, and publish metrics through `BotMonitor` for operational visibility.
+- **Sentiment-driven intelligence.** The AI strategy engine fuses quantitative signals with live social/community sentiment to justify recommendations surfaced in Telegram responses and sniper scoring.
+- **Graceful lifecycle management.** `RevolutionaryTradingBot.start()` runs inside an async application that waits on a shutdown event, while `BotRunner` wires OS signal handlers so polling and background tasks stop cleanly.
+- **Hardened key management.** Wallet encryption requires a supplied Fernet key, and `scripts/rotate_wallet_key.py` provides generate/dry-run/rotate flows for professional deployments.
 
 ---
 
@@ -250,7 +267,7 @@ See `ENV_CONFIGURATION.txt` for complete elite configuration with all new featur
 ```env
 TELEGRAM_BOT_TOKEN=your_bot_token
 SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-WALLET_ENCRYPTION_KEY=your_encryption_key  # Generated on first run
+WALLET_ENCRYPTION_KEY=base64_fernet_key  # Generate with scripts/rotate_wallet_key.py --generate-new-key
 ```
 
 **Recommended - Helius RPC (FREE 100K requests/day):**
@@ -300,6 +317,12 @@ MAX_DAILY_LOSS_SOL=50.0
 ```
 
 See `ENV_CONFIGURATION.txt` for all 60+ configuration options!
+
+### 🔐 Wallet encryption & rotation
+
+* **Always supply `WALLET_ENCRYPTION_KEY`.** The bot will now refuse to start without a valid Fernet key so that user wallets are never encrypted with a throw-away secret.
+* **Generate and rotate keys with tooling.** Run `python scripts/rotate_wallet_key.py --generate-new-key` to create a compliant key or `python scripts/rotate_wallet_key.py --new-key <key>` to re-encrypt existing wallets. Use `--dry-run` first in production to validate the current key before writing changes.
+* **Store secrets in hardened systems.** For professional deployments, keep the key in your cloud secret manager or hardware-backed KMS (AWS KMS, GCP Cloud KMS, Azure Key Vault with HSM, etc.) and inject it at runtime rather than storing it in plain `.env` files.
 
 ---
 
