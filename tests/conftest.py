@@ -2,9 +2,14 @@
 Pytest configuration and fixtures
 """
 
+import os
+
 import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock
+
+
+os.environ.setdefault("WALLET_ENCRYPTION_KEY", "dLchbDvo1g_JUTokdPNfKM2-tP32T7kL6YwEH54oFsY=")
 
 
 @pytest.fixture(scope="session")

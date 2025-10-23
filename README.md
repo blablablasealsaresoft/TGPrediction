@@ -169,8 +169,8 @@ Click Get Started to fund your trading wallet then:
 - `/export_wallet` - Export private keys (secure)
 
 ### 📈 Trading
-- `/buy <token> <amount>` - Buy tokens
-- `/sell <token> <amount>` - Sell tokens
+- `/buy <token_mint> <amount_sol>` - Swap SOL from your bot wallet into a token
+- `/sell <token_mint> [amount_tokens|all]` - Exit an open position (use `all` to close entirely)
 - `/snipe <token>` - Snipe new launch
 - `/positions` - View open positions
 
@@ -240,6 +240,17 @@ sol/
 └── Docker files          # Containerization
 ```
 
+## 🧠 Architecture Overview
+
+- **Database-backed state.** Trades, open positions, tracked traders, follower relationships, sniper snapshots, and per-user risk settings are all persisted through SQLAlchemy models so restarts never lose context (`Trade`, `Position`, `TrackedWallet`, `UserSettings`, `SnipeRun`).
+- **Centralized execution core.** Every buy/sell goes through `TradeExecutionService`, which enforces balance checks, user risk limits, elite protection, Jito routing, persistence, and follow-on copy trades for subscribers.
+- **Social marketplace & copy trading.** `SocialTradingMarketplace` hydrates trader profiles and active copy settings from the database, tracks performance, and fans out follower trades through the shared executor.
+- **Auto-sniper with resume support.** `AutoSniper` records AI decisions and outcomes, reloads user sniper preferences from `UserSettings`, and restores pending snipes from `SnipeRun` so maintenance windows do not drop signals.
+- **Automated trading telemetry.** Batched wallet scans reuse cached transaction data, honor user risk controls, and publish metrics through `BotMonitor` for operational visibility.
+- **Sentiment-driven intelligence.** The AI strategy engine fuses quantitative signals with live social/community sentiment to justify recommendations surfaced in Telegram responses and sniper scoring.
+- **Graceful lifecycle management.** `RevolutionaryTradingBot.start()` runs inside an async application that waits on a shutdown event, while `BotRunner` wires OS signal handlers so polling and background tasks stop cleanly.
+- **Hardened key management.** Wallet encryption requires a supplied Fernet key, and `scripts/rotate_wallet_key.py` provides generate/dry-run/rotate flows for professional deployments.
+
 ---
 
 ## ⚙️ Configuration
@@ -250,7 +261,7 @@ See `ENV_CONFIGURATION.txt` for complete elite configuration with all new featur
 ```env
 TELEGRAM_BOT_TOKEN=your_bot_token
 SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-WALLET_ENCRYPTION_KEY=your_encryption_key  # Generated on first run
+WALLET_ENCRYPTION_KEY=base64_fernet_key  # Generate with scripts/rotate_wallet_key.py --generate-new-key
 ```
 
 **Recommended - Helius RPC (FREE 100K requests/day):**
@@ -300,6 +311,12 @@ MAX_DAILY_LOSS_SOL=50.0
 ```
 
 See `ENV_CONFIGURATION.txt` for all 60+ configuration options!
+
+### 🔐 Wallet encryption & rotation
+
+* **Always supply `WALLET_ENCRYPTION_KEY`.** The bot will now refuse to start without a valid Fernet key so that user wallets are never encrypted with a throw-away secret.
+* **Generate and rotate keys with tooling.** Run `python scripts/rotate_wallet_key.py --generate-new-key` to create a compliant key or `python scripts/rotate_wallet_key.py --new-key <key>` to re-encrypt existing wallets. Use `--dry-run` first in production to validate the current key before writing changes.
+* **Store secrets in hardened systems.** For professional deployments, keep the key in your cloud secret manager or hardware-backed KMS (AWS KMS, GCP Cloud KMS, Azure Key Vault with HSM, etc.) and inject it at runtime rather than storing it in plain `.env` files.
 
 ---
 

@@ -43,7 +43,9 @@ class MLPredictionEngine:
             'market_cap',
             'age_hours',
             'social_mentions',
-            'sentiment_score'
+            'sentiment_score',
+            'social_score',
+            'community_score'
         ]
         self.trained = False
         self.accuracy = 0.0
@@ -139,7 +141,9 @@ class MLPredictionEngine:
                 float(token_data.get('market_cap', 0)),
                 float(token_data.get('age_hours', 0)),
                 float(token_data.get('social_mentions', 0)),
-                float(token_data.get('sentiment_score', 0))
+                float(token_data.get('sentiment_score', 0)),
+                float(token_data.get('social_score', 0)),
+                float(token_data.get('community_score', 0))
             ]
         except Exception as e:
             logger.error(f"Feature extraction error: {e}")
@@ -579,44 +583,77 @@ class AIStrategyManager:
     async def analyze_opportunity(
         self,
         token_data: Dict,
-        portfolio_value: float
+        portfolio_value: float,
+        sentiment_snapshot: Optional[Dict] = None,
+        community_signal: Optional[Dict] = None
     ) -> Dict:
         """
         Comprehensive AI analysis of trading opportunity
-        
+
         Returns complete recommendation with reasoning
         """
+        enriched_token_data = dict(token_data)
+
+        if sentiment_snapshot:
+            enriched_token_data['sentiment_score'] = sentiment_snapshot.get(
+                'sentiment_score',
+                enriched_token_data.get('sentiment_score', 50)
+            )
+            enriched_token_data['social_mentions'] = sentiment_snapshot.get(
+                'total_mentions',
+                enriched_token_data.get('social_mentions', 0)
+            )
+            enriched_token_data['social_score'] = sentiment_snapshot.get(
+                'social_score',
+                enriched_token_data.get('social_score', 0)
+            )
+
+        if community_signal:
+            enriched_token_data['community_score'] = community_signal.get(
+                'community_score',
+                enriched_token_data.get('community_score', 0)
+            )
+
+        enriched_token_data.setdefault('social_score', enriched_token_data.get('sentiment_score', 0))
+        enriched_token_data.setdefault('community_score', 0.0)
+
         # ML prediction
-        ml_prediction = await self.ml_engine.predict_token_success(token_data)
-        
+        ml_prediction = await self.ml_engine.predict_token_success(enriched_token_data)
+
         # Pattern recognition
-        pattern = await self.pattern_engine.identify_pattern(token_data)
+        pattern = await self.pattern_engine.identify_pattern(enriched_token_data)
         pattern_rec = await self.pattern_engine.get_pattern_recommendation(
             pattern
         ) if pattern else {}
-        
+
         # Market regime
         market_regime = await self.strategy_optimizer.detect_market_regime(
-            token_data.get('market_data', {})
+            enriched_token_data.get('market_data', {})
         )
-        
+
         # Recommended strategy
         strategy = await self.strategy_optimizer.get_recommended_strategy()
-        
+
+        social_context = self._score_social_sentiment(
+            sentiment_snapshot,
+            community_signal
+        )
+
         # Position sizing
         position_size = self.position_sizer.calculate_position_size(
             portfolio_value,
             ml_prediction['confidence']
         )
-        
+
         # Combine all signals
         final_recommendation = self._combine_signals(
             ml_prediction,
             pattern_rec,
             market_regime,
-            strategy
+            strategy,
+            social_context
         )
-        
+
         return {
             'action': final_recommendation['action'],
             'confidence': final_recommendation['confidence'],
@@ -626,25 +663,128 @@ class AIStrategyManager:
             'pattern': pattern,
             'market_regime': market_regime,
             'strategy': strategy,
-            'risk_level': final_recommendation['risk_level']
+            'risk_level': final_recommendation['risk_level'],
+            'social_context': social_context,
+            'enriched_token_data': enriched_token_data
         }
-    
+
+    def _score_social_sentiment(
+        self,
+        sentiment_snapshot: Optional[Dict],
+        community_signal: Optional[Dict]
+    ) -> Optional[Dict]:
+        """Derive a normalized social/community score and qualitative insights."""
+
+        if not sentiment_snapshot and not community_signal:
+            return None
+
+        scores = []
+        insights: List[str] = []
+        breakdown: Dict[str, float] = {}
+
+        if sentiment_snapshot:
+            social_score = float(sentiment_snapshot.get('social_score', 0))
+            sentiment_score = float(sentiment_snapshot.get('sentiment_score', 0))
+            total_mentions = sentiment_snapshot.get('total_mentions')
+
+            if social_score:
+                scores.append(social_score / 100)
+                breakdown['social_score'] = social_score
+            if sentiment_score:
+                breakdown['sentiment_score'] = sentiment_score
+
+            if total_mentions is None:
+                total_mentions = 0
+                twitter_mentions = sentiment_snapshot.get('twitter', {}).get('mentions')
+                reddit_posts = sentiment_snapshot.get('reddit', {}).get('posts')
+                reddit_comments = sentiment_snapshot.get('reddit', {}).get('comments')
+                discord_mentions = sentiment_snapshot.get('discord', {}).get('mentions')
+                for value in (twitter_mentions, reddit_posts, reddit_comments, discord_mentions):
+                    if value:
+                        total_mentions += value
+
+            if total_mentions:
+                insights.append(
+                    f"{int(total_mentions)} recent social mentions across monitored feeds"
+                )
+
+            if sentiment_snapshot.get('overall_recommendation'):
+                insights.append(
+                    f"Aggregator bias: {sentiment_snapshot['overall_recommendation'].replace('_', ' ')}"
+                )
+
+            viral_potential = sentiment_snapshot.get('viral_potential')
+            if viral_potential:
+                insights.append(
+                    f"Viral potential {viral_potential * 100:.0f}%"
+                )
+
+            if sentiment_snapshot.get('twitter', {}).get('trending'):
+                insights.append("Token is trending on Twitter")
+
+        if community_signal:
+            community_score = float(community_signal.get('community_score', 0))
+            if community_score:
+                scores.append(community_score / 100)
+                breakdown['community_score'] = community_score
+
+            avg_rating = community_signal.get('avg_rating')
+            total_ratings = community_signal.get('total_ratings')
+            if avg_rating is not None and total_ratings is not None:
+                insights.append(
+                    f"Community rating {avg_rating:.1f}/5 from {total_ratings} ratings"
+                )
+
+            flag_count = community_signal.get('flag_count')
+            if flag_count:
+                insights.append(f"{flag_count} community risk flag(s) raised")
+
+            sentiment_label = community_signal.get('sentiment')
+            if sentiment_label:
+                breakdown['community_sentiment'] = sentiment_label
+
+        if not scores:
+            return None
+
+        normalized = sum(scores) / len(scores)
+        normalized = max(0.0, min(normalized, 1.0))
+
+        if normalized >= 0.75:
+            label = 'strongly_bullish'
+        elif normalized >= 0.6:
+            label = 'bullish'
+        elif normalized >= 0.45:
+            label = 'neutral'
+        elif normalized >= 0.3:
+            label = 'cautious'
+        else:
+            label = 'bearish'
+
+        return {
+            'score': normalized,
+            'label': label,
+            'insights': insights,
+            'breakdown': breakdown
+        }
+
     def _combine_signals(
         self,
         ml_pred: Dict,
         pattern_rec: Dict,
         market_regime: str,
-        strategy: str
+        strategy: str,
+        social_context: Optional[Dict] = None
     ) -> Dict:
         """Combine all signals into final recommendation"""
-        
+
         # Score calculation
         ml_score = ml_pred['probability']
         pattern_score = pattern_rec.get('confidence', 0.5)
-        
+        social_score = social_context['score'] if social_context else 0.5
+
         # Weight the scores
-        combined_score = (ml_score * 0.6) + (pattern_score * 0.4)
-        
+        combined_score = (ml_score * 0.5) + (pattern_score * 0.2) + (social_score * 0.3)
+
         # Determine action
         if combined_score > 0.7:
             action = 'strong_buy'
@@ -666,7 +806,11 @@ class AIStrategyManager:
             reasoning.append(f"Pattern: {pattern_rec.get('action', 'unknown')}")
         reasoning.append(f"Market: {market_regime} regime")
         reasoning.append(f"Strategy: {strategy}")
-        
+        if social_context:
+            reasoning.append(
+                f"Social/Community: {social_context['label']} ({social_context['score'] * 100:.0f}/100)"
+            )
+
         return {
             'action': action,
             'confidence': combined_score,

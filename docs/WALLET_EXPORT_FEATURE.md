@@ -182,7 +182,7 @@ Users can now:
 2. **Keys work in all Solana wallets** - Standard format
 3. **Same wallet everywhere** - Bot & Phantom share same funds
 4. **Encrypted in DB** - Even if DB is compromised, keys are encrypted
-5. **Master encryption key** - Stored in `.env` (WALLET_ENCRYPTION_KEY)
+5. **Master encryption key** - Stored in `.env` (WALLET_ENCRYPTION_KEY) — generate/rotate with `scripts/rotate_wallet_key.py` and keep it in your secret manager or KMS
 
 ---
 
