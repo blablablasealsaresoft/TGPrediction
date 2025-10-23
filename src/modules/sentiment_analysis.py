@@ -712,6 +712,43 @@ class SocialMediaAggregator:
         
         return result
     
+    async def aggregate_sentiment(
+        self,
+        token_address: Optional[str] = None,
+        duration_hours: int = 24
+    ) -> Dict:
+        """
+        Aggregate sentiment across all social media sources
+        
+        Args:
+            token_address: Token to analyze (None for general market sentiment)
+            duration_hours: Time window to analyze
+        
+        Returns:
+            Aggregated sentiment data
+        """
+        # Simulated aggregated data
+        return {
+            'twitter_mentions': 1500,
+            'reddit_mentions': 800,
+            'discord_mentions': 600,
+            'total_mentions': 2900,
+            'avg_sentiment': 72.5,
+            'sentiment_breakdown': {
+                'very_positive': 35,
+                'positive': 40,
+                'neutral': 15,
+                'negative': 7,
+                'very_negative': 3
+            },
+            'trending_topics': [
+                {'topic': 'new_listing', 'count': 450},
+                {'topic': 'partnership', 'count': 320},
+                {'topic': 'bullish', 'count': 280}
+            ],
+            'duration_hours': duration_hours
+        }
+    
     def _calculate_social_score(
         self,
         twitter: Dict,
@@ -806,6 +843,58 @@ class TrendDetector:
             t for t in self.keyword_tracker[keyword]
             if t > cutoff
         ]
+    
+    async def get_trending_tokens(
+        self,
+        sources: List[str] = None,
+        time_window_hours: int = 24
+    ) -> List[Dict]:
+        """
+        Get trending tokens from social media
+        
+        Args:
+            sources: List of sources to check (twitter, reddit, discord)
+            time_window_hours: Time window to analyze
+        
+        Returns:
+            List of trending tokens with metrics
+        """
+        if sources is None:
+            sources = ['twitter', 'reddit', 'discord']
+        
+        # Simulate trending tokens for now
+        # In production, this would aggregate from all sources
+        trending = [
+            {
+                'name': 'Bonk',
+                'symbol': 'BONK',
+                'mention_count': 2500,
+                'avg_sentiment': 75.0,
+                'viral_score': 0.85,
+                'trend': 'up',
+                'sources': sources
+            },
+            {
+                'name': 'Dogwifhat',
+                'symbol': 'WIF',
+                'mention_count': 1800,
+                'avg_sentiment': 68.0,
+                'viral_score': 0.72,
+                'trend': 'up',
+                'sources': sources
+            },
+            {
+                'name': 'Popcat',
+                'symbol': 'POPCAT',
+                'mention_count': 1200,
+                'avg_sentiment': 82.0,
+                'viral_score': 0.65,
+                'trend': 'up',
+                'sources': sources
+            }
+        ]
+        
+        return trending
     
     async def detect_emerging_trends(self) -> List[Dict]:
         """Detect keywords with accelerating mentions"""

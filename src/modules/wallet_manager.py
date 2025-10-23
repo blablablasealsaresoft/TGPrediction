@@ -73,7 +73,11 @@ class UserWalletManager:
             Dict with public_key, sol_balance, is_new
         """
         # Check if user already has wallet
+        logger.info(f"🔍 Looking for existing wallet for user {user_id}...")
         wallet = await self._get_wallet_from_db(user_id)
+        
+        if wallet:
+            logger.info(f"✅ Found existing wallet: {wallet.public_key}")
         
         if wallet:
             # Update balance
@@ -93,6 +97,7 @@ class UserWalletManager:
             }
         
         # Create new wallet for user
+        logger.warning(f"⚠️ No existing wallet found for user {user_id}")
         logger.info(f"Creating new wallet for user {user_id}")
         
         # Generate new Solana keypair

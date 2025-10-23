@@ -1,0 +1,28 @@
+# ⚡ FAST EXECUTION CONFIGURATION
+# Add these to your .env file for ultra-fast sniping
+
+# Primary RPC (your fastest)
+SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+
+# Fallback RPCs (free, for parallel submission)
+FALLBACK_RPC_1=https://api.mainnet-beta.solana.com
+FALLBACK_RPC_2=https://solana-api.projectserum.com
+FALLBACK_RPC_3=https://rpc.ankr.com/solana
+
+# Simulation RPC (fastest for pre-checks)
+SIMULATE_RPC=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+
+# Jito configuration
+JITO_BLOCK_ENGINE_URL=https://mainnet.block-engine.jito.wtf/api/v1
+JITO_TIP_ACCOUNT=96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5
+JITO_TIP_LAMPORTS=100000
+
+# Priority fees (increase for faster execution)
+PRIORITY_FEE_MICROLAMPORTS=2000000
+COMPUTE_UNIT_LIMIT=200000
+
+# Fast execution settings
+ENABLE_PARALLEL_SUBMISSION=true
+ENABLE_FAST_SIMULATION=true
+PARALLEL_RPC_COUNT=3
+

@@ -161,6 +161,73 @@ class SocialTradingMarketplace:
         else:
             return TraderTier.BRONZE
     
+    async def start_copying(
+        self,
+        follower_id: int,
+        trader_id: int,
+        copy_percentage: float = 100.0,
+        max_copy_amount: float = 1.0
+    ) -> bool:
+        """
+        Start copying a trader
+        
+        Args:
+            follower_id: User who wants to copy
+            trader_id: Trader to copy
+            copy_percentage: Percentage of trader's position size to copy
+            max_copy_amount: Maximum amount to copy per trade
+        
+        Returns:
+            Success status
+        """
+        settings = {
+            'copy_percentage': copy_percentage,
+            'max_copy_amount': max_copy_amount
+        }
+        return await self.start_copying_trader(follower_id, trader_id, settings)
+    
+    async def is_copying(self, follower_id: int, trader_id: int) -> bool:
+        """Check if follower is copying a trader"""
+        if follower_id not in self.copy_relationships:
+            return False
+        return trader_id in self.copy_relationships[follower_id]
+    
+    async def should_copy_trade(
+        self,
+        follower_id: int,
+        trader_id: int,
+        trade_data: Dict
+    ) -> bool:
+        """
+        Determine if a follower should copy a trader's trade
+        
+        Args:
+            follower_id: User who is copying
+            trader_id: Trader being copied
+            trade_data: Trade information
+        
+        Returns:
+            True if should copy
+        """
+        # Check if actively copying
+        if not await self.is_copying(follower_id, trader_id):
+            return False
+        
+        # Check copy settings
+        if follower_id not in self.active_copies or trader_id not in self.active_copies[follower_id]:
+            return False
+        
+        settings = self.active_copies[follower_id][trader_id]
+        
+        # Check if copy amount exceeds max
+        copy_percentage = settings.get('copy_percentage', 100) / 100
+        copy_amount = trade_data.get('amount_sol', 0) * copy_percentage
+        
+        if copy_amount > settings.get('max_copy_amount', 1.0):
+            return False
+        
+        return True
+    
     async def start_copying_trader(
         self,
         follower_id: int,
@@ -389,6 +456,68 @@ class StrategyMarketplace:
         logger.info(f"Strategy published: {strategy_data['name']} by user {creator_id}")
         return strategy_id
     
+    async def list_strategy(
+        self,
+        creator_id: int,
+        name: str,
+        description: str,
+        strategy_data: Dict,
+        price_sol: float
+    ) -> str:
+        """
+        List a strategy in the marketplace (alias for publish_strategy)
+        
+        Args:
+            creator_id: Strategy creator
+            name: Strategy name
+            description: Strategy description
+            strategy_data: Strategy configuration
+            price_sol: Price in SOL
+        
+        Returns:
+            Strategy ID
+        """
+        full_strategy_data = {
+            'name': name,
+            'description': description,
+            'price': price_sol,
+            **strategy_data
+        }
+        return await self.publish_strategy(creator_id, full_strategy_data)
+    
+    async def browse_strategies(
+        self,
+        min_win_rate: float = 0.0,
+        sort_by: str = 'popularity'
+    ) -> List[Dict]:
+        """
+        Browse available strategies
+        
+        Args:
+            min_win_rate: Minimum win rate filter
+            sort_by: Sort order (popularity, rating, price)
+        
+        Returns:
+            List of strategies
+        """
+        strategies = list(self.strategies.values())
+        
+        # Filter by win rate
+        strategies = [
+            s for s in strategies
+            if s['performance'].get('win_rate', 0) >= min_win_rate * 100
+        ]
+        
+        # Sort
+        if sort_by == 'popularity':
+            strategies.sort(key=lambda x: x['purchases'], reverse=True)
+        elif sort_by == 'rating':
+            strategies.sort(key=lambda x: x['rating'], reverse=True)
+        elif sort_by == 'price':
+            strategies.sort(key=lambda x: x['price'])
+        
+        return strategies
+    
     async def purchase_strategy(
         self,
         buyer_id: int,
@@ -516,6 +645,78 @@ class CommunityIntelligence:
         
         # Update community signal
         await self._update_community_signal(token_mint)
+    
+    async def submit_rating(
+        self,
+        user_id: int,
+        token_address: str,
+        rating: float,
+        comment: str = ""
+    ):
+        """
+        Submit a rating for a token (alias for submit_token_rating)
+        
+        Args:
+            user_id: User submitting rating
+            token_address: Token address
+            rating: Rating (0-10)
+            comment: Optional comment
+        """
+        return await self.submit_token_rating(user_id, token_address, rating, comment)
+    
+    async def get_token_rating(self, token_address: str) -> Dict:
+        """
+        Get community rating for a token
+        
+        Args:
+            token_address: Token to rate
+        
+        Returns:
+            Rating data with consensus
+        """
+        if token_address not in self.token_ratings:
+            return {
+                'avg_rating': 0.0,
+                'rating_count': 0,
+                'confidence': 0.0,
+                'recommendation': 'neutral'
+            }
+        
+        ratings = self.token_ratings[token_address]
+        
+        if not ratings:
+            return {
+                'avg_rating': 0.0,
+                'rating_count': 0,
+                'confidence': 0.0,
+                'recommendation': 'neutral'
+            }
+        
+        # Calculate average
+        avg_rating = sum(r['rating'] for r in ratings) / len(ratings)
+        
+        # Calculate confidence (based on number of ratings)
+        confidence = min(len(ratings) / 10 * 100, 100)  # 10 ratings = 100% confidence
+        
+        # Determine recommendation
+        if avg_rating >= 7.5:
+            recommendation = 'strong_buy'
+        elif avg_rating >= 6.0:
+            recommendation = 'buy'
+        elif avg_rating >= 4.0:
+            recommendation = 'hold'
+        elif avg_rating >= 2.5:
+            recommendation = 'sell'
+        else:
+            recommendation = 'strong_sell'
+        
+        return {
+            'avg_rating': avg_rating,
+            'rating_count': len(ratings),
+            'confidence': confidence,
+            'recommendation': recommendation,
+            'ratings': ratings
+        }
     
     async def flag_token(
         self,

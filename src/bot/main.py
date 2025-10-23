@@ -1217,6 +1217,7 @@ Points: *{rewards['points']}*
     async def strategies_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
         🔥 KILLER FEATURE #5: Strategy Marketplace
+        Browse and purchase proven trading strategies
         """
         await update.message.reply_text("📚 *STRATEGY MARKETPLACE*\n\nLoading strategies...", parse_mode='Markdown')
         
@@ -1226,32 +1227,329 @@ Points: *{rewards['points']}*
         )
         
         if not strategies:
-            message = """
-📚 <b>STRATEGY MARKETPLACE</b>
+            message = """📚 <b>STRATEGY MARKETPLACE</b>
 
-No strategies available yet!
+💡 No strategies available yet!
 
-<b>Want to share your strategy?</b>
-Earn SOL by publishing successful strategies!
+<b>🚀 Be the First!</b>
+Publish your winning strategy and earn SOL from every sale!
 
-Command: /publish_strategy
+📝 Commands:
+• /publish_strategy - List your strategy
+• /my_strategies - View your published strategies
+
+<b>💰 How it Works:</b>
+1. Publish your proven strategy
+2. Set your price (in SOL)
+3. Earn 70% of each sale
+4. Build your reputation as a top strategist!
+
+<b>Top strategies earn 10-50 SOL per month!</b>
+"""
+            keyboard = [
+                [InlineKeyboardButton("📝 Publish Strategy", callback_data="publish_strategy_start")],
+                [InlineKeyboardButton("❓ How It Works", callback_data="marketplace_info")],
+                [InlineKeyboardButton("❌ Close", callback_data="close_message")]
+            ]
+            await update.message.reply_text(
+                message, 
+                parse_mode='HTML',
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            return
+        
+        message = "📚 <b>TOP TRADING STRATEGIES</b>\n\n"
+        message += "🔥 <i>Proven strategies from successful traders</i>\n\n"
+        message += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        for i, strategy in enumerate(strategies[:5], 1):
+            stars = '⭐' * int(strategy['rating'])
+            win_rate = strategy['performance'].get('win_rate', 0)
+            avg_profit = strategy['performance'].get('avg_profit', 0)
+            total_trades = strategy['performance'].get('total_trades', 0)
+            
+            message += f"{i}. <b>{strategy['name']}</b>\n"
+            message += f"   💫 Rating: {stars} ({strategy['rating']:.1f}/5)\n"
+            message += f"   📊 Win Rate: {win_rate:.1f}%\n"
+            message += f"   💰 Avg Profit: {avg_profit:.4f} SOL\n"
+            message += f"   🔄 Trades: {total_trades}\n"
+            message += f"   💵 Price: <b>{strategy['price']} SOL</b>\n"
+            message += f"   📦 Sales: {strategy['purchases']}\n"
+            message += f"   👤 Creator: User {strategy['creator_id']}\n"
+            message += f"\n   🛒 <code>/buy_strategy {strategy['id'][:8]}</code>\n\n"
+        
+        message += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        message += "💡 <i>More strategies: /browse_strategies</i>\n"
+        message += "📝 <i>Publish yours: /publish_strategy</i>"
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("🔍 Browse All", callback_data="browse_all_strategies"),
+                InlineKeyboardButton("📝 Publish", callback_data="publish_strategy_start")
+            ],
+            [
+                InlineKeyboardButton("📚 My Strategies", callback_data="my_strategies"),
+                InlineKeyboardButton("💼 Purchased", callback_data="purchased_strategies")
+            ],
+            [InlineKeyboardButton("❌ Close", callback_data="close_message")]
+        ]
+        
+        await update.message.reply_text(
+            message, 
+            parse_mode='HTML',
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
+    async def publish_strategy_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Publish a trading strategy to marketplace"""
+        user_id = update.effective_user.id
+        
+        if not context.args or len(context.args) < 3:
+            message = """📝 <b>PUBLISH YOUR STRATEGY</b>
+
+<b>How to publish:</b>
+<code>/publish_strategy &lt;name&gt; &lt;price&gt; &lt;description&gt;</code>
+
+<b>Example:</b>
+<code>/publish_strategy "Momentum Scalper" 5.0 "High-frequency momentum trading with 72% win rate"</code>
+
+<b>💰 Pricing Guide:</b>
+• Beginner strategy: 1-3 SOL
+• Intermediate: 3-7 SOL
+• Advanced: 7-15 SOL
+• Expert/Proven: 15+ SOL
+
+<b>💡 Tips for Success:</b>
+• Provide detailed description
+• Share verified performance stats
+• Offer strategy documentation
+• Respond to buyer questions
+
+<b>You earn 70% of each sale!</b>
 """
             await update.message.reply_text(message, parse_mode='HTML')
             return
         
-        message = "📚 <b>TOP STRATEGIES</b>\n\n"
+        try:
+            strategy_name = context.args[0].strip('"')
+            price = float(context.args[1])
+            description = ' '.join(context.args[2:]).strip('"')
+            
+            if price < 0.1:
+                await update.message.reply_text("❌ Minimum price is 0.1 SOL")
+                return
+            
+            # Get user's trading stats for strategy performance
+            user_stats = await self.db.get_user_stats(user_id)
+            
+            strategy_data = {
+                'name': strategy_name,
+                'description': description,
+                'price': price,
+                'category': 'user_created',
+                'win_rate': user_stats.get('win_rate', 0) * 100 if user_stats else 0,
+                'avg_profit': user_stats.get('avg_profit', 0) if user_stats else 0,
+                'total_trades': user_stats.get('total_trades', 0) if user_stats else 0,
+            }
+            
+            strategy_id = await self.strategy_marketplace.publish_strategy(
+                creator_id=user_id,
+                strategy_data=strategy_data
+            )
+            
+            message = f"""✅ <b>STRATEGY PUBLISHED!</b>
+
+📝 <b>{strategy_name}</b>
+💵 Price: {price} SOL
+📊 Win Rate: {strategy_data['win_rate']:.1f}%
+🔄 Based on {strategy_data['total_trades']} trades
+
+🎉 <b>Your strategy is now live in the marketplace!</b>
+
+Strategy ID: <code>{strategy_id[:8]}...</code>
+
+💰 <b>Earnings:</b>
+• You get: {price * 0.7:.2f} SOL per sale (70%)
+• Platform fee: {price * 0.3:.2f} SOL (30%)
+
+📈 <b>Promote your strategy:</b>
+• Share in trading communities
+• Show verified results
+• Respond to questions quickly
+
+View: /my_strategies
+"""
+            
+            keyboard = [
+                [InlineKeyboardButton("📊 View in Marketplace", callback_data=f"view_strategy_{strategy_id[:8]}")],
+                [InlineKeyboardButton("📝 Edit", callback_data=f"edit_strategy_{strategy_id[:8]}")],
+                [InlineKeyboardButton("❌ Close", callback_data="close_message")]
+            ]
+            
+            await update.message.reply_text(
+                message, 
+                parse_mode='HTML',
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            
+        except ValueError:
+            await update.message.reply_text("❌ Invalid price. Must be a number (e.g., 5.0)")
+        except Exception as e:
+            logger.error(f"Error publishing strategy: {e}")
+            await update.message.reply_text(f"❌ Error publishing strategy: {str(e)}")
+    
+    async def buy_strategy_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Buy a strategy from marketplace"""
+        user_id = update.effective_user.id
         
-        for i, strategy in enumerate(strategies[:5], 1):
-            stars = '⭐' * int(strategy['rating'])
-            message += f"{i}. <b>{strategy['name']}</b>\n"
-            message += f"   Creator: User {strategy['creator_id']}\n"
-            message += f"   Rating: {stars} ({strategy['rating']:.1f}/5)\n"
-            message += f"   Win Rate: {strategy['performance']['win_rate']:.1f}%\n"
-            message += f"   Price: {strategy['price']} SOL\n"
-            message += f"   Purchases: {strategy['purchases']}\n"
-            message += f"   /buy_strategy {strategy['id']}\n\n"
+        if not context.args:
+            await update.message.reply_text(
+                "Usage: /buy_strategy <strategy_id>\n\n"
+                "Browse strategies: /strategies"
+            )
+            return
         
-        await update.message.reply_text(message, parse_mode='HTML')
+        strategy_id_partial = context.args[0]
+        
+        try:
+            # Find full strategy ID
+            strategy = None
+            for sid, strat in self.strategy_marketplace.strategies.items():
+                if sid.startswith(strategy_id_partial):
+                    strategy = strat
+                    break
+            
+            if not strategy:
+                await update.message.reply_text("❌ Strategy not found")
+                return
+            
+            # Check if already purchased
+            if user_id in self.strategy_marketplace.strategy_purchases and \
+               strategy['id'] in self.strategy_marketplace.strategy_purchases[user_id]:
+                await update.message.reply_text("ℹ️ You already own this strategy!")
+                return
+            
+            # Get user wallet balance
+            user_wallet = await self.wallet_manager.get_or_create_wallet(user_id)
+            balance = await self.wallet_manager.get_balance(user_id)
+            
+            if balance < strategy['price']:
+                await update.message.reply_text(
+                    f"❌ Insufficient balance\n\n"
+                    f"Required: {strategy['price']} SOL\n"
+                    f"Your balance: {balance:.4f} SOL\n\n"
+                    f"Deposit SOL: /deposit"
+                )
+                return
+            
+            # Purchase strategy
+            success = await self.strategy_marketplace.purchase_strategy(
+                buyer_id=user_id,
+                strategy_id=strategy['id']
+            )
+            
+            if success:
+                message = f"""🎉 <b>STRATEGY PURCHASED!</b>
+
+📝 <b>{strategy['name']}</b>
+💵 Paid: {strategy['price']} SOL
+
+📊 <b>Strategy Details:</b>
+{strategy['description']}
+
+<b>Performance:</b>
+• Win Rate: {strategy['performance']['win_rate']:.1f}%
+• Avg Profit: {strategy['performance']['avg_profit']:.4f} SOL
+• Total Trades: {strategy['performance']['total_trades']}
+
+<b>📚 How to Use:</b>
+1. Study the strategy parameters
+2. Test on small amounts first
+3. Apply to your trading
+4. Track your results
+
+<b>💡 Need help?</b>
+Contact creator: User {strategy['creator_id']}
+
+Access: /my_strategies
+"""
+                
+                keyboard = [
+                    [InlineKeyboardButton("📖 View Full Strategy", callback_data=f"view_purchased_{strategy['id'][:8]}")],
+                    [InlineKeyboardButton("⭐ Rate Strategy", callback_data=f"rate_strategy_{strategy['id'][:8]}")],
+                    [InlineKeyboardButton("❌ Close", callback_data="close_message")]
+                ]
+                
+                await update.message.reply_text(
+                    message, 
+                    parse_mode='HTML',
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+            else:
+                await update.message.reply_text("❌ Purchase failed. Please try again.")
+            
+        except Exception as e:
+            logger.error(f"Error buying strategy: {e}")
+            await update.message.reply_text(f"❌ Error: {str(e)}")
+    
+    async def my_strategies_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """View user's published and purchased strategies"""
+        user_id = update.effective_user.id
+        
+        # Get published strategies
+        published = [s for s in self.strategy_marketplace.strategies.values() if s['creator_id'] == user_id]
+        
+        # Get purchased strategies
+        purchased_ids = self.strategy_marketplace.strategy_purchases.get(user_id, set())
+        purchased = [self.strategy_marketplace.strategies[sid] for sid in purchased_ids if sid in self.strategy_marketplace.strategies]
+        
+        message = "📚 <b>MY STRATEGIES</b>\n\n"
+        
+        if published:
+            message += f"📝 <b>PUBLISHED ({len(published)}):</b>\n\n"
+            total_earnings = 0
+            for strat in published:
+                earnings = strat['purchases'] * strat['price'] * 0.7
+                total_earnings += earnings
+                message += f"• <b>{strat['name']}</b>\n"
+                message += f"  💵 Price: {strat['price']} SOL\n"
+                message += f"  📦 Sales: {strat['purchases']}\n"
+                message += f"  💰 Earned: {earnings:.2f} SOL\n"
+                message += f"  ⭐ Rating: {strat['rating']:.1f}/5\n\n"
+            
+            message += f"💰 <b>Total Earnings: {total_earnings:.2f} SOL</b>\n\n"
+        else:
+            message += "📝 <i>No published strategies</i>\n\n"
+        
+        message += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        if purchased:
+            message += f"💼 <b>PURCHASED ({len(purchased)}):</b>\n\n"
+            for strat in purchased:
+                message += f"• <b>{strat['name']}</b>\n"
+                message += f"  Creator: User {strat['creator_id']}\n"
+                message += f"  📊 Win Rate: {strat['performance']['win_rate']:.1f}%\n"
+                message += f"  <code>/view_strategy {strat['id'][:8]}</code>\n\n"
+        else:
+            message += "💼 <i>No purchased strategies</i>\n\n"
+        
+        message += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        message += "📝 Publish new: /publish_strategy\n"
+        message += "🔍 Browse: /strategies"
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("📝 Publish New", callback_data="publish_strategy_start"),
+                InlineKeyboardButton("🔍 Browse", callback_data="browse_all_strategies")
+            ],
+            [InlineKeyboardButton("❌ Close", callback_data="close_message")]
+        ]
+        
+        await update.message.reply_text(
+            message, 
+            parse_mode='HTML',
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
     
     async def track_wallet_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -1332,7 +1630,20 @@ Use /rankings to see top wallets!
         """
         🧠 ELITE FEATURE: Show top performing wallets
         """
-        top_wallets = self.wallet_intelligence.get_top_wallets(limit=10)
+        user_id = update.effective_user.id
+        
+        # Get from database instead of in-memory cache
+        tracked_wallets = await self.db.get_tracked_wallets(user_id)
+        
+        if not tracked_wallets or len(tracked_wallets) == 0:
+            await update.message.reply_text(
+                "No wallets tracked yet!\n\n"
+                "Use /track <wallet_address> to start tracking profitable wallets."
+            )
+            return
+        
+        # Sort by score (highest first)
+        top_wallets = sorted(tracked_wallets, key=lambda w: w.score, reverse=True)[:10]
         
         if not top_wallets:
             await update.message.reply_text(
@@ -1341,18 +1652,27 @@ Use /rankings to see top wallets!
             )
             return
         
-        message = "🏆 TOP PERFORMING WALLETS\n\n"
+        message = f"🏆 TOP PERFORMING WALLETS\n\n"
+        message += f"📊 Monitoring {len(tracked_wallets)} wallets total\n\n"
         message += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         
-        for idx, (address, metrics, score) in enumerate(top_wallets, 1):
+        for idx, wallet in enumerate(top_wallets, 1):
             medal = "🥇" if idx == 1 else "🥈" if idx == 2 else "🥉" if idx == 3 else f"{idx}."
             
+            address = wallet.wallet_address
+            score = wallet.score
+            win_rate = wallet.win_rate * 100
+            total_pnl = wallet.total_pnl
+            
             message += f"{medal} {address[:8]}...{address[-4:]}\n"
-            message += f"   Score: {score:.1f} | "
-            message += f"Win Rate: {metrics.win_rate*100:.0f}% | "
-            message += f"P&L: {metrics.recent_performance_30d:+.2f} SOL\n\n"
+            message += f"   Score: {score:.1f}/100 | "
+            message += f"Win Rate: {win_rate:.0f}% | "
+            message += f"P&L: {total_pnl:+.4f} SOL\n"
+            message += f"   Trades: {wallet.total_trades} | "
+            message += f"Profitable: {wallet.profitable_trades}\n\n"
         
         message += "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        message += f"💡 Copy-trading from top {len([w for w in tracked_wallets if w.score >= 65])} wallets (score ≥65)\n\n"
         message += "Use /track <address> to analyze any wallet!"
         
         await update.message.reply_text(message, parse_mode=None)
@@ -1528,6 +1848,12 @@ OPEN POSITIONS:
 /leaderboard - Top traders
 /copy <trader_id> - Copy trader
 /stop_copy - Stop copying
+
+📚 STRATEGY MARKETPLACE:
+/strategies - Browse strategies
+/publish_strategy - Publish your strategy
+/buy_strategy <id> - Purchase strategy
+/my_strategies - Your strategies
 
 🎮 STATS:
 /stats - Your performance
@@ -2178,6 +2504,9 @@ Use /settings command to modify these settings
         
         # Strategy marketplace
         app.add_handler(CommandHandler("strategies", self.strategies_command))
+        app.add_handler(CommandHandler("publish_strategy", self.publish_strategy_command))
+        app.add_handler(CommandHandler("buy_strategy", self.buy_strategy_command))
+        app.add_handler(CommandHandler("my_strategies", self.my_strategies_command))
         
         # Help
         app.add_handler(CommandHandler("help", self.help_command))
