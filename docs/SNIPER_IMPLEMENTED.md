@@ -147,25 +147,9 @@ For each user with snipe enabled:
 - User settings
 - Enable/disable commands
 - Database storage
-
-⏳ **Next Step Needed:**
-- Actual Jupiter swap execution
-- User notifications via Telegram
-- Trade recording in database
-
-Currently it **LOGS what it would buy** but doesn't execute yet. This is SAFE for testing!
-
-## To Make It Execute Real Trades
-
-In `src/modules/token_sniper.py`, line ~280, there's a TODO:
-
-```python
-# TODO: Implement actual Jupiter swap here
-# For now, log what we would do
-logger.info(f"🎯 WOULD BUY: {settings.max_buy_amount:.4f} SOL")
-```
-
-Replace with actual swap execution once you're ready to test with real money.
+- Jupiter swap execution with Jito bundles
+- Trade persistence + sniper history recovery
+- User notifications via Telegram (auto updates + failure alerts)
 
 ## Monitoring in Real-Time
 

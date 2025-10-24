@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Database Migration Script
 Adds new columns to existing database without losing data
@@ -7,6 +8,12 @@ Adds new columns to existing database without losing data
 import sqlite3
 import sys
 import os
+
+# Fix Windows console encoding issues
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -17,11 +24,11 @@ def migrate_database():
     db_path = 'trading_bot.db'
     
     if not os.path.exists(db_path):
-        print(f"❌ Database not found: {db_path}")
+        print(f"[X] Database not found: {db_path}")
         print("Run the bot first to create the database.")
         return False
     
-    print("🔧 Migrating database...")
+    print("[*] Migrating database...")
     print(f"Database: {db_path}")
     
     try:
@@ -58,7 +65,7 @@ def migrate_database():
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            print("✅ Created user_settings table")
+            print("[OK] Created user_settings table")
         else:
             # Table exists, add missing columns
             print("Checking for missing columns...")
@@ -88,19 +95,19 @@ def migrate_database():
                     added += 1
             
             if added > 0:
-                print(f"✅ Added {added} new columns")
+                print(f"[OK] Added {added} new columns")
             else:
-                print("✅ All columns already exist")
+                print("[OK] All columns already exist")
         
         conn.commit()
         conn.close()
         
-        print("\n✅ Database migration complete!")
+        print("\n[OK] Database migration complete!")
         print("Restart your bot now.")
         return True
         
     except Exception as e:
-        print(f"\n❌ Migration failed: {e}")
+        print(f"\n[ERROR] Migration failed: {e}")
         return False
 
 
@@ -113,10 +120,10 @@ if __name__ == "__main__":
     success = migrate_database()
     
     if success:
-        print("\n✅ Migration successful!")
+        print("\n[OK] Migration successful!")
         print("You can now use the auto-sniper features.")
         sys.exit(0)
     else:
-        print("\n❌ Migration failed!")
+        print("\n[ERROR] Migration failed!")
         sys.exit(1)
 

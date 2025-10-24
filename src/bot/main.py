@@ -21,7 +21,7 @@ import os
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -55,7 +55,7 @@ from src.modules.token_sniper import AutoSniper, SnipeSettings
 from src.modules.jupiter_client import JupiterClient, AntiMEVProtection
 from src.modules.monitoring import BotMonitor, PerformanceTracker
 from src.modules.trade_execution import TradeExecutionService
-from src.config import get_config
+from src.config import Config, get_config
 
 # 🚀 ELITE ENHANCEMENTS
 from src.modules.wallet_intelligence import WalletIntelligenceEngine, WalletMetrics
@@ -82,13 +82,29 @@ class RevolutionaryTradingBot:
     - Professional risk management
     """
     
-    def __init__(self):
-        # Core components
-        self.client = AsyncClient(os.getenv('SOLANA_RPC_URL'))
-        self.db = DatabaseManager()
+    def __init__(
+        self,
+        config: 'Config',
+        db_manager: DatabaseManager,
+        solana_client: Optional[AsyncClient] = None,
+        monitor: Optional['BotMonitor'] = None,
+    ):
+        self.config = config
+        self.db = db_manager
         
+        # Track whether we own the client (created it) so we know if we should close it
+        self._owns_client = solana_client is None
+        self.client = solana_client or AsyncClient(config.solana_rpc_url)
+
+        # Default risk settings for new users
+        self.default_user_settings = self._build_default_user_settings()
+
         # 🔐 USER WALLET MANAGEMENT - Each user gets their own wallet
-        self.wallet_manager = UserWalletManager(self.db, self.client)
+        self.wallet_manager = UserWalletManager(
+            self.db,
+            self.client,
+            default_user_settings=self.default_user_settings,
+        )
         
         # Revolutionary AI system
         self.ai_manager = AIStrategyManager()
@@ -101,15 +117,16 @@ class RevolutionaryTradingBot:
         
         # Sentiment analysis with full Twitter OAuth 2.0 credentials
         self.sentiment_analyzer = SocialMediaAggregator(
-            twitter_api_key=os.getenv('TWITTER_API_KEY'),
-            twitter_bearer_token=os.getenv('TWITTER_BEARER_TOKEN'),
-            twitter_client_id=os.getenv('TWITTER_CLIENT_ID'),
-            twitter_client_secret=os.getenv('TWITTER_CLIENT_SECRET'),
+            twitter_api_key=self.config.twitter_api_key,
+            twitter_bearer_token=self.config.twitter_bearer_token,
+            twitter_client_id=self.config.twitter_client_id,
+            twitter_client_secret=self.config.twitter_client_secret,
             reddit_credentials={
-                'client_id': os.getenv('REDDIT_CLIENT_ID'),
-                'client_secret': os.getenv('REDDIT_CLIENT_SECRET')
+                'client_id': self.config.reddit_client_id,
+                'client_secret': self.config.reddit_client_secret,
+                'user_agent': self.config.reddit_user_agent,
             },
-            discord_token=os.getenv('DISCORD_TOKEN')
+            discord_token=self.config.discord_token,
         )
         self.trend_detector = TrendDetector()
         
@@ -122,7 +139,7 @@ class RevolutionaryTradingBot:
         self.elite_protection = EliteProtectionSystem(self.client, ProtectionConfig())
 
         # Monitoring & performance tracking
-        self.monitor = BotMonitor(None, admin_chat_id=int(os.getenv('ADMIN_CHAT_ID', 0)))
+        self.monitor = monitor or BotMonitor(None, admin_chat_id=self.config.admin_chat_id)
         self.performance = PerformanceTracker()
 
         # Centralized trade execution
@@ -163,10 +180,40 @@ class RevolutionaryTradingBot:
         logger.info("🧠 Wallet Intelligence System ready")
         logger.info("🛡️ Elite Protection System (6-layer) ready")
         logger.info("🤖 Automated Trading Engine ready")
+
+    def _build_default_user_settings(self) -> Dict:
+        """Build default user settings from config"""
+        trading = self.config.trading
+        return {
+            'max_trade_size_sol': trading.max_trade_size_sol,
+            'daily_loss_limit_sol': trading.daily_loss_limit_sol,
+            'slippage_percentage': trading.max_slippage,
+            'require_confirmation': trading.require_confirmation,
+            'use_stop_loss': trading.stop_loss_percentage > 0,
+            'default_stop_loss_percentage': trading.stop_loss_percentage,
+            'use_take_profit': trading.take_profit_percentage > 0,
+            'default_take_profit_percentage': trading.take_profit_percentage,
+            'check_honeypots': trading.honeypot_check_enabled,
+            'min_liquidity_usd': trading.min_liquidity_usd,
+        }
+
+    def _is_admin(self, update: Update) -> bool:
+        """Return True when the incoming update belongs to the admin chat."""
+
+        if not self.config.admin_chat_id:
+            return False
+
+        user = update.effective_user if update else None
+        chat = update.effective_chat if update else None
+        candidates = (
+            getattr(user, "id", None),
+            getattr(chat, "id", None),
+        )
+        return any(identifier == self.config.admin_chat_id for identifier in candidates)
     
     def _load_wallet(self) -> Optional[Keypair]:
         """Load wallet from environment"""
-        private_key = os.getenv('WALLET_PRIVATE_KEY')
+        private_key = self.config.wallet_private_key
         if private_key:
             import base58
             return Keypair.from_bytes(base58.b58decode(private_key))
@@ -1955,7 +2002,7 @@ COMMANDS:
         if not self.auto_trader:
             await update.message.reply_text("Automated trading not initialized. Use /autostart")
             return
-        
+
         status = self.auto_trader.get_status()
         
         status_emoji = "✅ RUNNING" if status['is_running'] else "❌ STOPPED"
@@ -1982,9 +2029,84 @@ OPEN POSITIONS:
         message += "Commands:\n"
         message += "/autostop - Stop trading\n"
         message += "/positions - Manage positions"
-        
+
         await update.message.reply_text(message, parse_mode=None)
+
+    async def metrics_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Return live operational telemetry for the administrator."""
+
+        message = update.effective_message
+        if not message:
+            return
+
+        if not self._is_admin(update):
+            await message.reply_text("❌ Metrics are available to the admin only.")
+            return
+
+        if not self.monitor:
+            await message.reply_text("Monitoring is currently disabled.")
+            return
+
+        report = self.monitor.render_markdown_summary()
+        await message.reply_text(
+            report,
+            parse_mode="Markdown",
+            disable_web_page_preview=True,
+        )
     
+    async def metrics_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show bot metrics (admin only)"""
+        if not self._is_admin(update):
+            await update.message.reply_text("❌ Admin access required")
+            return
+        
+        try:
+            stats = self.monitor.get_stats()
+            health = self.monitor.get_health_status()
+            
+            # Format uptime
+            uptime_hours = int(stats['uptime_hours'])
+            uptime_minutes = int((stats['uptime_hours'] - uptime_hours) * 60)
+            
+            # Build metrics message
+            message = f"""📊 **BOT METRICS**
+
+⏱️ **Uptime:** {uptime_hours}h {uptime_minutes}m
+🔄 **Total RPC Requests:** {stats['total_requests']:,}
+
+💼 **Trading:**
+✅ Successful: {stats['successful_trades']:,}
+❌ Failed: {stats['failed_trades']:,}
+📈 Success Rate: {stats['success_rate']:.1f}%
+
+🚨 **Recent Errors:** {stats['recent_errors']}
+
+🏥 **Health Status:** {"✅ Healthy" if health['healthy'] else "⚠️ Issues Detected"}
+"""
+            
+            if health['issues']:
+                message += "\n⚠️ **Issues:**\n"
+                for issue in health['issues']:
+                    message += f"  • {issue}\n"
+            
+            # Add custom metrics if any
+            if self.monitor.metrics:
+                message += "\n📊 **Custom Metrics:**\n"
+                for name, samples in self.monitor.metrics.items():
+                    if samples:
+                        latest = samples[-1]
+                        value = latest['value']
+                        if isinstance(value, float):
+                            message += f"  • {name}: {value:.2f}\n"
+                        else:
+                            message += f"  • {name}: {value}\n"
+            
+            await update.message.reply_text(message, parse_mode='Markdown')
+            
+        except Exception as e:
+            logger.error(f"Error generating metrics: {e}")
+            await update.message.reply_text(f"❌ Error generating metrics: {e}")
+
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show help menu with all commands"""
         message = """❓ HELP & COMMANDS
@@ -2031,6 +2153,9 @@ OPEN POSITIONS:
 
 ⚙️ SETTINGS:
 /settings - Configure bot
+
+🔧 ADMIN:
+/metrics - Bot health & metrics
 
 Platform fee: 0.5% per trade
 """
@@ -2190,10 +2315,10 @@ Your keys give COMPLETE access to your wallet and funds."""
             )
         
         elif data == "my_stats":
-            await self.my_stats_command(query, context)
+            await self.my_stats_command(update, context)
         
         elif data == "leaderboard":
-            await self.leaderboard_command(query, context)
+            await self.leaderboard_command(update, context)
         
         elif data == "settings":
             await self._show_settings_menu(query)
@@ -2662,6 +2787,9 @@ Use /settings command to modify these settings
         app.add_handler(CommandHandler("help", self.help_command))
         app.add_handler(CommandHandler("features", self.features_command))
         
+        # Admin
+        app.add_handler(CommandHandler("metrics", self.metrics_command))
+        
         # Callback handler for all buttons
         app.add_handler(CallbackQueryHandler(self.button_callback))
         
@@ -2705,17 +2833,25 @@ Use /settings command to modify these settings
                 # Stop sniper first
                 await self.sniper.stop()
 
+                # Stop Telegram updater and app
                 if getattr(self.app, "updater", None):
                     await self.app.updater.stop()
                 await self.app.stop()
                 await self.app.shutdown()
+                
+                # Close network resources if we own them
+                if self._owns_client and self.client:
+                    logger.info("Closing Solana RPC client...")
+                    await self.client.close()
+                
                 logger.info("Bot stopped successfully")
             except Exception as e:
                 logger.error(f"Error during shutdown: {e}")
     
     def run(self):
         """Start the revolutionary bot (sync version for direct use)"""
-        app = Application.builder().token(os.getenv('TELEGRAM_BOT_TOKEN')).build()
+        self.app = Application.builder().token(self.config.telegram_bot_token).build()
+        app = self.app
         
         # Register all commands
         app.add_handler(CommandHandler("start", self.start_command))
@@ -2746,5 +2882,13 @@ Use /settings command to modify these settings
 
 
 if __name__ == "__main__":
-    bot = RevolutionaryTradingBot()
-    bot.run()
+    config = get_config()
+    db_manager = DatabaseManager(config.database_url)
+    asyncio.run(db_manager.init_db())
+    client = AsyncClient(config.solana_rpc_url)
+
+    bot = RevolutionaryTradingBot(config, db_manager, solana_client=client)
+    try:
+        bot.run()
+    finally:
+        asyncio.run(bot.stop())

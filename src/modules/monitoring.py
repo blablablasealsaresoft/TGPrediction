@@ -95,6 +95,70 @@ class BotMonitor:
         """Return recent metric samples for external reporting."""
 
         return list(self.metrics.get(name, ()))
+
+    def get_recent_errors(self, *, limit: int = 5) -> List[Dict[str, Any]]:
+        """Return the most recent recorded errors."""
+
+        if limit <= 0:
+            return []
+        return list(self.errors[-limit:])
+
+    def render_markdown_summary(self) -> str:
+        """Serialize current health/metrics into a Markdown snippet."""
+        from telegram.helpers import escape_markdown
+
+        stats = self.get_stats()
+        lines = [
+            "*Bot Metrics Summary*",
+            f"• Uptime: `{stats['uptime_hours']:.2f}h`",
+            f"• Total requests: `{stats['total_requests']}`",
+            f"• Successful trades: `{stats['successful_trades']}`",
+            f"• Failed trades: `{stats['failed_trades']}`",
+            f"• Success rate: `{stats['success_rate']:.1f}%`",
+        ]
+
+        if self.metrics:
+            lines.append("\n*Latest custom metrics*")
+            for name, samples in self.metrics.items():
+                if not samples:
+                    continue
+                latest = samples[-1]
+                timestamp = latest['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                value = latest['value']
+                lines.append(
+                    f"• `{escape_markdown(name, version=1)}`: `{value}` (at {timestamp} UTC)"
+                )
+
+        recent_errors = self.get_recent_errors()
+        if recent_errors:
+            lines.append("\n*Recent errors*")
+            for err in recent_errors:
+                timestamp = err['timestamp'].strftime('%H:%M:%S')
+                err_type = escape_markdown(str(err['type']), version=1)
+                message = escape_markdown(str(err['message']), version=1)
+                lines.append(
+                    f"• `{timestamp}` · `{err_type}` – {message}"
+                )
+
+        return "\n".join(lines)
+
+    async def publish_summary(self, heading: str = "📊 Bot metrics summary") -> None:
+        """Send the metrics report to the configured admin chat."""
+        from telegram.error import TelegramError
+
+        if not self.admin_chat_id or not self.bot:
+            return
+
+        message = f"{heading}\n\n{self.render_markdown_summary()}"
+        try:
+            await self.bot.send_message(
+                chat_id=self.admin_chat_id,
+                text=message,
+                parse_mode='Markdown',
+                disable_web_page_preview=True,
+            )
+        except TelegramError as exc:
+            logger.error("Failed to publish metrics summary: %s", exc)
     
     async def send_alert(self, alert_type: str, message: str):
         """Send alert to admin"""

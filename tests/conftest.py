@@ -28,13 +28,16 @@ def mock_config():
     trading = TradingConfig(
         max_slippage=5.0,
         default_buy_amount_sol=0.1,
-        min_profit_percentage=2.0,
         max_trade_size_sol=1.0,
         daily_loss_limit_sol=5.0,
         require_confirmation=True,
         min_liquidity_usd=10000.0,
         check_mint_authority=True,
         check_freeze_authority=True,
+        honeypot_check_enabled=True,
+        stop_loss_percentage=15.0,
+        take_profit_percentage=50.0,
+        trailing_stop_percentage=10.0,
     )
     
     return Config(
@@ -46,8 +49,12 @@ def mock_config():
         trading=trading,
         twitter_api_key=None,
         twitter_api_secret=None,
+        twitter_bearer_token=None,
+        twitter_client_id=None,
+        twitter_client_secret=None,
         reddit_client_id=None,
         reddit_client_secret=None,
+        reddit_user_agent=None,
         discord_token=None,
         database_url="sqlite+aiosqlite:///:memory:",
         enable_health_check_server=False,

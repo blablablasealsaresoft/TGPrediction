@@ -13,20 +13,17 @@
 TELEGRAM_BOT_TOKEN=8455438652:AAFvrxM6GFZ91BwoohvMCezhsj7N16YFju0
 
 # Admin Telegram User ID (get from @userinfobot)
-ADMIN_CHAT_ID=6594416344
+ADMIN_CHAT_ID=8059844643
 
 # Solana RPC URLs (use paid RPC for better performance)
-SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
 SOLANA_WS_URL=wss://api.mainnet-beta.solana.com
+FALLBACK_RPC_URL=https://api.mainnet-beta.solana.com
 
 # Optional: Your wallet private key in base58 format (for platform fees)
 WALLET_PRIVATE_KEY=2KBD49gknMGpsVSJWuUFbTPLsVLd4kMEN8n8cBERvJFML8sBzavGqpHH14mYUwDWYHZ6EdTx1DzHxto6PUsUVpke
 
-# Required: Master encryption key for user wallets (Fernet, base64 encoded)
-# Generate with: python scripts/rotate_wallet_key.py --generate-new-key
-WALLET_ENCRYPTION_KEY=
-
-
+WALLET_ENCRYPTION_KEY=6SZqLo3c77pzvLVyRLuYafhNuxa-qANLx8WWaplEZPw=
 # ============================================================================
 # 🧠 ELITE WALLET INTELLIGENCE
 # ============================================================================
@@ -35,7 +32,7 @@ WALLET_ENCRYPTION_KEY=
 TRACK_WALLETS_AUTO=true
 
 # Minimum score to consider a wallet "good" (0-100)
-MIN_WALLET_SCORE=70.0
+MIN_WALLET_SCORE=65.0
 
 # Max wallets to track simultaneously
 MAX_TRACKED_WALLETS=100
@@ -49,19 +46,19 @@ MAX_TRACKED_WALLETS=100
 AUTO_TRADE_ENABLED=true
 
 # Minimum AI confidence required to execute (0.0-1.0)
-AUTO_TRADE_MIN_CONFIDENCE=0.75
+AUTO_TRADE_MIN_CONFIDENCE=0.6
 
 # Max trades per day per user
-AUTO_TRADE_MAX_DAILY_TRADES=50
+AUTO_TRADE_MAX_DAILY_TRADES=10
 
 # Max SOL to spend on auto-trading per day per user
-AUTO_TRADE_DAILY_LIMIT_SOL=100.0
+AUTO_TRADE_DAILY_LIMIT_SOL=1.0
 
 # Default buy amount per trade (SOL)
-DEFAULT_BUY_AMOUNT=0.1
+DEFAULT_BUY_AMOUNT=0.05
 
 # Max position size (SOL)
-MAX_POSITION_SIZE_SOL=10.0
+MAX_POSITION_SIZE_SOL=0.5
 
 
 # ============================================================================
@@ -73,7 +70,7 @@ HONEYPOT_DETECTION_METHODS=6
 HONEYPOT_CHECK_ENABLED=true
 
 # Minimum liquidity required (USD)
-MIN_LIQUIDITY_USD=5000.0
+MIN_LIQUIDITY_USD=2000.0
 
 # Authority checks
 CHECK_MINT_AUTHORITY=true
@@ -107,13 +104,13 @@ SNIPE_TIP_LAMPORTS=100000
 SNIPE_PRIORITY_FEE=2000000
 
 # Default snipe amount (SOL)
-SNIPE_AMOUNT_SOL=0.5
+SNIPE_AMOUNT_SOL=0.05
 
 # Minimum liquidity for snipes (SOL)
-SNIPE_MIN_LIQUIDITY_SOL=10
+SNIPE_MIN_LIQUIDITY_SOL=2
 
 # Max snipes per day per user
-SNIPE_MAX_DAILY=10
+SNIPE_MAX_DAILY=3
 
 
 # ============================================================================
@@ -130,7 +127,7 @@ TAKE_PROFIT_PERCENTAGE=0.50
 TRAILING_STOP_PERCENTAGE=0.10
 
 # Max daily loss per user (SOL)
-MAX_DAILY_LOSS_SOL=50.0
+MAX_DAILY_LOSS_SOL=0.15
 
 # Max slippage (0.05 = 5%)
 MAX_SLIPPAGE=0.05
@@ -155,13 +152,13 @@ JITO_TIP_LAMPORTS=100000
 # ============================================================================
 
 # Twitter/X API v2
-TWITTER_API_KEY=
-TWITTER_API_SECRET=
-TWITTER_BEARER_TOKEN=
+TWITTER_API_KEY=SrEqKHwaXpj3R28d7RcnZjJIE
+TWITTER_API_SECRET=Lli2wtX1ifkDXwsB9v23DtJaKvFEk2rhqReItSzfoMuB8U7Dse
+TWITTER_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAAHY%2F1wEAAAAAnj8bmnYBp5pvGrUamSySm4Uzfdw%3DUopwOJrEuPFtvj6GRzjTj2dEAX0dtYbLTNsE5qaYMBesseEP7B
 
 # Reddit API
-REDDIT_CLIENT_ID=
-REDDIT_CLIENT_SECRET=
+REDDIT_CLIENT_ID=U-h5zvhaIifMRiZ3hKGyfw
+REDDIT_CLIENT_SECRET=_dlqVgssQQwhGCFw4XYadfI64odO4g
 REDDIT_USER_AGENT=EliteTradingBot/1.0
 
 # Discord Bot (for monitoring channels)
@@ -173,7 +170,7 @@ DISCORD_TOKEN=
 # ============================================================================
 
 # Database URL (SQLite by default, can use PostgreSQL for production)
-DATABASE_URL=sqlite:///trading_bot.db
+DATABASE_URL=sqlite+aiosqlite:///trading_bot.db
 
 # Enable database backups
 DATABASE_BACKUP_ENABLED=true
@@ -275,4 +272,42 @@ DRY_RUN=false
 # 6. Keep your .env file secure - never share it or commit to git
 #
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+WALLET_ENCRYPTION_KEY=6SZqLo3c77pzvLVyRLuYafhNuxa-qANLx8WWaplEZPw=
+
+# Helius RPC (100K requests/day FREE)
+
+HELIUS_API_KEY=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+
+HELIUS_PROJECT_ID=6a9a1a3c-79f8-4265-a86f-199bc33ffa56
+
+TWITTER_CLIENT_ID=Z3NITmlwMkZxQ3hpdFVlQ3Q3NS06MTpjaQ
+
+TWITTER_CLIENT_SECRET=BrT7t3BgwOqEfAVoBonDdydonE1JfSWKzt3qleYFIVkyL-VZHd
+
+# Primary RPC (your fastest)
+SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+
+# Fallback RPCs (free, for parallel submission)
+FALLBACK_RPC_1=https://api.mainnet-beta.solana.com
+FALLBACK_RPC_2=https://solana-api.projectserum.com
+FALLBACK_RPC_3=https://rpc.ankr.com/solana
+
+# Simulation RPC (fastest for pre-checks)
+SIMULATE_RPC=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+
+# Jito configuration
+JITO_BLOCK_ENGINE_URL=https://mainnet.block-engine.jito.wtf/api/v1
+JITO_TIP_ACCOUNT=96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5
+JITO_TIP_LAMPORTS=100000
+
+# Priority fees (increase for faster execution)
+PRIORITY_FEE_MICROLAMPORTS=2000000
+COMPUTE_UNIT_LIMIT=200000
+
+# Fast execution settings
+ENABLE_PARALLEL_SUBMISSION=true
+ENABLE_FAST_SIMULATION=true
+PARALLEL_RPC_COUNT=3
 

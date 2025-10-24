@@ -96,11 +96,12 @@ class UserWalletManager:
     Each user gets their own Solana wallet for trading
     """
     
-    def __init__(self, db: DatabaseManager, rpc_client: AsyncClient):
+    def __init__(self, db: DatabaseManager, rpc_client: AsyncClient, default_user_settings: Optional[Dict] = None):
         self.db = db
         self.client = rpc_client
         self.encryption = WalletEncryption()
         self._wallet_cache = {}  # Cache keypairs in memory
+        self._default_user_settings = dict(default_user_settings) if default_user_settings else None
     
     async def get_or_create_user_wallet(
         self,
@@ -119,9 +120,11 @@ class UserWalletManager:
         
         if wallet:
             logger.info(f"✅ Found existing wallet: {wallet.public_key}")
-        
-        if wallet:
-            # Update balance
+
+            if self._default_user_settings is not None:
+                await self.db.ensure_user_settings(user_id, self._default_user_settings)
+
+            # Update balance from chain
             balance = await self._get_sol_balance(wallet.public_key)
             
             async with self.db.async_session() as session:
@@ -161,6 +164,9 @@ class UserWalletManager:
             )
             session.add(user_wallet)
             await session.commit()
+        
+        if self._default_user_settings is not None:
+            await self.db.ensure_user_settings(user_id, self._default_user_settings)
         
         # Cache the keypair
         self._wallet_cache[user_id] = keypair
@@ -218,11 +224,19 @@ class UserWalletManager:
         # Get fresh balance from RPC
         balance = await self._get_sol_balance(wallet.public_key)
         
-        # Update cached balance
+        # Update cached balance in a new session
         async with self.db.async_session() as session:
-            wallet.sol_balance = balance
-            wallet.last_balance_update = datetime.utcnow()
-            await session.commit()
+            # Get the wallet object in this session
+            from sqlalchemy import select
+            result = await session.execute(
+                select(UserWallet).where(UserWallet.user_id == user_id)
+            )
+            wallet_obj = result.scalar_one_or_none()
+            
+            if wallet_obj:
+                wallet_obj.sol_balance = balance
+                wallet_obj.last_balance_update = datetime.utcnow()
+                await session.commit()
         
         return balance
     

@@ -1,7 +1,6 @@
-"""
-Configuration management for trading bot
-Loads settings from environment variables with validation
-"""
+
+"""Configuration management for trading bot
+Loads settings from environment variables with validation"""
 
 import os
 from typing import Optional
@@ -12,102 +11,144 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _normalize_percentage(value: float) -> float:
+    """Convert fractional percentages (0-1) to 0-100 scale."""
+    if value <= 1:
+        return value * 100
+    return value
+
+
+def _get_float(name: str, default: str) -> float:
+    """Safely parse a float environment variable."""
+    raw = os.getenv(name, default)
+    try:
+        return float(raw)
+    except (TypeError, ValueError) as exc:  # pragma: no cover - defensive guard
+        raise ValueError(f"Invalid numeric value for {name}: {raw}") from exc
+
+
+def _get_bool(name: str, default: str = 'false') -> bool:
+    """Parse a boolean flag from environment variables."""
+    value = os.getenv(name, default)
+    if value is None:
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass
 class TradingConfig:
     """Trading parameters"""
+
     max_slippage: float
     default_buy_amount_sol: float
-    min_profit_percentage: float
     max_trade_size_sol: float
     daily_loss_limit_sol: float
     require_confirmation: bool
     min_liquidity_usd: float
     check_mint_authority: bool
     check_freeze_authority: bool
+    honeypot_check_enabled: bool
+    stop_loss_percentage: float
+    take_profit_percentage: float
+    trailing_stop_percentage: float
 
 
 @dataclass
 class Config:
     """Main configuration class"""
-    
+
     # Telegram
     telegram_bot_token: str
     admin_chat_id: Optional[int]
-    
+
     # Solana
     solana_rpc_url: str
     wallet_private_key: str
     solana_network: str
-    
+
     # Trading
     trading: TradingConfig
-    
+
     # Social Media APIs
     twitter_api_key: Optional[str]
     twitter_api_secret: Optional[str]
+    twitter_bearer_token: Optional[str]
+    twitter_client_id: Optional[str]
+    twitter_client_secret: Optional[str]
     reddit_client_id: Optional[str]
     reddit_client_secret: Optional[str]
+    reddit_user_agent: Optional[str]
     discord_token: Optional[str]
-    
+
     # Database
     database_url: str
-    
+
     # Monitoring
     enable_health_check_server: bool
     health_check_port: int
-    
+
     # Logging
     log_level: str
     log_file: str
-    
+
     @classmethod
     def from_env(cls) -> 'Config':
         """Load configuration from environment variables"""
-        
+
         # Telegram
         telegram_bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '')
         if not telegram_bot_token:
             raise ValueError("TELEGRAM_BOT_TOKEN is required")
-        
+
         admin_chat_id_str = os.getenv('ADMIN_CHAT_ID')
         admin_chat_id = int(admin_chat_id_str) if admin_chat_id_str else None
-        
+
         # Solana
         solana_rpc_url = os.getenv('SOLANA_RPC_URL', 'https://api.mainnet-beta.solana.com')
         wallet_private_key = os.getenv('WALLET_PRIVATE_KEY', '')
         solana_network = os.getenv('SOLANA_NETWORK', 'mainnet-beta')
-        
+
         # Trading
         trading = TradingConfig(
-            max_slippage=float(os.getenv('MAX_SLIPPAGE', '5.0')),
-            default_buy_amount_sol=float(os.getenv('DEFAULT_BUY_AMOUNT_SOL', '0.1')),
-            min_profit_percentage=float(os.getenv('MIN_PROFIT_PERCENTAGE', '2.0')),
-            max_trade_size_sol=float(os.getenv('MAX_TRADE_SIZE_SOL', '1.0')),
-            daily_loss_limit_sol=float(os.getenv('DAILY_LOSS_LIMIT_SOL', '5.0')),
-            require_confirmation=os.getenv('REQUIRE_CONFIRMATION', 'true').lower() == 'true',
-            min_liquidity_usd=float(os.getenv('MIN_LIQUIDITY_USD', '10000')),
-            check_mint_authority=os.getenv('CHECK_MINT_AUTHORITY', 'true').lower() == 'true',
-            check_freeze_authority=os.getenv('CHECK_FREEZE_AUTHORITY', 'true').lower() == 'true',
+            max_slippage=_normalize_percentage(_get_float('MAX_SLIPPAGE', '5.0')),
+            default_buy_amount_sol=_get_float('DEFAULT_BUY_AMOUNT', os.getenv('DEFAULT_BUY_AMOUNT_SOL', '0.1') or '0.1'),
+            max_trade_size_sol=_get_float('MAX_POSITION_SIZE_SOL', os.getenv('MAX_TRADE_SIZE_SOL', '1.0') or '1.0'),
+            daily_loss_limit_sol=_get_float('MAX_DAILY_LOSS_SOL', os.getenv('DAILY_LOSS_LIMIT_SOL', '5.0') or '5.0'),
+            require_confirmation=_get_bool('REQUIRE_CONFIRMATION', 'true'),
+            min_liquidity_usd=_get_float('MIN_LIQUIDITY_USD', '10000'),
+            check_mint_authority=_get_bool('CHECK_MINT_AUTHORITY', 'true'),
+            check_freeze_authority=_get_bool('CHECK_FREEZE_AUTHORITY', 'true'),
+            honeypot_check_enabled=_get_bool(
+                'HONEYPOT_CHECK_ENABLED',
+                os.getenv('HONEYPOT_DETECTION_ENABLED', 'true') or 'true'
+            ),
+            stop_loss_percentage=_normalize_percentage(_get_float('STOP_LOSS_PERCENTAGE', '10.0')),
+            take_profit_percentage=_normalize_percentage(_get_float('TAKE_PROFIT_PERCENTAGE', '20.0')),
+            trailing_stop_percentage=_normalize_percentage(_get_float('TRAILING_STOP_PERCENTAGE', '0.0')),
         )
-        
+
         # Social Media (optional)
         twitter_api_key = os.getenv('TWITTER_API_KEY')
         twitter_api_secret = os.getenv('TWITTER_API_SECRET')
+        twitter_bearer_token = os.getenv('TWITTER_BEARER_TOKEN')
+        twitter_client_id = os.getenv('TWITTER_CLIENT_ID')
+        twitter_client_secret = os.getenv('TWITTER_CLIENT_SECRET')
         reddit_client_id = os.getenv('REDDIT_CLIENT_ID')
         reddit_client_secret = os.getenv('REDDIT_CLIENT_SECRET')
+        reddit_user_agent = os.getenv('REDDIT_USER_AGENT')
         discord_token = os.getenv('DISCORD_TOKEN')
-        
+
         # Database
         database_url = os.getenv('DATABASE_URL', 'sqlite+aiosqlite:///trading_bot.db')
-        
+
         # Monitoring
-        enable_health_check_server = os.getenv('ENABLE_HEALTH_CHECK_SERVER', 'true').lower() == 'true'
+        enable_health_check_server = _get_bool('ENABLE_HEALTH_CHECK_SERVER', 'true')
         health_check_port = int(os.getenv('HEALTH_CHECK_PORT', '8080'))
-        
+
         # Logging
         log_level = os.getenv('LOG_LEVEL', 'INFO')
         log_file = os.getenv('LOG_FILE', 'logs/trading_bot.log')
-        
+
         return cls(
             telegram_bot_token=telegram_bot_token,
             admin_chat_id=admin_chat_id,
@@ -117,8 +158,12 @@ class Config:
             trading=trading,
             twitter_api_key=twitter_api_key,
             twitter_api_secret=twitter_api_secret,
+            twitter_bearer_token=twitter_bearer_token,
+            twitter_client_id=twitter_client_id,
+            twitter_client_secret=twitter_client_secret,
             reddit_client_id=reddit_client_id,
             reddit_client_secret=reddit_client_secret,
+            reddit_user_agent=reddit_user_agent,
             discord_token=discord_token,
             database_url=database_url,
             enable_health_check_server=enable_health_check_server,
@@ -126,25 +171,30 @@ class Config:
             log_level=log_level,
             log_file=log_file
         )
-    
+
     def validate(self):
         """Validate configuration"""
         errors = []
-        
+
         if not self.telegram_bot_token:
             errors.append("TELEGRAM_BOT_TOKEN is required")
-        
+
         if self.solana_network not in ['devnet', 'testnet', 'mainnet-beta']:
             errors.append(f"Invalid SOLANA_NETWORK: {self.solana_network}")
-        
+
         if self.trading.max_slippage < 0 or self.trading.max_slippage > 50:
-            errors.append("MAX_SLIPPAGE must be between 0 and 50")
-        
+            errors.append("MAX_SLIPPAGE must be between 0 and 50 percent")
+
         if self.trading.max_trade_size_sol <= 0:
-            errors.append("MAX_TRADE_SIZE_SOL must be positive")
-        
+            errors.append("MAX_POSITION_SIZE_SOL must be positive")
+
+        if self.trading.daily_loss_limit_sol <= 0:
+            errors.append("MAX_DAILY_LOSS_SOL must be positive")
+
         if errors:
-            raise ValueError(f"Configuration errors:\n" + "\n".join(f"- {e}" for e in errors))
+            raise ValueError(
+                "Configuration errors:\n" + "\n".join(f"- {e}" for e in errors)
+            )
 
 
 # Global config instance
@@ -165,4 +215,3 @@ def reload_config():
     global _config
     _config = None
     return get_config()
-

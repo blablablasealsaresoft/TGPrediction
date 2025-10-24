@@ -131,6 +131,13 @@ class Position(Base):
     entry_signature = Column(String)
     entry_timestamp = Column(DateTime, default=datetime.utcnow)
 
+    # Remaining balances for partial exits
+    remaining_amount_sol = Column(Float, default=0.0)
+    remaining_amount_tokens = Column(Float, default=0.0)
+    remaining_amount_raw = Column(Integer, default=0)
+    realized_pnl_sol = Column(Float, default=0.0)
+    realized_amount_sol = Column(Float, default=0.0)
+
     # Exit
     exit_price = Column(Float, nullable=True)
     exit_amount_sol = Column(Float, nullable=True)
@@ -576,6 +583,27 @@ class DatabaseManager:
             await session.refresh(position)
             return position
     
+    async def update_position_partial(self, position_id: str, updates: Dict) -> Optional[Position]:
+        """Apply partial exit updates to a position without closing it."""
+        if not updates:
+            return None
+
+        async with self.async_session() as session:
+            query = select(Position).where(Position.position_id == position_id)
+            result = await session.execute(query)
+            position = result.scalar_one_or_none()
+
+            if not position:
+                return None
+
+            for key, value in updates.items():
+                if hasattr(position, key):
+                    setattr(position, key, value)
+
+            await session.commit()
+            await session.refresh(position)
+            return position
+
     async def close_position(
         self,
         position_id: str,
@@ -642,6 +670,22 @@ class DatabaseManager:
             result = await session.execute(query)
             return result.scalar_one_or_none()
     
+    async def ensure_user_settings(self, user_id: int, defaults: Dict) -> UserSettings:
+        """Ensure a user settings row exists and return it."""
+        async with self.async_session() as session:
+            query = select(UserSettings).where(UserSettings.user_id == user_id)
+            result = await session.execute(query)
+            record = result.scalar_one_or_none()
+
+            if record:
+                return record
+
+            record = UserSettings(user_id=user_id, **defaults)
+            session.add(record)
+            await session.commit()
+            await session.refresh(record)
+            return record
+
     async def update_user_settings(self, user_id: int, settings: Dict):
         """Update user settings"""
         async with self.async_session() as session:
@@ -762,3 +806,13 @@ class DatabaseManager:
             
             await session.commit()
             logger.info(f"Cleaned up {len(old_trades)} old trades")
+
+    async def dispose(self):
+        """Dispose of the underlying async engine."""
+        dispose = getattr(self.engine, 'dispose', None)
+        if not dispose:
+            return
+
+        result = dispose()
+        if hasattr(result, '__await__'):
+            await result

@@ -298,19 +298,32 @@ class TradeExecutionService:
         if amount_tokens <= 0:
             return {"success": False, "error": "Sell amount must be positive"}
 
-        remaining_tokens = position.entry_amount_tokens or 0.0
-        if abs(amount_tokens - remaining_tokens) > 1e-6:
-            return {
-                "success": False,
-                "error": "Partial position sells are not supported yet. Use 'all'.",
-            }
-
-        amount_raw = position.entry_amount_raw or 0
-        if amount_raw <= 0:
+        # Calculate remaining tokens (handle partial exits)
+        position_tokens = position.entry_amount_tokens or 0.0
+        position_raw = position.entry_amount_raw or 0
+        
+        if position_raw <= 0:
             return {
                 "success": False,
                 "error": "Stored position amount is invalid, cannot sell.",
             }
+        
+        # Check if this is a partial sell
+        is_partial_sell = amount_tokens < position_tokens - 1e-6
+        
+        if is_partial_sell:
+            # Calculate proportional raw amount
+            sell_percentage = amount_tokens / position_tokens
+            amount_raw = int(position_raw * sell_percentage)
+            
+            if amount_raw <= 0:
+                return {
+                    "success": False,
+                    "error": "Partial sell amount too small to execute.",
+                }
+        else:
+            # Full position exit
+            amount_raw = position_raw
 
         keypair = await self.wallet_manager.get_user_keypair(user_id)
         if not keypair:
@@ -346,44 +359,88 @@ class TradeExecutionService:
         price = self._calculate_price(sol_received, amount_tokens)
         trade_metadata = metadata or {}
 
-        await self._persist_trade_record(
-            user_id,
-            token_mint,
-            token_symbol,
-            sol_received,
-            amount_tokens,
-            "sell",
-            signature=signature,
-            price=price,
-            slippage=settings.slippage_percentage,
-            price_impact=result.get("price_impact"),
-            position_id=position.position_id,
-            is_position_open=False,
-            context=context,
-            metadata=trade_metadata,
-        )
+        # Handle partial vs. full exit
+        if is_partial_sell:
+            # Partial exit - keep position open
+            remaining_tokens = position_tokens - amount_tokens
+            remaining_raw = position_raw - amount_raw
+            remaining_sol = position.entry_amount_sol * (remaining_tokens / position_tokens)
+            
+            partial_pnl = sol_received - (position.entry_amount_sol * (amount_tokens / position_tokens))
+            
+            await self._persist_trade_record(
+                user_id,
+                token_mint,
+                token_symbol,
+                sol_received,
+                amount_tokens,
+                "sell",
+                signature=signature,
+                price=price,
+                slippage=settings.slippage_percentage,
+                price_impact=result.get("price_impact"),
+                position_id=position.position_id,
+                is_position_open=True,  # Position still open
+                context=context,
+                metadata=trade_metadata,
+            )
+            
+            partial_updates = {
+                "remaining_amount_tokens": remaining_tokens,
+                "remaining_amount_raw": remaining_raw,
+                "remaining_amount_sol": remaining_sol,
+                "realized_pnl_sol": (position.realized_pnl_sol or 0.0) + partial_pnl,
+                "realized_amount_sol": (position.realized_amount_sol or 0.0) + sol_received,
+            }
+            
+            await self.db.update_position_partial(position.position_id, partial_updates)
+            pnl = partial_pnl
+            
+            logger.info(
+                f"Partial SELL | user={user_id} token={token_mint} "
+                f"sold={amount_tokens:.4f} remaining={remaining_tokens:.4f} "
+                f"sol_received={sol_received:.4f} pnl={pnl:+.4f}"
+            )
+        else:
+            # Full exit - close position
+            await self._persist_trade_record(
+                user_id,
+                token_mint,
+                token_symbol,
+                sol_received,
+                amount_tokens,
+                "sell",
+                signature=signature,
+                price=price,
+                slippage=settings.slippage_percentage,
+                price_impact=result.get("price_impact"),
+                position_id=position.position_id,
+                is_position_open=False,
+                context=context,
+                metadata=trade_metadata,
+            )
 
-        position_updates = {
-            "exit_price": price or 0.0,
-            "exit_amount_sol": sol_received,
-            "exit_amount_tokens": amount_tokens,
-            "exit_amount_raw": amount_raw,
-            "exit_signature": signature,
-            "exit_timestamp": datetime.utcnow(),
-        }
+            position_updates = {
+                "exit_price": price or 0.0,
+                "exit_amount_sol": sol_received,
+                "exit_amount_tokens": amount_tokens,
+                "exit_amount_raw": amount_raw,
+                "exit_signature": signature,
+                "exit_timestamp": datetime.utcnow(),
+            }
 
-        serialized_metadata = self._serialize_metadata(trade_metadata)
-        if serialized_metadata is not None:
-            position_updates["metadata_json"] = serialized_metadata
+            serialized_metadata = self._serialize_metadata(trade_metadata)
+            if serialized_metadata is not None:
+                position_updates["metadata_json"] = serialized_metadata
 
-        closed_position = await self.db.close_position(
-            position.position_id,
-            position_updates,
-        )
+            closed_position = await self.db.close_position(
+                position.position_id,
+                position_updates,
+            )
 
-        pnl = 0.0
-        if closed_position and closed_position.pnl_sol is not None:
-            pnl = closed_position.pnl_sol
+            pnl = 0.0
+            if closed_position and closed_position.pnl_sol is not None:
+                pnl = closed_position.pnl_sol
 
         await self._reward_user(user_id, "sell", reason, pnl=pnl)
 
