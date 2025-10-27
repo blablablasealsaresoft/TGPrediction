@@ -14,7 +14,7 @@ from solders.keypair import Keypair
 from solana.rpc.async_api import AsyncClient
 from sqlalchemy import select
 
-from src.modules.database import UserWallet, DatabaseManager
+from src.modules.database import UserWallet, DatabaseManager, TrackedWallet
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +123,7 @@ class UserWalletManager:
 
             if self._default_user_settings is not None:
                 await self.db.ensure_user_settings(user_id, self._default_user_settings)
+            await self._auto_link_copy_traders(user_id)
 
             # Update balance from chain
             balance = await self._get_sol_balance(wallet.public_key)
@@ -167,6 +168,7 @@ class UserWalletManager:
         
         if self._default_user_settings is not None:
             await self.db.ensure_user_settings(user_id, self._default_user_settings)
+        await self._auto_link_copy_traders(user_id)
         
         # Cache the keypair
         self._wallet_cache[user_id] = keypair
@@ -179,6 +181,46 @@ class UserWalletManager:
             'is_new': True,
             'created_at': datetime.utcnow()
         }
+
+    async def _auto_link_copy_traders(self, follower_id: int) -> None:
+        """Automatically attach new users to all active leader profiles."""
+        try:
+            async with self.db.async_session() as session:
+                result = await session.execute(
+                    select(TrackedWallet).where(
+                        TrackedWallet.is_trader.is_(True),
+                        TrackedWallet.copy_trader_id.is_(None),
+                        TrackedWallet.copy_enabled.is_(True),
+                    )
+                )
+                leaders = result.scalars().all()
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("Failed to load leader wallets for auto copy linking")
+            return
+
+        if not leaders:
+            return
+
+        for leader in leaders:
+            settings = {
+                'wallet_address': leader.wallet_address,
+                'label': leader.label or f"Leader {leader.wallet_address[:6]}",
+                'max_copy_amount': leader.copy_amount_sol or 0.1,
+                'copy_percentage': leader.copy_percentage or 100.0,
+                'max_daily_trades': leader.copy_max_daily_trades or 10,
+            }
+            try:
+                await self.db.set_copy_relationship(
+                    follower_id=follower_id,
+                    trader_id=leader.user_id,
+                    settings=settings,
+                )
+            except Exception:  # pragma: no cover - defensive
+                logger.exception(
+                    "Failed to auto link follower %s to leader %s",
+                    follower_id,
+                    leader.wallet_address,
+                )
     
     async def get_user_keypair(self, user_id: int) -> Optional[Keypair]:
         """

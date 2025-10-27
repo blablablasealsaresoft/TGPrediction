@@ -1,0 +1,2 @@
+# See requirements/README.md for details on updating the lockfile.
+-r requirements/dev.lock

@@ -1,0 +1,345 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🚀 ELITE SOLANA TRADING BOT - PRODUCTION CONFIGURATION
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# COPY THIS FILE TO: .env
+# All your API keys + production safety features
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ============================================================================
+# 🔒 PRODUCTION ENVIRONMENT & SAFETY
+# ============================================================================
+
+# Environment mode (CRITICAL)
+ENV=prod
+
+# Auto-trading control
+ALLOW_AUTOTRADE=true
+
+# Broadcast control (start with false, then enable when ready)
+ALLOW_BROADCAST=false
+
+# Production safety token (required when ALLOW_BROADCAST=true)
+# Use in commands like: /buy TOKEN 1.0 confirm=lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+CONFIRM_TOKEN=lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+
+# Wallet encryption key (32-byte base64 - REQUIRED for prod)
+WALLET_ENCRYPTION_KEY=i6RtLA9zCQ7vtNwOdej8eekndp7AKKJclOzYeBEaDJY
+
+# ============================================================================
+# 🔐 CORE CREDENTIALS
+# ============================================================================
+
+# Telegram Bot Token (from @BotFather)
+TELEGRAM_BOT_TOKEN=8455438652:AAFvrxM6GFZ91BwoohvMCezhsj7N16YFju0
+
+# Admin Telegram User ID (from @userinfobot)
+ADMIN_CHAT_ID=8059844643
+
+# Bot's operational wallet (Base58 encoded)
+WALLET_PRIVATE_KEY=2KBD49gknMGpsVSJWuUFbTPLsVLd4kMEN8n8cBERvJFML8sBzavGqpHH14mYUwDWYHZ6EdTx1DzHxto6PUsUVpke
+
+# ============================================================================
+# ⚡ HELIUS RPC (100K FREE REQUESTS/DAY - PREMIUM PERFORMANCE)
+# ============================================================================
+
+# Helius credentials
+HELIUS_API_KEY=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+HELIUS_PROJECT_ID=6a9a1a3c-79f8-4265-a86f-199bc33ffa56
+
+# Primary RPC (Helius - fastest)
+SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+
+# WebSocket URL
+SOLANA_WS_URL=wss://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+
+# Network
+SOLANA_NETWORK=mainnet-beta
+
+# Fallback RPCs (for redundancy & parallel submission)
+FALLBACK_RPC_URL=https://api.mainnet-beta.solana.com
+FALLBACK_RPC_1=https://api.mainnet-beta.solana.com
+FALLBACK_RPC_2=https://solana-api.projectserum.com
+FALLBACK_RPC_3=https://rpc.ankr.com/solana
+
+# Simulation RPC (use fastest for pre-checks)
+SIMULATE_RPC=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+
+# ============================================================================
+# 🐦 TWITTER/X API v2 (SENTIMENT ANALYSIS)
+# ============================================================================
+
+TWITTER_API_KEY=SrEqKHwaXpj3R28d7RcnZjJIE
+TWITTER_API_SECRET=Lli2wtX1ifkDXwsB9v23DtJaKvFEk2rhqReItSzfoMuB8U7Dse
+TWITTER_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAAHY%2F1wEAAAAAnj8bmnYBp5pvGrUamSySm4Uzfdw%3DUopwOJrEuPFtvj6GRzjTj2dEAX0dtYbLTNsE5qaYMBesseEP7B
+TWITTER_CLIENT_ID=Z3NITmlwMkZxQ3hpdFVlQ3Q3NS06MTpjaQ
+TWITTER_CLIENT_SECRET=BrT7t3BgwOqEfAVoBonDdydonE1JfSWKzt3qleYFIVkyL-VZHd
+
+# ============================================================================
+# 🔴 REDDIT API (COMMUNITY SENTIMENT)
+# ============================================================================
+
+REDDIT_CLIENT_ID=U-h5zvhaIifMRiZ3hKGyfw
+REDDIT_CLIENT_SECRET=_dlqVgssQQwhGCFw4XYadfI64odO4g
+REDDIT_USER_AGENT=EliteTradingBot/1.0
+
+# ============================================================================
+# 💬 DISCORD BOT (CHANNEL MONITORING)
+# ============================================================================
+
+DISCORD_TOKEN=MTQzMDU0MjQyNDA4MTU2MzcxOA.GyFc4o.ZOHyRR_s9TXQTKXWLzqYRQ7IIqOOyk-3zyEwG4
+
+# ============================================================================
+# 🎯 JITO CONFIGURATION (MEV PROTECTION)
+# ============================================================================
+
+JITO_BLOCK_ENGINE_URL=https://mainnet.block-engine.jito.wtf/api/v1
+JITO_TIP_ACCOUNT=96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5
+JITO_TIP_LAMPORTS=100000
+ENABLE_JITO_BUNDLES=true
+
+# ============================================================================
+# ⚡ PERFORMANCE OPTIMIZATION
+# ============================================================================
+
+# Priority fees (microlamports - 2M = 0.002 SOL per tx)
+PRIORITY_FEE_MICROLAMPORTS=2000000
+PRIORITY_FEE_LAMPORTS=5000
+ENABLE_PRIORITY_FEES=true
+
+# Compute unit limit
+COMPUTE_UNIT_LIMIT=200000
+
+# Fast execution
+ENABLE_PARALLEL_SUBMISSION=true
+ENABLE_FAST_SIMULATION=true
+PARALLEL_RPC_COUNT=3
+
+# RPC settings
+RPC_TIMEOUT=30
+TX_CONFIRMATION_TIMEOUT=60
+TX_MAX_RETRIES=3
+
+# WebSocket
+WS_PING_INTERVAL=30
+
+# ============================================================================
+# 🧠 ELITE WALLET INTELLIGENCE
+# ============================================================================
+
+TRACK_WALLETS_AUTO=true
+MIN_WALLET_SCORE=65.0
+MAX_TRACKED_WALLETS=100
+
+# ============================================================================
+# 🤖 AUTOMATED TRADING
+# ============================================================================
+
+AUTO_TRADE_ENABLED=true
+AUTO_TRADE_MIN_CONFIDENCE=0.6
+AUTO_TRADE_MAX_DAILY_TRADES=10
+AUTO_TRADE_DAILY_LIMIT_SOL=1.0
+
+# ============================================================================
+# 🛡️ ELITE PROTECTION SYSTEM (6-LAYER)
+# ============================================================================
+
+# Honeypot detection (all 6 methods)
+HONEYPOT_DETECTION_METHODS=6
+HONEYPOT_CHECK_ENABLED=true
+CHECK_HONEYPOTS=true
+
+# Liquidity requirements
+MIN_LIQUIDITY_USD=2000.0
+
+# Authority checks
+CHECK_MINT_AUTHORITY=true
+CHECK_FREEZE_AUTHORITY=true
+
+# Holder distribution
+CHECK_TOP_HOLDERS=true
+MAX_TOP_HOLDER_PERCENTAGE=0.20
+
+# Advanced checks
+TWITTER_HANDLE_CHECK=true
+CONTRACT_ANALYSIS_DEPTH=HIGH
+
+# ============================================================================
+# ⚡ ELITE SNIPING ENGINE
+# ============================================================================
+
+SNIPE_ENABLED=true
+SNIPE_USE_JITO=true
+SNIPE_TIP_LAMPORTS=100000
+SNIPE_PRIORITY_FEE=2000000
+SNIPE_AMOUNT_SOL=0.05
+SNIPE_MIN_LIQUIDITY_SOL=2
+SNIPE_MAX_DAILY=3
+
+# ============================================================================
+# 💰 TRADING PARAMETERS (REQUIRED FOR CONFIG VALIDATION)
+# ============================================================================
+
+# Position sizing
+MAX_POSITION_SIZE_SOL=10.0
+MAX_TRADE_SIZE_SOL=10.0
+DEFAULT_BUY_AMOUNT_SOL=0.05
+DEFAULT_BUY_AMOUNT=0.05
+
+# Daily limits
+MAX_DAILY_LOSS_SOL=0.15
+DAILY_LOSS_LIMIT_SOL=0.15
+
+# Risk management
+STOP_LOSS_PERCENTAGE=15.0
+TAKE_PROFIT_PERCENTAGE=50.0
+TRAILING_STOP_PERCENTAGE=10.0
+
+# Slippage
+MAX_SLIPPAGE=5.0
+
+# Confirmation
+REQUIRE_CONFIRMATION=true
+
+# ============================================================================
+# 💾 DATABASE
+# ============================================================================
+
+# SQLite (default - simple, good for starting)
+DATABASE_URL=sqlite+aiosqlite:///trading_bot.db
+
+# Backups
+DATABASE_BACKUP_ENABLED=true
+DATABASE_BACKUP_INTERVAL_HOURS=6
+
+# ============================================================================
+# 📊 MONITORING & LOGGING
+# ============================================================================
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=logs/trading_bot.log
+DEBUG_MODE=false
+DETAILED_TRANSACTION_LOGS=true
+
+# Monitoring
+MONITORING_ENABLED=true
+ENABLE_HEALTH_CHECK_SERVER=true
+HEALTH_CHECK_PORT=8080
+
+# Metrics (optional)
+PROMETHEUS_ENABLED=false
+PROMETHEUS_PORT=9090
+
+# ============================================================================
+# 🎮 GAMIFICATION & REWARDS
+# ============================================================================
+
+ENABLE_GAMIFICATION=true
+REWARDS_ENABLED=true
+POINTS_PER_TRADE=10
+POINTS_PER_WALLET_TRACK=5
+POINTS_PER_RATING=5
+ENABLE_REFERRAL_PROGRAM=true
+REFERRAL_BONUS_PERCENTAGE=20.0
+
+# ============================================================================
+# 💰 PLATFORM FEES (MONETIZATION)
+# ============================================================================
+
+# Fee collection wallet
+TEAM_WALLET_ADDRESS=4164wKUM9HJyqXc9yrj24LKvy8BwxjzDazg4FSMycfR5
+FEE_COLLECTION_WALLET=4164wKUM9HJyqXc9yrj24LKvy8BwxjzDazg4FSMycfR5
+
+# Fee structure
+TRANSACTION_FEE_PERCENTAGE=0.5
+PLATFORM_FEE_PERCENTAGE=0.005
+MIN_FEE_SOL=0.001
+MAX_FEE_SOL=0.1
+FEE_MODEL=per_trade
+
+# ============================================================================
+# 🎯 FEATURE FLAGS
+# ============================================================================
+
+ENABLE_AI_FEATURES=true
+ENABLE_COPY_TRADING=true
+ENABLE_STRATEGY_MARKETPLACE=true
+ENABLE_SENTIMENT_ANALYSIS=true
+ENABLE_COMMUNITY_FEATURES=true
+ENABLE_ADMIN_ALERTS=true
+
+# ============================================================================
+# 🚦 RATE LIMITING
+# ============================================================================
+
+RATE_LIMIT_PER_MINUTE=60
+MAX_TRADES_PER_HOUR=20
+TRADE_COOLDOWN_SECONDS=5
+
+# ============================================================================
+# 📱 NOTIFICATIONS
+# ============================================================================
+
+SEND_TRADE_CONFIRMATIONS=true
+SEND_DAILY_SUMMARIES=true
+ALERT_LARGE_TRADE_THRESHOLD=5.0
+
+# ============================================================================
+# 🧪 TESTING & DEVELOPMENT (Set to false for production)
+# ============================================================================
+
+TEST_MODE=false
+DRY_RUN=false
+DEVNET_RPC_URL=https://api.devnet.solana.com
+
+# ============================================================================
+# 📈 ADVANCED SETTINGS
+# ============================================================================
+
+CACHE_DURATION=300
+MAX_CONCURRENT_POSITIONS=5
+JUPITER_SLIPPAGE_BPS=50
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🎯 PRODUCTION CHECKLIST
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# ✅ Helius RPC (premium, 100K free requests/day)
+# ✅ Twitter API (sentiment analysis enabled)
+# ✅ Reddit API (community sentiment)
+# ✅ Discord monitoring
+# ✅ Jito MEV protection
+# ✅ 6-layer honeypot detection
+# ✅ Elite wallet intelligence
+# ✅ Auto-sniper configured
+# ✅ Parallel RPC submission
+# ✅ CONFIRM_TOKEN for safety
+# ✅ WALLET_ENCRYPTION_KEY set
+# ✅ All credentials filled in
+#
+# 🚦 CURRENT STATUS:
+# - ENV=prod (production mode)
+# - ALLOW_BROADCAST=false (READ-ONLY, SAFE)
+# - All safety features ENABLED
+#
+# 🚀 TO GO LIVE:
+# 1. Test everything in read-only mode
+# 2. Verify all API keys work
+# 3. Test with SMALL amounts (0.01 SOL)
+# 4. Set: ALLOW_BROADCAST=true
+# 5. All trades require: confirm=lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+#
+# 💡 EXAMPLE COMMAND:
+# /buy TOKEN 1.0 confirm=lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+#
+# ⚠️ SECURITY REMINDERS:
+# - Never commit .env to git
+# - Rotate CONFIRM_TOKEN after testing
+# - Keep WALLET_ENCRYPTION_KEY secret
+# - Monitor bot activity regularly
+# - Start with small amounts
+# - Use Helius RPC for best performance
+# - Enable all protection features
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+

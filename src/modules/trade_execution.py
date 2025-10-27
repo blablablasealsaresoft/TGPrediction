@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import datetime
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
@@ -20,6 +21,10 @@ from src.modules.social_trading import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _read_only_enabled() -> bool:
+    return os.getenv("READ_ONLY_MODE", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 
 class TradeExecutionError(Exception):
@@ -64,6 +69,13 @@ class TradeExecutionService:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict:
         """Execute a SOL -> token swap with safety and persistence."""
+
+        if _read_only_enabled():
+            logger.warning("Read-only mode active; blocking BUY request.")
+            return {"success": False, "error": "Trading disabled in read-only mode."}
+
+        metadata = dict(metadata) if metadata else {}
+        confirm_token = metadata.get("confirm_token")
 
         if amount_sol <= 0:
             return {"success": False, "error": "Trade amount must be positive"}
@@ -137,6 +149,7 @@ class TradeExecutionService:
                 slippage_bps=slippage_bps,
                 tip_amount_lamports=tip_lamports or 100_000,
                 priority_fee_lamports=priority_fee_lamports or 1_000_000,
+                confirm_token=confirm_token,
             )
         else:
             result = await self.jupiter.execute_swap(
@@ -145,6 +158,7 @@ class TradeExecutionService:
                 amount_lamports,
                 keypair,
                 slippage_bps=slippage_bps,
+                confirm_token=confirm_token,
             )
 
         if not result.get("success"):
@@ -176,7 +190,7 @@ class TradeExecutionService:
 
         position_id = signature or self._build_position_id(user_id, token_mint)
 
-        trade_metadata = metadata or {}
+        trade_metadata = metadata
         if bundle_id:
             trade_metadata = {**trade_metadata, "bundle_id": bundle_id}
 
@@ -282,6 +296,13 @@ class TradeExecutionService:
     ) -> Dict:
         """Execute a token -> SOL swap for an open position."""
 
+        if _read_only_enabled():
+            logger.warning("Read-only mode active; blocking SELL request.")
+            return {"success": False, "error": "Trading disabled in read-only mode."}
+
+        metadata = dict(metadata) if metadata else {}
+        confirm_token = metadata.get("confirm_token")
+
         position = await self.db.get_position_by_token(user_id, token_mint)
         if not position:
             return {
@@ -335,6 +356,7 @@ class TradeExecutionService:
             amount_raw,
             keypair,
             slippage_bps=slippage_bps,
+            confirm_token=confirm_token,
         )
 
         if not result.get("success"):
@@ -357,7 +379,7 @@ class TradeExecutionService:
         signature = result.get("signature")
         sol_received = self._convert_amount(int(result.get("output_amount", 0)), 9)
         price = self._calculate_price(sol_received, amount_tokens)
-        trade_metadata = metadata or {}
+        trade_metadata = metadata
 
         # Handle partial vs. full exit
         if is_partial_sell:

@@ -1,0 +1,196 @@
+# ================================
+# PRODUCTION CONFIGURATION
+# Solana Revolutionary Trading Bot
+# ================================
+# COPY THIS FILE TO: .env
+# Then fill in your values marked with "your_"
+# ================================
+
+# ================================
+# ENVIRONMENT & SAFETY 🔒
+# ================================
+ENV=prod
+ALLOW_AUTOTRADE=true
+ALLOW_BROADCAST=false
+# ⚠️ CRITICAL: Set to true ONLY when ready to execute real transactions
+# When true, you MUST provide confirm=<token> in commands
+
+# Production safety token (required when ALLOW_BROADCAST=true)
+CONFIRM_TOKEN=lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+
+# Wallet encryption key (base64 urlsafe, min 32 bytes)
+WALLET_ENCRYPTION_KEY=i6RtLA9zCQ7vtNwOdej8eekndp7AKKJclOzYeBEaDJY
+
+# ================================
+# TELEGRAM CONFIGURATION
+# ================================
+# Get from @BotFather
+TELEGRAM_BOT_TOKEN=8455438652:AAFvrxM6GFZ91BwoohvMCezhsj7N16YFju0
+
+# Your admin Telegram ID (get from @userinfobot)
+ADMIN_CHAT_ID=your_telegram_id_here
+
+# ================================
+# SOLANA BLOCKCHAIN
+# ================================
+# Network
+SOLANA_NETWORK=mainnet-beta
+
+# RPC URL (upgrade to premium for production)
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+# Premium alternatives:
+# SOLANA_RPC_URL=https://solana-mainnet.g.alchemy.com/v2/YOUR-KEY
+# SOLANA_RPC_URL=https://rpc.helius.xyz/?api-key=YOUR-KEY
+
+# Bot's operational wallet (Base58 encoded private key)
+WALLET_PRIVATE_KEY=your_wallet_private_key_here
+
+# ================================
+# TRADING PARAMETERS
+# ================================
+# Maximum position size per trade
+MAX_POSITION_SIZE_SOL=10.0
+MAX_TRADE_SIZE_SOL=10.0
+
+# Default buy amount
+DEFAULT_BUY_AMOUNT_SOL=0.1
+DEFAULT_BUY_AMOUNT=0.1
+
+# Daily loss limit per user
+MAX_DAILY_LOSS_SOL=50.0
+DAILY_LOSS_LIMIT_SOL=50.0
+
+# Stop loss / Take profit (percentage)
+STOP_LOSS_PERCENTAGE=10.0
+TAKE_PROFIT_PERCENTAGE=25.0
+TRAILING_STOP_PERCENTAGE=5.0
+
+# Slippage tolerance (percentage)
+MAX_SLIPPAGE=5.0
+
+# Minimum liquidity required (USD)
+MIN_LIQUIDITY_USD=10000
+
+# ================================
+# SAFETY FEATURES 🛡️
+# ================================
+# Require user confirmation
+REQUIRE_CONFIRMATION=true
+
+# Token safety checks
+CHECK_MINT_AUTHORITY=true
+CHECK_FREEZE_AUTHORITY=true
+HONEYPOT_CHECK_ENABLED=true
+
+# Auto-trading features
+AUTO_TRADE_ENABLED=true
+SNIPE_ENABLED=true
+
+# ================================
+# DATABASE
+# ================================
+# SQLite (simple, good for starting)
+DATABASE_URL=sqlite+aiosqlite:///trading_bot.db
+
+# For production scale, use PostgreSQL:
+# DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/trading_bot
+
+# ================================
+# LOGGING & MONITORING
+# ================================
+LOG_LEVEL=INFO
+LOG_FILE=logs/trading_bot.log
+
+# Health check server
+ENABLE_HEALTH_CHECK_SERVER=true
+HEALTH_CHECK_PORT=8080
+
+# ================================
+# PLATFORM FEES 💰
+# ================================
+# Your fee collection wallet
+TEAM_WALLET_ADDRESS=5GwJiL3BX8EfaMQDpNrnr3kbHT64c5RRaK33uPtaQAHY
+
+# Transaction fee (0.5%)
+TRANSACTION_FEE_PERCENTAGE=0.5
+MIN_FEE_SOL=0.001
+MAX_FEE_SOL=0.1
+FEE_MODEL=per_trade
+
+# ================================
+# JITO MEV PROTECTION
+# ================================
+ENABLE_JITO_BUNDLES=true
+JITO_TIP_LAMPORTS=10000
+
+# ================================
+# OPTIONAL API KEYS
+# ================================
+# Birdeye (token analytics)
+BIRDEYE_API_KEY=
+
+# Twitter/X (sentiment analysis)
+TWITTER_API_KEY=
+TWITTER_API_SECRET=
+TWITTER_BEARER_TOKEN=
+
+# ================================
+# FEATURE FLAGS
+# ================================
+ENABLE_AI_FEATURES=true
+ENABLE_COPY_TRADING=true
+ENABLE_STRATEGY_MARKETPLACE=true
+ENABLE_SENTIMENT_ANALYSIS=false
+ENABLE_COMMUNITY_FEATURES=true
+ENABLE_GAMIFICATION=true
+ENABLE_REFERRAL_PROGRAM=true
+
+# ================================
+# RATE LIMITING
+# ================================
+RATE_LIMIT_PER_MINUTE=60
+MAX_TRADES_PER_HOUR=20
+TRADE_COOLDOWN_SECONDS=5
+
+# ================================
+# NOTIFICATIONS
+# ================================
+SEND_TRADE_CONFIRMATIONS=true
+SEND_DAILY_SUMMARIES=true
+ENABLE_ADMIN_ALERTS=true
+ALERT_LARGE_TRADE_THRESHOLD=5.0
+
+# ================================
+# 🎯 QUICK SETUP CHECKLIST
+# ================================
+# 
+# ✅ CONFIRM_TOKEN - Generated: lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+# ✅ WALLET_ENCRYPTION_KEY - Generated (secure)
+# ✅ TELEGRAM_BOT_TOKEN - Already set
+# ⚠️ ADMIN_CHAT_ID - YOU NEED TO FILL THIS IN
+# ⚠️ WALLET_PRIVATE_KEY - YOU NEED TO FILL THIS IN
+# ✅ ENV=prod - Production mode enabled
+# ✅ ALLOW_BROADCAST=false - Safe (read-only until you're ready)
+#
+# ================================
+# 🚀 TO GO LIVE WITH REAL TRADES:
+# ================================
+# 1. Set: ALLOW_BROADCAST=true
+# 2. All trades will require the confirm token
+# 3. Example command:
+#    /buy TOKEN 1.0 confirm=lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+#
+# This prevents accidental fat-finger trades in production
+#
+# ================================
+# 💡 CONFIRM TOKEN USAGE
+# ================================
+# The bot extracts confirm tokens from commands like:
+# - /buy TOKEN 1.0 confirm=lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+# - /sell TOKEN 1.0 confirm:lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+#
+# If ALLOW_BROADCAST=true and confirm token doesn't match,
+# the transaction will be rejected with error.
+#
+# ================================
+

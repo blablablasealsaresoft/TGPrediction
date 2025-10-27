@@ -1,0 +1,8 @@
+{{REPO_ROOT}}/logs/trading_bot.jsonl {
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    copytruncate
+}

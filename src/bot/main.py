@@ -21,7 +21,7 @@ import os
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -49,6 +49,8 @@ from src.modules.social_trading import (
     REWARD_POINTS
 )
 from src.modules.sentiment_analysis import SocialMediaAggregator, TrendDetector
+from src.modules.active_sentiment_scanner import ActiveSentimentScanner
+from src.modules.unified_neural_engine import UnifiedNeuralEngine
 from src.modules.database import DatabaseManager
 from src.modules.wallet_manager import UserWalletManager
 from src.modules.token_sniper import AutoSniper, SnipeSettings
@@ -129,6 +131,16 @@ class RevolutionaryTradingBot:
             discord_token=self.config.discord_token,
         )
         self.trend_detector = TrendDetector()
+        
+        # 🔥 ACTIVE SENTIMENT SCANNER - Actually uses your APIs!
+        self.active_scanner = ActiveSentimentScanner(
+            twitter_bearer_token=self.config.twitter_bearer_token,
+            reddit_client_id=self.config.reddit_client_id,
+            reddit_client_secret=self.config.reddit_client_secret,
+        )
+        
+        # 🧠 UNIFIED NEURAL ENGINE - True AI that learns across ALL systems
+        self.neural_engine = UnifiedNeuralEngine()
         
         # Trading execution
         self.jupiter = JupiterClient(self.client)
@@ -227,6 +239,9 @@ class RevolutionaryTradingBot:
         username = update.effective_user.username or f"user_{user_id}"
         first_name = update.effective_user.first_name or username
         
+        # Import enterprise UI
+        from src.modules.ui_formatter import MessageTemplates
+        
         # 🔐 Create individual wallet for user
         wallet_info = await self.wallet_manager.get_or_create_user_wallet(user_id, username)
         
@@ -236,57 +251,26 @@ class RevolutionaryTradingBot:
         # Award login points
         await self.rewards.award_points(user_id, REWARD_POINTS['daily_login'], 'Daily login')
         
-        wallet_status = "✨ *New wallet created!*" if wallet_info['is_new'] else f"Balance: {wallet_info['sol_balance']:.4f} SOL"
-        
-        welcome_message = f"""*Welcome {first_name}!* 🎉
-
-{wallet_status}
-
-🔐 *Your Personal Trading Wallet:*
-`{wallet_info['public_key']}`
-
-Use /wallet to manage your wallet
-
-*Quick Start:*
-1. *Fund* your wallet with /deposit
-2. *Analyze* tokens with /ai <address>
-3. *Trade* with /buy and /sell
-4. *Copy* top traders with /leaderboard
-
-💡 *Pro Tips:*
-• Each user has their own secure wallet
-• Use /snipe for new token launches
-• Check /community for ratings
-• Earn rewards with /rewards
-
-*All trades protected with Anti-MEV* 🛡️
-"""
-        
-        # Create inline keyboard with buttons
-        keyboard = [
-            [
-                InlineKeyboardButton("💰 My Wallet", callback_data="show_wallet"),
-                InlineKeyboardButton("📊 My Stats", callback_data="my_stats")
-            ],
-            [
-                InlineKeyboardButton("🏆 Leaderboard", callback_data="leaderboard"),
-                InlineKeyboardButton("❓ Help", callback_data="help")
-            ],
-            [
-                InlineKeyboardButton("❌ Close", callback_data="close_message")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        # Generate enterprise welcome message
+        message, keyboard = MessageTemplates.welcome(
+            user_name=first_name,
+            wallet_address=wallet_info['public_key'],
+            balance=wallet_info['sol_balance'],
+            is_new=wallet_info['is_new']
+        )
         
         await update.message.reply_text(
-            welcome_message,
-            parse_mode='Markdown',
-            reply_markup=reply_markup
+            message,
+            parse_mode='HTML',
+            reply_markup=keyboard
         )
     
     async def wallet_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show user's wallet information"""
         user_id = update.effective_user.id
+        
+        # Import enterprise UI
+        from src.modules.ui_formatter import MessageTemplates
         
         # Get wallet info
         wallet_address = await self.wallet_manager.get_user_wallet_address(user_id)
@@ -303,49 +287,13 @@ Use /wallet to manage your wallet
         # Get trading stats
         stats = await self.db.get_user_stats(user_id, days=30)
         
-        message = f"""💰 <b>YOUR TRADING WALLET</b>
-
-🔐 <b>Address:</b>
-<code>{wallet_address}</code>
-
-💵 <b>Balance:</b>
-{balance:.6f} SOL
-
-📊 <b>Trading Stats (30 days):</b>
-Total Trades: {stats['total_trades']}
-Win Rate: {stats['win_rate']:.1f}%
-Total PnL: {stats['total_pnl']:+.4f} SOL
-
-<b>Commands:</b>
-/deposit - Fund your wallet
-/balance - Check balance
-/export_wallet - Export private keys
-
-⚠️ <b>Security:</b>
-• Your wallet is encrypted and secure
-• Never share your wallet info
-• This is YOUR personal trading wallet
-• You can export keys to use in Phantom/Solflare
-"""
-        
-        keyboard = [
-            [
-                InlineKeyboardButton("📥 Deposit", callback_data="show_deposit"),
-                InlineKeyboardButton("🔄 Refresh", callback_data="refresh_wallet")
-            ],
-            [
-                InlineKeyboardButton("🔐 Export Keys", callback_data="export_keys_prompt"),
-                InlineKeyboardButton("📊 History", callback_data="show_history")
-            ],
-            [
-                InlineKeyboardButton("◀️ Back", callback_data="back_to_start")
-            ]
-        ]
+        # Generate enterprise wallet display
+        message, keyboard = MessageTemplates.wallet_info(wallet_address, balance, stats)
         
         await update.message.reply_text(
             message,
             parse_mode='HTML',
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=keyboard
         )
     
     async def deposit_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -432,9 +380,12 @@ After depositing, use /balance to check your new balance
             await update.message.reply_text("Amount must be a number (SOL)")
             return
 
-        token_symbol = context.args[2] if len(context.args) >= 3 else None
+        confirm_token, remainder = self._extract_confirm_token(context.args[2:])
+        token_symbol = remainder[0] if remainder else None
 
         progress_message = await update.message.reply_text("⏳ Executing buy order...")
+
+        metadata = {"confirm_token": confirm_token} if confirm_token else None
 
         result = await self.trade_executor.execute_buy(
             user_id,
@@ -442,7 +393,8 @@ After depositing, use /balance to check your new balance
             amount_sol,
             token_symbol=token_symbol,
             reason='manual_command',
-            context='manual_command'
+            context='manual_command',
+            metadata=metadata,
         )
 
         if result.get('success'):
@@ -472,13 +424,15 @@ After depositing, use /balance to check your new balance
         token_mint = context.args[0]
         amount_tokens = None
 
-        if len(context.args) >= 2:
-            amount_arg = context.args[1].lower()
+        confirm_token, remainder = self._extract_confirm_token(context.args[1:])
+
+        if remainder:
+            amount_arg = remainder[0].lower()
             if amount_arg == 'all':
                 amount_tokens = None
             else:
                 try:
-                    amount_tokens = float(context.args[1])
+                    amount_tokens = float(remainder[0])
                 except ValueError:
                     await update.message.reply_text(
                         "Amount must be numeric or 'all'"
@@ -487,12 +441,15 @@ After depositing, use /balance to check your new balance
 
         progress_message = await update.message.reply_text("⏳ Executing sell order...")
 
+        metadata = {"confirm_token": confirm_token} if confirm_token else None
+
         result = await self.trade_executor.execute_sell(
             user_id,
             token_mint,
             amount_tokens=amount_tokens,
             reason='manual_command',
-            context='manual_command'
+            context='manual_command',
+            metadata=metadata,
         )
 
         if result.get('success'):
@@ -631,7 +588,7 @@ After depositing, use /balance to check your new balance
             # Get portfolio value
             portfolio_value = await self._get_portfolio_value(user_id)
 
-            # 🔥 AI ANALYSIS
+            # 🔥 AI ANALYSIS (Standard)
             ai_analysis = await self.ai_manager.analyze_opportunity(
                 enriched_token_data,
                 portfolio_value,
@@ -639,26 +596,71 @@ After depositing, use /balance to check your new balance
                 community_signal=community_signal
             )
             
+            # 🧠 UNIFIED NEURAL ENGINE ANALYSIS (THE EDGE!)
+            # This combines ALL signals into one learned intelligence
+            wallet_signals = []  # TODO: Get wallet signals for this token
+            market_context = enriched_token_data.get('market_data', {})
+            
+            unified_analysis = await self.neural_engine.analyze_with_full_intelligence(
+                token_address=token_mint,
+                ai_prediction=ai_analysis,
+                sentiment_data=sentiment,
+                community_signal=community_signal,
+                wallet_signals=wallet_signals,
+                market_context=market_context
+            )
+            
+            # Use unified score for final recommendation
+            ai_analysis['unified_score'] = unified_analysis['unified_score']
+            ai_analysis['neural_confidence'] = unified_analysis['confidence']
+            ai_analysis['system_intelligence'] = self.neural_engine.get_system_intelligence_report()
+            
             # Build comprehensive analysis
             ml_pred = ai_analysis.get('ml_prediction', {})
             key_factors = ml_pred.get('key_factors', [])
             key_factors_text = ', '.join(key_factors[:3]) if key_factors else 'N/A'
             
+            # Get intelligence report
+            intel_report = ai_analysis.get('system_intelligence', {})
+            unified_score = ai_analysis.get('unified_score', ai_analysis.get('confidence', 0) * 100)
+            neural_conf = ai_analysis.get('neural_confidence', ai_analysis.get('confidence', 0))
+            
             message = f"""
-🤖 *AI ANALYSIS COMPLETE*
+🧠 <b>UNIFIED NEURAL ANALYSIS</b>
 
-*Token:* `{token_mint[:8]}...`
+<b>Token:</b> <code>{token_mint[:8]}...</code>
 
-*🎯 AI RECOMMENDATION:* *{ai_analysis['action'].upper()}*
-*Confidence:* {ai_analysis['confidence']:.1%}
-*Risk Level:* {ai_analysis['risk_level'].upper()}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-*📊 ML MODEL PREDICTION:*
-Success Probability: {ml_pred.get('probability', 0):.1%}
-Recommendation: {ml_pred.get('recommendation', 'N/A')}
-Key Factors: {key_factors_text}
+<b>🎯 NEURAL RECOMMENDATION:</b> <b>{ai_analysis['action'].upper()}</b>
+<b>Unified Score:</b> {unified_score:.1f}/100
+<b>Neural Confidence:</b> {neural_conf:.1%}
+<b>Risk Level:</b> {ai_analysis['risk_level'].upper()}
 
-*📱 SOCIAL SENTIMENT:*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🤖 COMPONENT BREAKDOWN:</b>
+• AI Model: {ml_pred.get('probability', 0):.1%} success probability
+• Key Factors: {key_factors_text}
+• Recommendation: {ml_pred.get('recommendation', 'N/A')}
+
+<b>📱 SOCIAL SENTIMENT:</b>
+"""
+            
+            # Add system intelligence status
+            if intel_report.get('is_learning'):
+                intel_level = intel_report.get('intelligence_level', 'LEARNING')
+                system_acc = intel_report.get('accuracy', 0)
+                predictions = intel_report.get('total_predictions', 0)
+                
+                message += f"""
+<b>🧠 SYSTEM INTELLIGENCE:</b>
+• Level: <b>{intel_level}</b>
+• Predictions Made: {predictions}
+• System Accuracy: {system_acc:.1%}
+• Status: <i>Learning from every trade</i>
+
+<b>📱 SOCIAL SENTIMENT:</b>
 """
             
             # Check if sentiment data is available
@@ -740,45 +742,40 @@ Market Regime: {ai_analysis['market_regime'].upper()}
     
     async def leaderboard_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
-        🔥 KILLER FEATURE #2: Social Trading Leaderboard
+        🔥 KILLER FEATURE #2: Social Trading Leaderboard - Enterprise UI
         """
+        # Import enterprise UI
+        from src.modules.ui_formatter import MessageTemplates
+        
         # Handle both regular commands and button callbacks
         is_callback = hasattr(update, 'callback_query') and update.callback_query
         
         if not is_callback:
-            await update.message.reply_text("📊 *LOADING LEADERBOARD...*", parse_mode='Markdown')
+            await update.message.reply_text("📊 <b>LOADING LEADERBOARD...</b>", parse_mode='HTML')
         
         # Get top traders
-        top_traders = await self.social_marketplace.get_leaderboard(limit=10)
+        top_traders_raw = await self.social_marketplace.get_leaderboard(limit=10)
         
-        message = "🏆 *TOP TRADERS - LEADERBOARD*\n\n"
+        # Convert to dict format for template
+        top_traders = []
+        for trader in top_traders_raw:
+            top_traders.append({
+                'username': trader.username,
+                'user_id': trader.user_id,
+                'tier': trader.tier.value if hasattr(trader.tier, 'value') else 'bronze',
+                'reputation_score': trader.reputation_score,
+                'win_rate': trader.win_rate,
+                'total_pnl': trader.total_pnl,
+                'followers': trader.followers
+            })
         
-        medals = ["🥇", "🥈", "🥉"]
-        
-        for i, trader in enumerate(top_traders, 1):
-            medal = medals[i-1] if i <= 3 else f"{i}."
-            
-            message += f"{medal} *{trader.username}*\n"
-            message += f"   Tier: {trader.tier.value.upper()} {self._get_tier_emoji(trader.tier)}\n"
-            message += f"   Score: {trader.reputation_score:.1f}/100\n"
-            message += f"   Win Rate: {trader.win_rate:.1f}%\n"
-            message += f"   PnL: {trader.total_pnl:+.4f} SOL\n"
-            message += f"   Followers: {trader.followers}\n\n"
-        
-        # Add action buttons
-        keyboard = [
-            [InlineKeyboardButton("👥 Copy Top Trader", callback_data="copy_top")],
-            [
-                InlineKeyboardButton("📊 My Ranking", callback_data="my_stats"),
-                InlineKeyboardButton("◀️ Back", callback_data="back_to_start")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        # Generate enterprise leaderboard
+        message, keyboard = MessageTemplates.leaderboard(top_traders, limit=10)
         
         if is_callback:
-            await update.callback_query.edit_message_text(message, parse_mode='Markdown', reply_markup=reply_markup)
+            await update.callback_query.edit_message_text(message, parse_mode='HTML', reply_markup=keyboard)
         else:
-            await update.message.reply_text(message, parse_mode='Markdown', reply_markup=reply_markup)
+            await update.message.reply_text(message, parse_mode='HTML', reply_markup=keyboard)
     
     async def copy_trader_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -1111,74 +1108,113 @@ Keep sufficient SOL balance for snipes!
     
     async def trending_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
-        🔥 KILLER FEATURE #4: Viral Token Detection
-        Real-time detection of tokens going viral
+        🔥 KILLER FEATURE #4: Viral Token Detection - NOW WITH ACTIVE SCANNING!
+        Real-time detection of tokens going viral using YOUR APIs
         """
-        await update.message.reply_text("🔥 *DETECTING VIRAL TOKENS...*", parse_mode='Markdown')
+        await update.message.reply_text("🔥 <b>SCANNING SOCIAL MEDIA...</b>", parse_mode='HTML')
+        
+        # Check if APIs are configured
+        if not self.active_scanner.has_apis_configured():
+            message = """🔥 <b>TRENDING TOKENS</b>
+
+<b>⚠️ Social Media APIs Not Configured</b>
+
+Your API keys are in .env but may need formatting:
+
+<b>Required format:</b>
+<code>TWITTER_BEARER_TOKEN=your_token_here
+REDDIT_CLIENT_ID=your_id_here
+REDDIT_CLIENT_SECRET=your_secret_here</code>
+
+<b>Check your .env file has:</b>
+• No extra spaces
+• No quotes around values
+• Correct variable names
+
+<i>Meanwhile, use /ai to analyze specific tokens manually</i>
+"""
+            await update.message.reply_text(message, parse_mode='HTML')
+            return
         
         try:
-            # Get viral tokens
-            viral_tokens = await self.sentiment_analyzer.detect_viral_tokens(min_score=70)
+            # 🔥 ACTIVELY SCAN Twitter & Reddit for trending tokens
+            viral_tokens = await self.active_scanner.scan_for_trending_tokens()
             
-            # Get emerging trends
-            trends = await self.trend_detector.detect_emerging_trends()
-        except Exception as e:
-            logger.error(f"Trending detection error: {e}")
-            viral_tokens = []
-            trends = []
-        
-        if not viral_tokens:
-            # Show helpful message with demo
-            message = """🔥 *TRENDING TOKENS*
+            if not viral_tokens:
+                message = """🔥 <b>TRENDING TOKENS</b>
 
-No tokens going viral right now.
+<b>No viral tokens detected right now</b>
 
-*How trending works:*
-• Real-time Twitter monitoring
-• Reddit sentiment tracking
-• Discord mentions analysis
-• Viral potential scoring
+<b>✅ Active Monitoring:</b>
+• Twitter: Scanning #Solana hashtags
+• Reddit: Monitoring r/Solana, r/CryptoMoonShots
+• Real-time mention tracking
 
-*To enable:*
-Add API keys to .env:
-• TWITTER_API_KEY
-• REDDIT_CLIENT_ID
-• DISCORD_TOKEN
+<b>💡 How it works:</b>
+System scans social media every 5 minutes for Solana tokens gaining traction.
 
-*Meanwhile:*
-• Use /ai_analyze to check any token
-• Monitor pump.fun manually
-• Join communities for alpha
+<i>Check back in 5-10 minutes or use /ai to analyze specific tokens</i>
+"""
+                await update.message.reply_text(message, parse_mode='HTML')
+                return
+            
+            # Format viral tokens with enterprise UI
+            message = f"""🔥 <b>TOKENS GOING VIRAL NOW!</b>
 
-Check back soon!"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📊 Found {len(viral_tokens)} trending tokens</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+            
+            for i, token in enumerate(viral_tokens[:5], 1):
+                emoji = "🔥" if i == 1 else "🟡" if i == 2 else "⚪"
+                mentions = token.get('mentions', 0)
+                sentiment = token.get('sentiment_score', 50)
+                sources = ', '.join(token.get('sources', []))
+                
+                message += f"""
+{emoji} <b>#{i} - {token['token_address'][:8]}...</b>
+
+   <b>Mentions:</b> {mentions} across {len(token.get('sources', []))} sources
+   <b>Sentiment:</b> {sentiment:.0f}/100
+   <b>Sources:</b> {sources}
+   <b>Viral Score:</b> {token.get('viral_score', 0):.1f}
+   
+   <code>/ai {token['token_address']}</code>
+
+"""
+            
+            message += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 <i>Tokens are ranked by viral velocity & sentiment</i>
+🎯 <i>Use /ai to analyze before trading</i>
+"""
             
             keyboard = [
-                [InlineKeyboardButton("🔍 Analyze Token", callback_data="help")],
-                [InlineKeyboardButton("📊 Leaderboard", callback_data="leaderboard")]
+                [
+                    InlineKeyboardButton(f"🔍 Analyze #{1}", callback_data=f"analyze_{viral_tokens[0]['token_address']}"),
+                ] if viral_tokens else [],
+                [
+                    InlineKeyboardButton("🔄 Refresh", callback_data="trending"),
+                    InlineKeyboardButton("◀️ Back", callback_data="back_to_start")
+                ]
             ]
             
             await update.message.reply_text(
                 message,
-                parse_mode='Markdown',
-                reply_markup=InlineKeyboardMarkup(keyboard)
+                parse_mode='HTML',
+                reply_markup=InlineKeyboardMarkup([k for k in keyboard if k])
             )
-            return
-        
-        message = "🔥 *TOKENS GOING VIRAL RIGHT NOW*\n\n"
-        
-        for i, token in enumerate(viral_tokens[:5], 1):
-            message += f"{i}. Token: `{token['token_address'][:8]}...`\n"
-            message += f"   Social Score: {token['social_score']:.1f}/100\n"
-            message += f"   Mentions: {token['mentions']}\n"
-            message += f"   Viral Potential: {token['viral_potential']:.1%}\n"
-            message += f"   /ai_analyze {token['token_address']}\n\n"
-        
-        if trends:
-            message += "\n📈 *EMERGING TRENDS:*\n\n"
-            for trend in trends[:3]:
-                message += f"• {trend['keyword']} (+{trend['acceleration']:.0%})\n"
-        
-        await update.message.reply_text(message, parse_mode='Markdown')
+            
+        except Exception as e:
+            logger.error(f"Trending scan error: {e}")
+            await update.message.reply_text(
+                f"❌ Error scanning social media: {str(e)}",
+                parse_mode='HTML'
+            )
     
     async def community_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """
@@ -1292,14 +1328,18 @@ Check /community {token_mint} to see updated ratings.
         await update.message.reply_text(message, parse_mode='Markdown')
     
     async def my_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Show user's performance statistics"""
+        """Show user's performance statistics - Enterprise UI"""
+        from src.modules.ui_formatter import MessageTemplates
+        
         # Handle both regular commands and button callbacks
         is_callback = hasattr(update, 'callback_query') and update.callback_query
         
         if is_callback:
             user_id = update.from_user.id
+            username = update.from_user.username or f"user_{user_id}"
         else:
             user_id = update.effective_user.id
+            username = update.effective_user.username or f"user_{user_id}"
         
         # Get stats from database
         stats = await self.db.get_user_stats(user_id, days=30)
@@ -1310,54 +1350,27 @@ Check /community {token_mint} to see updated ratings.
         # Get reward status
         rewards = await self.rewards.get_user_rewards(user_id)
         
-        message = f"""📊 *YOUR PERFORMANCE*
-
-*🎯 TRADING STATS (30 Days):*
-Total Trades: {stats['total_trades']}
-Profitable: {stats['profitable_trades']}
-Win Rate: {stats['win_rate']:.1f}%
-Total PnL: {stats['total_pnl']:+.4f} SOL
-
-*👤 TRADER PROFILE:*
-"""
-        
+        # Add trader profile data to stats
         if trader:
-            message += f"""Reputation Score: {trader.reputation_score:.1f}/100
-Tier: {trader.tier.value.upper()} {self._get_tier_emoji(trader.tier)}
-Followers: {trader.followers}
-
-"""
+            stats['tier'] = trader.tier.value if hasattr(trader.tier, 'value') else 'bronze'
+            stats['reputation_score'] = trader.reputation_score
+            stats['followers'] = trader.followers
+        else:
+            stats['tier'] = 'bronze'
+            stats['reputation_score'] = 0
+            stats['followers'] = 0
         
-        message += f"""*🎮 REWARDS:*
-Points: {rewards['points']}
-Tier: {rewards['tier']}
-Progress to next: {rewards['progress']:.1f}%
-
-*💰 PORTFOLIO:*
-Value: {await self._get_portfolio_value(user_id):.4f} SOL
-
-"""
+        # Add best/worst trades
+        stats['best_trade'] = stats.get('best_profit', 0)
+        stats['worst_trade'] = stats.get('worst_loss', 0)
         
-        # Add action buttons
-        keyboard = [
-            [
-                InlineKeyboardButton("🏆 Leaderboard", callback_data="leaderboard"),
-                InlineKeyboardButton("🎁 Rewards", callback_data="show_rewards")
-            ],
-            [InlineKeyboardButton("◀️ Back", callback_data="back_to_start")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        # Generate enterprise stats dashboard
+        message, keyboard = MessageTemplates.stats_dashboard(username, stats, rewards)
         
         if is_callback:
-            await update.callback_query.edit_message_text(message, parse_mode='Markdown', reply_markup=reply_markup)
+            await update.callback_query.edit_message_text(message, parse_mode='HTML', reply_markup=keyboard)
         else:
-            await update.message.reply_text(message, parse_mode='Markdown', reply_markup=reply_markup)
-            return
-        
-        message += """
-"""
-        
-        await update.message.reply_text(message, parse_mode='Markdown', reply_markup=reply_markup)
+            await update.message.reply_text(message, parse_mode='HTML', reply_markup=keyboard)
     
     async def rewards_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show user rewards and points"""
@@ -2108,71 +2121,15 @@ OPEN POSITIONS:
             await update.message.reply_text(f"❌ Error generating metrics: {e}")
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Show help menu with all commands"""
-        message = """❓ HELP & COMMANDS
-
-💰 WALLET:
-/wallet - Your wallet info
-/balance - Check balance
-/deposit - Deposit instructions
-/export_wallet - Export private keys
-
-📊 ANALYSIS:
-/analyze <token> - AI analysis
-/ai <token> - Quick analysis
-/trending - Viral tokens
-/community <token> - Ratings
-
-💰 TRADING:
-/buy <token> <amount>
-/sell <token> <amount>
-/snipe <token>
-/positions - Open trades
-
-🧠 ELITE FEATURES:
-/track <wallet> - Track wallet performance
-/rankings - Top performing wallets
-/autostart - Start auto-trading
-/autostop - Stop auto-trading
-/autostatus - Check auto-trade status
-
-👥 SOCIAL:
-/leaderboard - Top traders
-/copy <trader_id> - Copy trader
-/stop_copy - Stop copying
-
-📚 STRATEGY MARKETPLACE:
-/strategies - Browse strategies
-/publish_strategy - Publish your strategy
-/buy_strategy <id> - Purchase strategy
-/my_strategies - Your strategies
-
-🎮 STATS:
-/stats - Your performance
-/rewards - Points & tier
-
-⚙️ SETTINGS:
-/settings - Configure bot
-
-🔧 ADMIN:
-/metrics - Bot health & metrics
-
-Platform fee: 0.5% per trade
-"""
-        keyboard = [
-            [
-                InlineKeyboardButton("📊 Analyze Token", url="https://t.me/share/url?url=/analyze"),
-                InlineKeyboardButton("💰 Trading Guide", callback_data="help_trading")
-            ],
-            [
-                InlineKeyboardButton("🏆 Leaderboard", callback_data="leaderboard"),
-                InlineKeyboardButton("❌ Close", callback_data="close_message")
-            ]
-        ]
+        """Show help menu with all commands - Enterprise UI"""
+        from src.modules.ui_formatter import MessageTemplates
+        
+        message, keyboard = MessageTemplates.help_menu()
+        
         await update.message.reply_text(
             message,
-            parse_mode='Markdown',
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            parse_mode='HTML',
+            reply_markup=keyboard
         )
     
     async def features_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2892,3 +2849,18 @@ if __name__ == "__main__":
         bot.run()
     finally:
         asyncio.run(bot.stop())
+    @staticmethod
+    def _extract_confirm_token(args: List[str]) -> Tuple[Optional[str], List[str]]:
+        """Return (confirm_token, remaining_args) parsed from Telegram arguments."""
+        remainder: List[str] = []
+        confirm_token: Optional[str] = None
+        for arg in args:
+            lowered = arg.lower()
+            if lowered.startswith("confirm="):
+                confirm_token = arg.split("=", 1)[1]
+                continue
+            if lowered.startswith("confirm:"):
+                confirm_token = arg.split(":", 1)[1]
+                continue
+            remainder.append(arg)
+        return confirm_token, remainder

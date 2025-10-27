@@ -187,7 +187,8 @@ class JupiterClient:
         amount: int,
         keypair: Keypair,
         slippage_bps: int = 50,
-        max_retries: int = 3
+        max_retries: int = 3,
+        confirm_token: Optional[str] = None,
     ) -> Optional[Dict]:
         """
         Execute a complete swap operation
@@ -242,29 +243,25 @@ class JupiterClient:
             # Send transaction with retries
             for attempt in range(max_retries):
                 try:
-                    # Send raw transaction
-                    result = await self.rpc_client.send_raw_transaction(
+                    signature = await broadcast.send(
+                        self.rpc_client,
                         tx_bytes,
-                        opts={"skip_preflight": False, "preflight_commitment": "confirmed"}
+                        context={"component": "jupiter_swap", "attempt": attempt + 1},
+                        confirm_token=confirm_token,
                     )
-                    
-                    if result.value:
-                        signature = str(result.value)
-                        logger.info(f"Swap transaction sent: {signature}")
-                        
-                        # Confirm transaction
-                        confirmed = await self._confirm_transaction(signature)
-                        
-                        if confirmed:
-                            return {
-                                "success": True,
-                                "signature": signature,
-                                "input_amount": amount,
-                                "output_amount": int(quote.get("outAmount", 0)),
-                                "price_impact": price_impact,
-                                "route": quote.get("routePlan", [])
-                            }
-                    
+
+                    confirmed = await self._confirm_transaction(signature)
+
+                    if confirmed:
+                        return {
+                            "success": True,
+                            "signature": signature,
+                            "input_amount": amount,
+                            "output_amount": int(quote.get("outAmount", 0)),
+                            "price_impact": price_impact,
+                            "route": quote.get("routePlan", [])
+                        }
+
                 except Exception as e:
                     logger.warning(f"Swap attempt {attempt + 1} failed: {e}")
                     if attempt < max_retries - 1:
@@ -413,7 +410,8 @@ class JupiterClient:
         keypair: Keypair,
         slippage_bps: int = 50,
         tip_amount_lamports: int = 100000,  # 0.0001 SOL tip
-        priority_fee_lamports: int = 1000000
+        priority_fee_lamports: int = 1000000,
+        confirm_token: Optional[str] = None,
     ) -> Optional[Dict]:
         """
         🚀 ELITE FEATURE: Execute swap with Jito MEV protection
@@ -474,7 +472,8 @@ class JupiterClient:
                     output_mint,
                     amount,
                     keypair,
-                    slippage_bps
+                    slippage_bps,
+                    confirm_token=confirm_token,
                 )
                 
         except Exception as e:

@@ -1,14 +1,70 @@
 
-"""Configuration management for trading bot
-Loads settings from environment variables with validation"""
+"""Configuration management for trading bot.
 
+Enforces a strict environment contract derived from importantdocs/ENVIRONMENT_VARIABLES.md
+and exposes helpers for the rest of the application."""
+
+import base64
 import os
-from typing import Optional
+from typing import Dict, Optional, Set
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+BOOL_TRUE = {"1", "true", "yes", "on"}
+
+# Required environment variables and their types
+NUMERIC_FLOAT_VARS = {
+    "MAX_POSITION_SIZE_SOL",
+    "DEFAULT_BUY_AMOUNT_SOL",
+    "MAX_DAILY_LOSS_SOL",
+    "STOP_LOSS_PERCENTAGE",
+    "TAKE_PROFIT_PERCENTAGE",
+    "TRAILING_STOP_PERCENTAGE",
+    "MAX_SLIPPAGE",
+    "MIN_LIQUIDITY_USD",
+}
+
+NUMERIC_INT_VARS = {
+    "ADMIN_CHAT_ID",
+    "HEALTH_CHECK_PORT",
+}
+
+BOOL_VARS = {
+    "REQUIRE_CONFIRMATION",
+    "CHECK_MINT_AUTHORITY",
+    "CHECK_FREEZE_AUTHORITY",
+    "HONEYPOT_CHECK_ENABLED",
+    "ENABLE_HEALTH_CHECK_SERVER",
+}
+
+STRING_VARS = {
+    "WALLET_ENCRYPTION_KEY",
+    "TELEGRAM_BOT_TOKEN",
+    "SOLANA_RPC_URL",
+    "WALLET_PRIVATE_KEY",
+    "SOLANA_NETWORK",
+    "DATABASE_URL",
+    "LOG_LEVEL",
+    "LOG_FILE",
+}
+
+MANDATORY_VARS: Set[str] = (
+    NUMERIC_FLOAT_VARS
+    | NUMERIC_INT_VARS
+    | BOOL_VARS
+    | STRING_VARS
+)
+
+ALIAS_MAP = {
+    "DEFAULT_BUY_AMOUNT_SOL": ["DEFAULT_BUY_AMOUNT"],
+    "MAX_POSITION_SIZE_SOL": ["MAX_TRADE_SIZE_SOL"],
+    "MAX_DAILY_LOSS_SOL": ["DAILY_LOSS_LIMIT_SOL"],
+}
+
+IS_PROD = os.getenv("ENV", "dev").strip().lower() == "prod"
 
 
 def _normalize_percentage(value: float) -> float:
@@ -32,7 +88,88 @@ def _get_bool(name: str, default: str = 'false') -> bool:
     value = os.getenv(name, default)
     if value is None:
         return False
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    return value.strip().lower() in BOOL_TRUE
+
+
+def _require_bool(value: str, key: str, errors: Dict[str, str]):
+    if value.strip().lower() not in BOOL_TRUE and value.strip().lower() not in {"0", "false", "no", "off"}:
+        errors[key] = "must be boolean (true/false)"
+
+
+def _require_float(value: str, key: str, errors: Dict[str, str]):
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        errors[key] = "must be numeric"
+
+
+def _require_int(value: str, key: str, errors: Dict[str, str]):
+    try:
+        int(value)
+    except (TypeError, ValueError):
+        errors[key] = "must be an integer"
+
+
+def validate_env() -> None:
+    """Fail fast if required environment variables are missing or invalid."""
+    missing = []
+    invalid: Dict[str, str] = {}
+
+    for key in sorted(MANDATORY_VARS):
+        value = os.getenv(key)
+        if (value is None or value.strip() == "") and key in ALIAS_MAP:
+            for alias in ALIAS_MAP[key]:
+                alias_val = os.getenv(alias)
+                if alias_val and alias_val.strip():
+                    os.environ.setdefault(key, alias_val)
+                    value = alias_val
+                    break
+        if value is None or value.strip() == "":
+            missing.append(key)
+            continue
+        if key in NUMERIC_FLOAT_VARS:
+            _require_float(value, key, invalid)
+        elif key in NUMERIC_INT_VARS:
+            _require_int(value, key, invalid)
+        elif key in BOOL_VARS:
+            _require_bool(value, key, invalid)
+
+    if IS_PROD:
+        _validate_prod_constraints(missing, invalid)
+
+    if missing or invalid:
+        lines = []
+        if missing:
+            lines.append("Missing: " + ", ".join(sorted(missing)))
+        if invalid:
+            issues = ", ".join(f"{k} ({msg})" for k, msg in sorted(invalid.items()))
+            lines.append("Invalid: " + issues)
+        raise RuntimeError("Environment validation failed:\n" + "\n".join(lines))
+
+
+def _validate_prod_constraints(missing, invalid):
+    """Extra validations enforced only when running in production."""
+    allow_autotrade = os.getenv("ALLOW_AUTOTRADE", "false").strip().lower() in BOOL_TRUE
+    if not allow_autotrade:
+        os.environ["AUTO_TRADE_ENABLED"] = "false"
+        os.environ["SNIPE_ENABLED"] = "false"
+
+    wallet_key = os.getenv("WALLET_ENCRYPTION_KEY")
+    if wallet_key:
+        try:
+            decoded = base64.urlsafe_b64decode(wallet_key + "==")
+        except Exception:  # pragma: no cover - defensive path
+            invalid["WALLET_ENCRYPTION_KEY"] = "must be valid urlsafe base64"
+        else:
+            if len(decoded) < 32:
+                invalid["WALLET_ENCRYPTION_KEY"] = "must decode to at least 32 bytes"
+    else:
+        missing.append("WALLET_ENCRYPTION_KEY")
+
+    allow_broadcast = os.getenv("ALLOW_BROADCAST", "false").strip().lower() in BOOL_TRUE
+    confirm_token = os.getenv("CONFIRM_TOKEN")
+    if allow_broadcast and not confirm_token:
+        missing.append("CONFIRM_TOKEN")
 
 
 @dataclass
@@ -205,6 +342,7 @@ def get_config() -> Config:
     """Get global configuration instance"""
     global _config
     if _config is None:
+        validate_env()
         _config = Config.from_env()
         _config.validate()
     return _config
