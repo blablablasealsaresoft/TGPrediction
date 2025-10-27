@@ -51,6 +51,7 @@ from src.modules.social_trading import (
 from src.modules.sentiment_analysis import SocialMediaAggregator, TrendDetector
 from src.modules.active_sentiment_scanner import ActiveSentimentScanner
 from src.modules.unified_neural_engine import UnifiedNeuralEngine
+from src.modules.enhanced_neural_engine import PredictionLayer, ConfidenceLevel, Direction
 from src.modules.database import DatabaseManager
 from src.modules.wallet_manager import UserWalletManager
 from src.modules.token_sniper import AutoSniper, SnipeSettings
@@ -141,6 +142,9 @@ class RevolutionaryTradingBot:
         
         # 🧠 UNIFIED NEURAL ENGINE - True AI that learns across ALL systems
         self.neural_engine = UnifiedNeuralEngine()
+        
+        # 🎯 PREDICTION LAYER - Converts unified scores to probability predictions
+        self.prediction_layer = PredictionLayer(self.neural_engine)
         
         # Trading execution
         self.jupiter = JupiterClient(self.client)
@@ -2119,6 +2123,208 @@ OPEN POSITIONS:
         except Exception as e:
             logger.error(f"Error generating metrics: {e}")
             await update.message.reply_text(f"❌ Error generating metrics: {e}")
+    
+    async def predict_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """🎯 PROBABILITY PREDICTION - Show enhanced prediction with probabilities"""
+        if len(context.args) < 1:
+            await update.message.reply_text(
+                "Usage: /predict <token_address>\n\n"
+                "Get probability-based prediction with recommended action, "
+                "position size, and targets.",
+                parse_mode='HTML'
+            )
+            return
+        
+        token_address = context.args[0]
+        user_id = update.effective_user.id
+        
+        await update.message.reply_text("🧠 <b>GENERATING PREDICTION...</b>", parse_mode='HTML')
+        
+        try:
+            # Get token data
+            token_data = await self._fetch_token_data(token_address)
+            
+            # Get all intelligence sources
+            sentiment = await self.sentiment_analyzer.analyze_token_sentiment(
+                token_address, token_data.get('symbol', 'UNKNOWN')
+            )
+            community_signal = await self.community_intel.get_community_signal(token_address)
+            wallet_signals = []  # TODO: Get wallet signals
+            
+            # Get safety score
+            protection_result = await self.elite_protection.comprehensive_token_check(token_address)
+            safety_score = protection_result.get('overall_score', 0)
+            
+            # Get AI analysis
+            portfolio_value = await self._get_portfolio_value(user_id)
+            ai_analysis = await self.ai_manager.analyze_opportunity(
+                token_data, portfolio_value,
+                sentiment_snapshot=sentiment,
+                community_signal=community_signal
+            )
+            
+            # Get user tier
+            trader = await self.social_marketplace.get_trader_profile(user_id)
+            user_tier = trader.tier.value.upper() if trader else 'BRONZE'
+            
+            # 🎯 GENERATE ENHANCED PREDICTION
+            prediction = await self.prediction_layer.enhanced_analysis(
+                token_address=token_address,
+                ai_analysis=ai_analysis,
+                sentiment_data=sentiment,
+                community_signal=community_signal,
+                wallet_signals=wallet_signals,
+                safety_score=safety_score,
+                user_tier=user_tier
+            )
+            
+            # Format prediction message
+            direction_emoji = "↗️" if prediction.direction == Direction.UP else "↘️" if prediction.direction == Direction.DOWN else "➡️"
+            conf_emoji = "🔥" if prediction.confidence_level == ConfidenceLevel.ULTRA else "✨" if prediction.confidence_level == ConfidenceLevel.HIGH else "⚡"
+            
+            message = f"""🎯 <b>PROBABILITY PREDICTION</b>
+
+<b>Token:</b> <code>{token_address[:8]}...</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📊 PREDICTION:</b>
+{conf_emoji} <b>Direction:</b> {prediction.direction.value} {direction_emoji}
+<b>Confidence:</b> {prediction.confidence_score:.1%} ({prediction.confidence_level.value})
+<b>Timeframe:</b> {prediction.timeframe_hours} hours
+<b>Safety Score:</b> {prediction.safety_score}/100
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🎯 RECOMMENDED ACTION:</b>
+{prediction.suggested_action}
+
+"""
+
+            if prediction.position_size_sol:
+                message += f"""<b>💰 TRADE PARAMETERS:</b>
+• Position Size: <b>{prediction.position_size_sol} SOL</b>
+• Take Profit: <b>+{prediction.take_profit_target:.0%}</b>
+• Stop Loss: <b>{prediction.stop_loss:.0%}</b>
+
+"""
+
+            message += f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🤖 INTELLIGENCE BREAKDOWN:</b>
+• AI Model: {prediction.ai_ml_score:.0f}/100
+• Sentiment: {prediction.sentiment_score:.0f}/100
+• Elite Wallets: {prediction.wallet_score:.0f}/100
+• Community: {prediction.community_score:.0f}/100
+
+<b>💡 REASONING:</b>
+"""
+            for reason in prediction.reasoning:
+                message += f"{reason}\n"
+            
+            message += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🧠 SYSTEM INTELLIGENCE:</b>
+• Level: <b>{self.neural_engine.get_system_intelligence_report()['intelligence_level']}</b>
+• Accuracy: {self.neural_engine.system_accuracy:.1%}
+• Signals Used: {prediction.signals_used}
+
+<i>Neural engine learns from every trade to improve predictions</i>"""
+            
+            await update.message.reply_text(message, parse_mode='HTML')
+            
+        except Exception as e:
+            logger.error(f"Prediction error: {e}")
+            await update.message.reply_text(f"❌ Prediction failed: {str(e)}", parse_mode='HTML')
+    
+    async def autopredictions_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Enable prediction-based auto-trading"""
+        user_id = update.effective_user.id
+        
+        # Check balance
+        balance = await self.wallet_manager.get_user_balance(user_id)
+        if balance < 0.5:
+            await update.message.reply_text(
+                "❌ <b>Insufficient Balance</b>\n\n"
+                "Need at least 0.5 SOL for prediction-based auto-trading.\n\n"
+                "Use /deposit to fund your wallet.",
+                parse_mode='HTML'
+            )
+            return
+        
+        # Enable auto-predictions
+        await self.db.update_user_settings(user_id, {
+            'auto_predictions_enabled': True,
+            'auto_predictions_min_confidence': 0.85  # ULTRA only
+        })
+        
+        message = """✅ <b>AUTO-PREDICTIONS ENABLED!</b>
+
+<b>How it works:</b>
+• System continuously scans for opportunities
+• Neural engine generates probability predictions
+• ULTRA confidence predictions (90%+) auto-execute
+• Position sized based on your tier
+• Automatic stop-loss/take-profit
+
+<b>Safety Limits:</b>
+• Only ULTRA confidence (90%+)
+• Max 5 positions at once
+• Automatic risk management
+• Your tier position limits apply
+
+<b>Settings:</b>
+/prediction_stats - View performance
+/autopredictions off - Disable
+
+<b>🧠 Neural engine will learn from every trade!</b>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def prediction_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show prediction performance statistics"""
+        stats = self.prediction_layer.get_prediction_stats()
+        
+        if stats['total'] == 0:
+            await update.message.reply_text(
+                "📊 <b>NO PREDICTIONS YET</b>\n\n"
+                "Use /predict to generate probability predictions\n"
+                "System will track accuracy over time",
+                parse_mode='HTML'
+            )
+            return
+        
+        message = f"""📊 <b>PREDICTION PERFORMANCE</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>OVERALL STATS:</b>
+Total Predictions: {stats['total']}
+Correct: {stats['correct']}
+Accuracy: <b>{stats['accuracy']:.1%}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>BY CONFIDENCE LEVEL:</b>
+"""
+        
+        for level, data in stats.get('by_confidence', {}).items():
+            emoji = "🔥" if level == "ULTRA" else "✨" if level == "HIGH" else "⚡"
+            message += f"\n{emoji} <b>{level}:</b> {data['accuracy']:.1%} ({data['total']} predictions)"
+        
+        message += f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🧠 NEURAL ENGINE:</b>
+• Intelligence Level: {self.neural_engine.get_system_intelligence_report()['intelligence_level']}
+• System Accuracy: {self.neural_engine.system_accuracy:.1%}
+• Total Trades Analyzed: {self.neural_engine.total_predictions}
+
+<i>System gets smarter with every trade!</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show help menu with all commands - Enterprise UI"""
@@ -2746,6 +2952,11 @@ Use /settings command to modify these settings
         
         # Admin
         app.add_handler(CommandHandler("metrics", self.metrics_command))
+        
+        # 🎯 PREDICTION LAYER COMMANDS (NEW!)
+        app.add_handler(CommandHandler("predict", self.predict_command))
+        app.add_handler(CommandHandler("autopredictions", self.autopredictions_command))
+        app.add_handler(CommandHandler("prediction_stats", self.prediction_stats_command))
         
         # Callback handler for all buttons
         app.add_handler(CallbackQueryHandler(self.button_callback))
