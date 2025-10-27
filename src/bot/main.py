@@ -54,6 +54,7 @@ from src.modules.unified_neural_engine import UnifiedNeuralEngine
 from src.modules.enhanced_neural_engine import PredictionLayer, ConfidenceLevel, Direction
 from src.modules.flash_loan_engine import FlashLoanArbitrageEngine, MarginfiClient
 from src.modules.bundle_launch_predictor import BundleLaunchPredictor, TeamVerifier, LaunchConfidence
+from src.modules.prediction_markets import PredictionMarketsEngine, PredictionSide, MarketStatus
 from src.modules.database import DatabaseManager
 from src.modules.wallet_manager import UserWalletManager
 from src.modules.token_sniper import AutoSniper, SnipeSettings
@@ -207,6 +208,12 @@ class RevolutionaryTradingBot:
             safety_checker=self.elite_protection,
             neural_engine=self.neural_engine,
             db_manager=self.db
+        )
+        
+        # 🎲 PREDICTION MARKETS (Phase 4) - Stake on predictions, exponential network effects!
+        self.prediction_markets = PredictionMarketsEngine(
+            db_manager=self.db,
+            neural_engine=self.neural_engine
         )
 
         # Shutdown coordination
@@ -2748,6 +2755,267 @@ ULTRA Queue: {stats['ultra_queue_size']} ready to auto-snipe
 <i>Enable /launch_monitor for 24/7 tracking</i>"""
         
         await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def markets_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """🎲 Show active prediction markets"""
+        
+        await update.message.reply_text("🎲 <b>LOADING PREDICTION MARKETS...</b>", parse_mode='HTML')
+        
+        # Get active markets
+        markets = await self.prediction_markets.get_active_markets(limit=10)
+        
+        if not markets:
+            message = """🎲 <b>PREDICTION MARKETS</b>
+
+<b>No active markets right now</b>
+
+<b>How prediction markets work:</b>
+• Stake SOL on price predictions
+• UP (+50%), DOWN (-20%), or NEUTRAL
+• Winners split losing pools
+• Platform takes 3% fee
+
+<b>Example:</b>
+Market: "Will $BONK pump 50%+ in 6 hours?"
+- You stake 1 SOL on UP
+- Others stake 2 SOL on DOWN
+- BONK pumps 65% → You win!
+- Payout: 1 SOL stake + 1.94 SOL from DOWN pool
+- Your profit: 1.94 SOL (194% ROI!)
+
+<b>Create markets:</b>
+Elite tier users can create custom markets
+/create_market - Create new market
+
+<i>Markets auto-create from neural predictions every hour</i>"""
+            
+            await update.message.reply_text(message, parse_mode='HTML')
+            return
+        
+        # Format active markets
+        message = f"""🎲 <b>ACTIVE PREDICTION MARKETS</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>Found {len(markets)} active markets:</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+        
+        for i, market in enumerate(markets[:5], 1):
+            time_left = market.resolves_at - datetime.utcnow()
+            hours = time_left.seconds // 3600
+            minutes = (time_left.seconds % 3600) // 60
+            
+            # Calculate odds
+            up_odds = float(market.total_pool / market.up_pool) if market.up_pool > 0 else 1.0
+            down_odds = float(market.total_pool / market.down_pool) if market.down_pool > 0 else 1.0
+            
+            message += f"""
+{i}. <b>{market.question}</b>
+
+   <b>Token:</b> {market.token_symbol}
+   <b>Current Price:</b> ${float(market.initial_price):.6f}
+   
+   <b>📊 Pools:</b>
+   ↗️ UP: {float(market.up_pool):.2f} SOL ({up_odds:.2f}x odds)
+   ↘️ DOWN: {float(market.down_pool):.2f} SOL ({down_odds:.2f}x odds)
+   ➡️ NEUTRAL: {float(market.neutral_pool):.2f} SOL
+   
+   <b>⏱️ Resolves in:</b> {hours}h {minutes}m
+   <b>👥 Participants:</b> {market.participant_count}
+   
+   <code>/stake {market.market_id} up 0.5</code>
+
+"""
+        
+        message += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 <i>Stake on any market with /stake ID up/down AMOUNT</i>
+🎯 <i>View your predictions with /my_predictions</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def create_market_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Create custom prediction market (Elite tier only)"""
+        user_id = update.effective_user.id
+        
+        # Check tier
+        trader = await self.social_marketplace.get_trader_profile(user_id)
+        user_tier = trader.tier.value.upper() if trader else 'BRONZE'
+        
+        if user_tier != 'ELITE':
+            await update.message.reply_text(
+                "❌ <b>Elite Tier Required</b>\n\n"
+                "Creating custom prediction markets requires Elite tier\n\n"
+                "Upgrade to Elite to unlock market creation",
+                parse_mode='HTML'
+            )
+            return
+        
+        message = """🎲 <b>CREATE PREDICTION MARKET</b>
+
+<b>Usage:</b>
+<code>/create_market TOKEN TIMEFRAME QUESTION</code>
+
+<b>Example:</b>
+<code>/create_market BONK 6 Will BONK pump 50 percent in 6 hours?</code>
+
+<b>Parameters:</b>
+• TOKEN: Token symbol or address
+• TIMEFRAME: Hours until resolution (1-72)
+• QUESTION: Market question
+
+<b>As creator, you earn:</b>
+• 1% of all market volume
+• Recognition as market creator
+• Elite tier exclusive
+
+<i>Markets are automatically resolved via price oracle</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def stake_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Stake SOL on a prediction market"""
+        
+        if len(context.args) < 3:
+            await update.message.reply_text(
+                "Usage: /stake <market_id> <up/down/neutral> <amount_sol>\n\n"
+                "Example: /stake abc123 up 0.5",
+                parse_mode='HTML'
+            )
+            return
+        
+        market_id = context.args[0]
+        prediction_str = context.args[1].upper()
+        
+        try:
+            amount = Decimal(context.args[2])
+        except:
+            await update.message.reply_text("❌ Invalid amount", parse_mode='HTML')
+            return
+        
+        # Validate prediction side
+        try:
+            prediction = PredictionSide[prediction_str]
+        except KeyError:
+            await update.message.reply_text("❌ Use up, down, or neutral", parse_mode='HTML')
+            return
+        
+        user_id = update.effective_user.id
+        
+        # Place prediction
+        result = await self.prediction_markets.place_prediction(
+            user_id=user_id,
+            market_id=market_id,
+            prediction=prediction,
+            amount_sol=amount
+        )
+        
+        if not result['success']:
+            await update.message.reply_text(f"❌ {result['error']}", parse_mode='HTML')
+            return
+        
+        # Success!
+        message = f"""✅ <b>PREDICTION PLACED!</b>
+
+<b>Market ID:</b> {market_id}
+<b>Your Prediction:</b> {prediction.value}
+<b>Stake:</b> {float(amount):.4f} SOL
+
+<b>📊 Current Odds:</b> {result['current_odds']:.2f}x
+<b>💰 Potential Payout:</b> {result['your_potential_payout']:.4f} SOL
+
+<b>Market Status:</b>
+Total Pool: {result['total_pool']:.2f} SOL
+
+<b>If you win:</b>
+You get your {float(amount):.4f} SOL stake back
+Plus your share of the losing pools!
+
+<b>Track it:</b>
+/my_predictions - View all your predictions
+/markets - See other markets
+
+<i>May the odds be ever in your favor! 🎲</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def my_predictions_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """View user's active predictions"""
+        user_id = update.effective_user.id
+        
+        predictions = await self.prediction_markets.get_user_predictions(user_id)
+        
+        if not predictions:
+            await update.message.reply_text(
+                "🎲 <b>NO ACTIVE PREDICTIONS</b>\n\n"
+                "Browse markets with /markets\n"
+                "Stake on predictions with /stake",
+                parse_mode='HTML'
+            )
+            return
+        
+        message = f"""🎲 <b>YOUR PREDICTIONS</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>Active: {len([p for p in predictions if p['status'] == 'OPEN'])}</b>
+<b>Total Staked: {sum(p['stake'] for p in predictions):.2f} SOL</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+        
+        for i, pred in enumerate(predictions[:10], 1):
+            status_emoji = "🟢" if pred['status'] == 'OPEN' else "⏳" if pred['status'] == 'RESOLVING' else "✅"
+            
+            message += f"""
+{status_emoji} <b>#{i} - {pred['question'][:40]}...</b>
+
+   <b>Your Prediction:</b> {pred['prediction']}
+   <b>Stake:</b> {pred['stake']:.4f} SOL
+   <b>Potential Payout:</b> {pred['potential_payout']:.4f} SOL
+   <b>Status:</b> {pred['status']}
+
+"""
+        
+        message += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 <i>Markets resolve automatically via price oracle</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def market_leaderboard_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show prediction market leaderboard"""
+        
+        leaderboard = await self.prediction_markets.get_leaderboard(metric='total_profit')
+        
+        stats = self.prediction_markets.get_system_stats()
+        
+        message = f"""🏆 <b>PREDICTION MARKET LEADERBOARD</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>SYSTEM STATS:</b>
+Total Markets: {stats['total_markets_created']}
+Active Markets: {stats['active_markets']}
+Total Volume: {stats['total_volume_sol']:.2f} SOL
+Platform Fees: {stats['total_fees_collected']:.4f} SOL
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>TOP PREDICTORS:</b>
+
+<i>Leaderboard coming soon as users make predictions!</i>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 <i>Make predictions to climb the leaderboard</i>
+🎯 <i>Accuracy + Volume = Top ranking</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show help menu with all commands - Enterprise UI"""
@@ -3391,6 +3659,13 @@ Use /settings command to modify these settings
         app.add_handler(CommandHandler("launch_predictions", self.launch_predictions_command))
         app.add_handler(CommandHandler("launch_monitor", self.launch_monitor_command))
         app.add_handler(CommandHandler("launch_stats", self.launch_stats_command))
+        
+        # 🎲 PREDICTION MARKETS COMMANDS (Phase 4 - NEW!)
+        app.add_handler(CommandHandler("markets", self.markets_command))
+        app.add_handler(CommandHandler("create_market", self.create_market_command))
+        app.add_handler(CommandHandler("stake", self.stake_command))
+        app.add_handler(CommandHandler("my_predictions", self.my_predictions_command))
+        app.add_handler(CommandHandler("market_leaderboard", self.market_leaderboard_command))
         
         # Callback handler for all buttons
         app.add_handler(CallbackQueryHandler(self.button_callback))
