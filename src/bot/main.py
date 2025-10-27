@@ -53,6 +53,7 @@ from src.modules.active_sentiment_scanner import ActiveSentimentScanner
 from src.modules.unified_neural_engine import UnifiedNeuralEngine
 from src.modules.enhanced_neural_engine import PredictionLayer, ConfidenceLevel, Direction
 from src.modules.flash_loan_engine import FlashLoanArbitrageEngine, MarginfiClient
+from src.modules.bundle_launch_predictor import BundleLaunchPredictor, TeamVerifier, LaunchConfidence
 from src.modules.database import DatabaseManager
 from src.modules.wallet_manager import UserWalletManager
 from src.modules.token_sniper import AutoSniper, SnipeSettings
@@ -196,6 +197,16 @@ class RevolutionaryTradingBot:
             trade_executor=self.trade_executor,
             sentiment_aggregator=self.sentiment_analyzer,
             community_intel=self.community_intel,
+        )
+        
+        # 🚀 BUNDLE LAUNCH PREDICTOR (Phase 3) - Predict launches BEFORE they happen
+        self.team_verifier = TeamVerifier(self.db)
+        self.launch_predictor = BundleLaunchPredictor(
+            sentiment_scanner=self.active_scanner,
+            wallet_tracker=self.wallet_intelligence,
+            safety_checker=self.elite_protection,
+            neural_engine=self.neural_engine,
+            db_manager=self.db
         )
 
         # Shutdown coordination
@@ -2569,6 +2580,174 @@ System will auto-execute when opportunities appear!
 ⚡ <i>Enable /flash_enable for auto-execution</i>"""
         
         await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def launch_predictions_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """🚀 Show upcoming launches with predictions"""
+        
+        await update.message.reply_text("🔍 <b>SCANNING PRE-LAUNCH SIGNALS...</b>", parse_mode='HTML')
+        
+        # Get tracked pre-launches
+        upcoming_launches = await self.launch_predictor.get_tracked_launches(min_confidence=0.65)
+        
+        if not upcoming_launches:
+            message = """🚀 <b>BUNDLE LAUNCH PREDICTIONS</b>
+
+<b>No high-confidence launches detected</b>
+
+<b>✅ Active Monitoring:</b>
+• Twitter: Scanning for launch announcements
+• Reddit: Monitoring launch posts
+• 441 Elite Wallets: Tracking whale interest
+• Teams: Verifying credentials
+
+<b>What we look for:</b>
+• Strong social hype building
+• Whale wallets showing interest
+• Verified team history
+• Locked liquidity commitments
+
+<b>When detected:</b>
+• ULTRA confidence (90%+) → Auto-snipe ready
+• You get notified 2-6 hours BEFORE launch
+• Instant execution when pool created
+
+<i>Check back during high activity or enable /launch_monitor</i>"""
+            
+            await update.message.reply_text(message, parse_mode='HTML')
+            return
+        
+        # Format predictions
+        message = f"""🚀 <b>UPCOMING LAUNCH PREDICTIONS</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>Tracking {len(upcoming_launches)} high-confidence launches:</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+        
+        for i, launch in enumerate(upcoming_launches[:5], 1):
+            conf_emoji = "🔥" if launch.confidence_score >= 0.90 else "✨" if launch.confidence_score >= 0.80 else "⚡"
+            
+            hours_away = launch.expected_launch_hours
+            time_str = f"{hours_away:.1f}h" if hours_away < 24 else f"{hours_away/24:.1f}d"
+            
+            message += f"""
+{conf_emoji} <b>#{i} - {launch.token_identifier[:12]}...</b>
+
+   <b>Confidence:</b> {launch.confidence_score:.1%} ({launch.predicted_outcome.split(' - ')[1] if ' - ' in launch.predicted_outcome else 'MEDIUM'})
+   <b>Expected Launch:</b> {time_str}
+   
+   <b>📊 Signals:</b>
+   🔥 Twitter: {launch.twitter_mentions_24h} mentions ({launch.twitter_velocity:.0f}/hr growth)
+   🐋 Whales Interested: {launch.whale_wallets_interested}/441
+   ✅ Team: {'Verified' if launch.team_verified else 'Unverified'} ({launch.team_past_launches} past launches)
+   🔒 LP: {launch.lp_commitment_sol:.1f} SOL {'LOCKED' if launch.lp_locked else 'unlocked'}
+   
+   <b>Action:</b> {'🚀 AUTO-SNIPE READY' if launch.auto_snipe_recommended else '👁️ Monitoring'}
+
+"""
+        
+        message += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 <i>ULTRA confidence launches auto-execute when detected</i>
+🎯 <i>Use /launch_monitor to enable 24/7 tracking</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def launch_monitor_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Enable/disable pre-launch monitoring"""
+        user_id = update.effective_user.id
+        
+        if len(context.args) == 0 or context.args[0].lower() == 'enable':
+            # Enable monitoring
+            await self.db.update_user_settings(user_id, {
+                'launch_monitor_enabled': True,
+                'launch_auto_snipe_ultra': True  # Auto-snipe ULTRA confidence
+            })
+            
+            message = """✅ <b>LAUNCH MONITOR ENABLED!</b>
+
+<b>🔍 24/7 Pre-Launch Monitoring Active</b>
+
+<b>What happens:</b>
+• System scans Twitter/Reddit for launch announcements
+• Tracks 441 elite wallets for early interest
+• Verifies team history automatically
+• Builds confidence predictions
+• Alerts you 2-6 hours BEFORE launch
+
+<b>Auto-Execution:</b>
+• ULTRA confidence (90%+) launches
+• Instant snipe when pool created
+• You're FIRST in, best entry price
+• All safety checks applied
+
+<b>💡 Intelligence Sources:</b>
+🔥 Twitter hype velocity
+🐋 Whale wallet interest (441 wallets)
+✅ Team verification & history
+🔒 Liquidity lock commitments
+👥 Community sentiment
+
+<b>Commands:</b>
+/launch_predictions - View tracked launches
+/launch_stats - Your prediction accuracy
+/launch_monitor disable - Turn off
+
+<i>You'll be early to EVERY major launch!</i>"""
+            
+            await update.message.reply_text(message, parse_mode='HTML')
+            
+        else:  # disable
+            await self.db.update_user_settings(user_id, {
+                'launch_monitor_enabled': False,
+                'launch_auto_snipe_ultra': False
+            })
+            
+            await update.message.reply_text(
+                "❌ <b>LAUNCH MONITOR DISABLED</b>\n\n"
+                "You will no longer receive pre-launch predictions\n\n"
+                "Enable again with: /launch_monitor enable",
+                parse_mode='HTML'
+            )
+    
+    async def launch_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show launch prediction performance stats"""
+        stats = self.launch_predictor.get_prediction_stats()
+        
+        message = f"""🚀 <b>LAUNCH PREDICTION STATS</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>PREDICTION PERFORMANCE:</b>
+Total Predictions: {stats['total_predictions']}
+Correct Predictions: {stats['correct_predictions']}
+Overall Accuracy: <b>{stats['overall_accuracy']:.1%}</b>
+
+<b>ULTRA CONFIDENCE:</b>
+Ultra Predictions: {stats['ultra_predictions']}
+Ultra Accuracy: <b>{stats['ultra_accuracy']:.1%}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>CURRENT STATUS:</b>
+Tracking: {stats['currently_tracking']} pre-launches
+ULTRA Queue: {stats['ultra_queue_size']} ready to auto-snipe
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>💡 How it works:</b>
+• Monitors social media 24/7
+• Detects launches 2-6 hours early
+• Builds confidence from multiple signals
+• Auto-executes ULTRA predictions
+• You're always first in!
+
+<i>Enable /launch_monitor for 24/7 tracking</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show help menu with all commands - Enterprise UI"""
@@ -3207,6 +3386,11 @@ Use /settings command to modify these settings
         app.add_handler(CommandHandler("flash_enable", self.flash_enable_command))
         app.add_handler(CommandHandler("flash_stats", self.flash_stats_command))
         app.add_handler(CommandHandler("flash_opportunities", self.flash_opportunities_command))
+        
+        # 🚀 BUNDLE LAUNCH PREDICTOR COMMANDS (Phase 3 - NEW!)
+        app.add_handler(CommandHandler("launch_predictions", self.launch_predictions_command))
+        app.add_handler(CommandHandler("launch_monitor", self.launch_monitor_command))
+        app.add_handler(CommandHandler("launch_stats", self.launch_stats_command))
         
         # Callback handler for all buttons
         app.add_handler(CallbackQueryHandler(self.button_callback))
