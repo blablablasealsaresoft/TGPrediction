@@ -1,0 +1,250 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🔥 ULTIMATE PRODUCTION CONFIGURATION - FULLY LOADED
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# All keys merged + production guardrails + elite performance
+# COPY THIS TO: .env
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ============================================================================
+# 🔒 PRODUCTION GUARDRAILS (START SAFE!)
+# ============================================================================
+
+ENV=prod
+READ_ONLY_MODE=false
+ALLOW_AUTOTRADE=true
+ALLOW_BROADCAST=false
+CONFIRM_TOKEN=lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+REQUIRE_CONFIRMATION=true
+ENABLE_HEALTH_CHECK_SERVER=true
+HEALTH_CHECK_PORT=8080
+LOG_FILE=logs/trading_bot.jsonl
+LOG_LEVEL=INFO
+
+# ============================================================================
+# 🔐 CORE SECRETS
+# ============================================================================
+
+TELEGRAM_BOT_TOKEN=8455438652:AAFvrxM6GFZ91BwoohvMCezhsj7N16YFju0
+ADMIN_CHAT_ID=8059844643
+SOLANA_NETWORK=mainnet-beta
+SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+SOLANA_WS_URL=wss://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+FALLBACK_RPC_URL=https://api.mainnet-beta.solana.com
+FALLBACK_RPC_1=https://api.mainnet-beta.solana.com
+FALLBACK_RPC_2=https://solana-api.projectserum.com
+FALLBACK_RPC_3=https://rpc.ankr.com/solana
+SIMULATE_RPC=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+WALLET_PRIVATE_KEY=2KBD49gknMGpsVSJWuUFbTPLsVLd4kMEN8n8cBERvJFML8sBzavGqpHH14mYUwDWYHZ6EdTx1DzHxto6PUsUVpke
+WALLET_ENCRYPTION_KEY=i6RtLA9zCQ7vtNwOdej8eekndp7AKKJclOzYeBEaDJY
+
+# ============================================================================
+# 💰 TRADING LIMITS
+# ============================================================================
+
+DEFAULT_BUY_AMOUNT=0.5
+DEFAULT_BUY_AMOUNT_SOL=0.5
+MAX_POSITION_SIZE_SOL=2.0
+MAX_TRADE_SIZE_SOL=2.0
+MAX_DAILY_LOSS_SOL=1.0
+DAILY_LOSS_LIMIT_SOL=1.0
+AUTO_TRADE_MIN_CONFIDENCE=0.70
+AUTO_TRADE_MAX_DAILY_TRADES=15
+AUTO_TRADE_DAILY_LIMIT_SOL=3.0
+MAX_SLIPPAGE=5.0
+
+# ============================================================================
+# 🛡️ PROTECTION
+# ============================================================================
+
+HONEYPOT_DETECTION_METHODS=6
+HONEYPOT_CHECK_ENABLED=true
+CHECK_HONEYPOTS=true
+MIN_LIQUIDITY_USD=2000
+CHECK_MINT_AUTHORITY=true
+CHECK_FREEZE_AUTHORITY=true
+CHECK_TOP_HOLDERS=true
+MAX_TOP_HOLDER_PERCENTAGE=0.20
+TWITTER_HANDLE_CHECK=true
+CONTRACT_ANALYSIS_DEPTH=HIGH
+
+# ============================================================================
+# ⚡ SNIPER
+# ============================================================================
+
+SNIPE_ENABLED=true
+SNIPE_USE_JITO=true
+SNIPE_TIP_LAMPORTS=100000
+SNIPE_PRIORITY_FEE=2000000
+SNIPE_AMOUNT_SOL=0.2
+SNIPE_MIN_LIQUIDITY_SOL=2
+SNIPE_MAX_DAILY=5
+
+# ============================================================================
+# 📊 RISK
+# ============================================================================
+
+STOP_LOSS_PERCENTAGE=15.0
+TAKE_PROFIT_PERCENTAGE=50.0
+TRAILING_STOP_PERCENTAGE=10.0
+
+# ============================================================================
+# 🧠 WALLET INTELLIGENCE
+# ============================================================================
+
+TRACK_WALLETS_AUTO=true
+MIN_WALLET_SCORE=65
+MAX_TRACKED_WALLETS=100
+
+# ============================================================================
+# 🐦 TWITTER
+# ============================================================================
+
+TWITTER_API_KEY=SrEqKHwaXpj3R28d7RcnZjJIE
+TWITTER_API_SECRET=Lli2wtX1ifkDXwsB9v23DtJaKvFEk2rhqReItSzfoMuB8U7Dse
+TWITTER_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAAHY%2F1wEAAAAAnj8bmnYBp5pvGrUamSySm4Uzfdw%3DUopwOJrEuPFtvj6GRzjTj2dEAX0dtYbLTNsE5qaYMBesseEP7B
+TWITTER_CLIENT_ID=Z3NITmlwMkZxQ3hpdFVlQ3Q3NS06MTpjaQ
+TWITTER_CLIENT_SECRET=BrT7t3BgwOqEfAVoBonDdydonE1JfSWKzt3qleYFIVkyL-VZHd
+
+# ============================================================================
+# 🔴 REDDIT
+# ============================================================================
+
+REDDIT_CLIENT_ID=U-h5zvhaIifMRiZ3hKGyfw
+REDDIT_CLIENT_SECRET=_dlqVgssQQwhGCFw4XYadfI64odO4g
+REDDIT_USER_AGENT=EliteTradingBot/1.0
+
+# ============================================================================
+# 💬 DISCORD
+# ============================================================================
+
+DISCORD_TOKEN=MTQzMDU0MjQyNDA4MTU2MzcxOA.GyFc4o.ZOHyRR_s9TXQTKXWLzqYRQ7IIqOOyk-3zyEwG4
+
+# ============================================================================
+# 🎯 JITO
+# ============================================================================
+
+JITO_BLOCK_ENGINE_URL=https://mainnet.block-engine.jito.wtf/api/v1
+JITO_TIP_ACCOUNT=96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5
+JITO_TIP_LAMPORTS=100000
+ENABLE_JITO_BUNDLES=true
+
+# ============================================================================
+# 🪐 JUPITER
+# ============================================================================
+
+JUPITER_API_URL=https://quote-api.jup.ag/v6
+JUPITER_SLIPPAGE_BPS=50
+USE_VERSIONED_TRANSACTIONS=true
+
+# ============================================================================
+# 📡 DATA SOURCES
+# ============================================================================
+
+HELIUS_API_KEY=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+HELIUS_PROJECT_ID=6a9a1a3c-79f8-4265-a86f-199bc33ffa56
+BIRDEYE_API_KEY=
+DEXSCREENER_API_KEY=
+
+# ============================================================================
+# ⚡ PERFORMANCE
+# ============================================================================
+
+PRIORITY_FEE_MICROLAMPORTS=2000000
+PRIORITY_FEE_LAMPORTS=5000
+ENABLE_PRIORITY_FEES=true
+COMPUTE_UNIT_LIMIT=200000
+CONFIRMATION_STRATEGY=confirmed
+MAX_TX_RETRIES=3
+TX_CONFIRMATION_TIMEOUT=60
+RPC_TIMEOUT=30
+ENABLE_PARALLEL_SUBMISSION=true
+ENABLE_FAST_SIMULATION=true
+PARALLEL_RPC_COUNT=3
+WS_PING_INTERVAL=30
+MAX_CONCURRENT_TRADES=3
+MAX_CONCURRENT_POSITIONS=5
+CACHE_DURATION=300
+
+# ============================================================================
+# 💾 DATABASE
+# ============================================================================
+
+DATABASE_URL=sqlite+aiosqlite:///trading_bot.db
+DATABASE_BACKUP_ENABLED=true
+DATABASE_BACKUP_INTERVAL_HOURS=6
+
+# ============================================================================
+# 📊 MONITORING
+# ============================================================================
+
+MONITORING_ENABLED=true
+PROMETHEUS_ENABLED=false
+PROMETHEUS_PORT=9090
+DETAILED_TRANSACTION_LOGS=true
+
+# ============================================================================
+# 🎮 GAMIFICATION
+# ============================================================================
+
+ENABLE_GAMIFICATION=true
+REWARDS_ENABLED=true
+POINTS_PER_TRADE=10
+POINTS_PER_WALLET_TRACK=5
+POINTS_PER_RATING=5
+POINTS_PER_COPY=5
+ENABLE_REFERRAL_PROGRAM=true
+REFERRAL_BONUS_PERCENTAGE=20.0
+
+# ============================================================================
+# 💰 PLATFORM FEES
+# ============================================================================
+
+TEAM_WALLET_ADDRESS=4164wKUM9HJyqXc9yrj24LKvy8BwxjzDazg4FSMycfR5
+FEE_COLLECTION_WALLET=4164wKUM9HJyqXc9yrj24LKvy8BwxjzDazg4FSMycfR5
+TRANSACTION_FEE_PERCENTAGE=0.5
+PLATFORM_FEE_PERCENTAGE=0.005
+MIN_FEE_SOL=0.001
+MAX_FEE_SOL=0.1
+FEE_MODEL=per_trade
+
+# ============================================================================
+# 🎯 FEATURES
+# ============================================================================
+
+ENABLE_AI_FEATURES=true
+ENABLE_COPY_TRADING=true
+ENABLE_STRATEGY_MARKETPLACE=true
+ENABLE_SENTIMENT_ANALYSIS=true
+ENABLE_COMMUNITY_FEATURES=true
+ENABLE_ADMIN_ALERTS=true
+AUTO_TRADE_ENABLED=true
+
+# ============================================================================
+# 🚦 RATE LIMITING
+# ============================================================================
+
+RATE_LIMIT_PER_MINUTE=60
+MAX_TRADES_PER_HOUR=20
+TRADE_COOLDOWN_SECONDS=5
+
+# ============================================================================
+# 📱 NOTIFICATIONS
+# ============================================================================
+
+SEND_TRADE_CONFIRMATIONS=true
+SEND_DAILY_SUMMARIES=true
+ALERT_LARGE_TRADE_THRESHOLD=5.0
+
+# ============================================================================
+# 🧪 TESTING
+# ============================================================================
+
+TEST_MODE=false
+DRY_RUN=false
+DEBUG_MODE=false
+DEVNET_RPC_URL=https://api.devnet.solana.com
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🎯 ULTIMATE CONFIG - READY TO ROCK! 🤘
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
