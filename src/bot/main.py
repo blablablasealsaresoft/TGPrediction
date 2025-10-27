@@ -52,6 +52,7 @@ from src.modules.sentiment_analysis import SocialMediaAggregator, TrendDetector
 from src.modules.active_sentiment_scanner import ActiveSentimentScanner
 from src.modules.unified_neural_engine import UnifiedNeuralEngine
 from src.modules.enhanced_neural_engine import PredictionLayer, ConfidenceLevel, Direction
+from src.modules.flash_loan_engine import FlashLoanArbitrageEngine, MarginfiClient
 from src.modules.database import DatabaseManager
 from src.modules.wallet_manager import UserWalletManager
 from src.modules.token_sniper import AutoSniper, SnipeSettings
@@ -146,9 +147,19 @@ class RevolutionaryTradingBot:
         # 🎯 PREDICTION LAYER - Converts unified scores to probability predictions
         self.prediction_layer = PredictionLayer(self.neural_engine)
         
-        # Trading execution
+        # Trading execution (initialize first)
         self.jupiter = JupiterClient(self.client)
         self.anti_mev = AntiMEVProtection(self.client)
+        
+        # ⚡ FLASH LOAN ARBITRAGE ENGINE (Phase 2) - Initialized after Jupiter/Jito
+        self.marginfi = MarginfiClient(self.client, config)
+        self.flash_loan_engine = FlashLoanArbitrageEngine(
+            self.client,
+            self.anti_mev,  # Jito client
+            self.jupiter,
+            self.db,
+            config
+        )
         
         # 🚀 ELITE SYSTEMS
         self.wallet_intelligence = WalletIntelligenceEngine(self.client)
@@ -2325,6 +2336,239 @@ Accuracy: <b>{stats['accuracy']:.1%}</b>
 <i>System gets smarter with every trade!</i>"""
         
         await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def flash_arb_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """⚡ Flash loan arbitrage info and status"""
+        user_id = update.effective_user.id
+        
+        # Get user tier
+        trader = await self.social_marketplace.get_trader_profile(user_id)
+        user_tier = trader.tier.value.upper() if trader else 'BRONZE'
+        
+        # Get tier limit
+        max_capital = self.flash_loan_engine.tier_limits.get(user_tier, 0)
+        platform_fee = self.flash_loan_engine.tier_fees.get(user_tier, 0.05) * 100
+        
+        if max_capital == 0:
+            message = """⚡ <b>FLASH LOAN ARBITRAGE</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>🔒 TIER UPGRADE REQUIRED</b>
+
+Flash loan arbitrage requires <b>Gold+ tier</b>
+
+<b>💎 BENEFITS:</b>
+• 100x capital efficiency
+• Profit with minimal capital
+• Atomic transactions (risk-free)
+• MEV protected via Jito bundles
+
+<b>📊 TIER LIMITS:</b>
+🥇 Gold: 50 SOL flash loans (5% fee)
+💎 Platinum: 150 SOL (3% fee)
+👑 Elite: 500 SOL (2% fee)
+
+<b>How it works:</b>
+1. Detect price difference across DEXs
+2. Flash loan SOL from Marginfi
+3. Buy on cheaper DEX
+4. Sell on expensive DEX
+5. Repay flash loan + 0.001% fee
+6. Keep profit (minus platform fee)
+
+All in ONE atomic transaction - zero risk!
+
+<i>Upgrade to Gold tier to unlock this feature</i>"""
+            
+            await update.message.reply_text(message, parse_mode='HTML')
+            return
+        
+        # Show flash arb status
+        stats = await self.flash_loan_engine.get_user_arbitrage_stats(user_id)
+        
+        message = f"""⚡ <b>FLASH LOAN ARBITRAGE</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>YOUR TIER: {user_tier}</b>
+
+<b>💰 LIMITS:</b>
+Max Flash Loan: <b>{max_capital} SOL</b>
+Platform Fee: <b>{platform_fee:.1f}%</b> of profits
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📊 YOUR PERFORMANCE:</b>
+Total Arbitrages: {stats['total_trades']}
+Successful: {stats['successful_trades']}
+Total Profit: {stats['total_profit_sol']:.4f} SOL
+Avg Profit: {stats['average_profit_sol']:.4f} SOL
+Fees Paid: {stats['platform_fees_paid']:.4f} SOL
+ROI: {stats['roi']:.2%}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>💡 COMMANDS:</b>
+/flash_enable - Enable auto-arbitrage
+/flash_opportunities - View current opportunities
+/flash_stats - System-wide stats
+
+<i>100x your capital with flash loans!</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def flash_enable_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Enable flash loan auto-arbitrage"""
+        user_id = update.effective_user.id
+        
+        # Get user tier
+        trader = await self.social_marketplace.get_trader_profile(user_id)
+        user_tier = trader.tier.value.upper() if trader else 'BRONZE'
+        
+        if user_tier not in ['GOLD', 'PLATINUM', 'ELITE']:
+            await update.message.reply_text(
+                "❌ Flash loan arbitrage requires Gold+ tier\n\n"
+                "Upgrade your tier to unlock this feature",
+                parse_mode='HTML'
+            )
+            return
+        
+        # Enable flash arbitrage
+        await self.db.update_user_settings(user_id, {
+            'flash_arb_enabled': True,
+            'flash_arb_min_profit_bps': 50  # 0.5% minimum
+        })
+        
+        max_capital = self.flash_loan_engine.tier_limits.get(user_tier, 0)
+        
+        message = f"""✅ <b>FLASH LOAN ARBITRAGE ENABLED!</b>
+
+<b>Your Tier: {user_tier}</b>
+<b>Max Capital: {max_capital} SOL</b>
+
+<b>How it works:</b>
+• System scans for price differences every 2 seconds
+• When profit >0.5% detected
+• Simulates full arbitrage transaction
+• If profitable, executes via Jito bundle
+• You get notified of every trade
+
+<b>Safety Features:</b>
+• Atomic transactions (all-or-nothing)
+• MEV protected via Jito
+• Simulation required before execution
+• Auto-revert on any loss
+
+<b>💰 Revenue Split:</b>
+• You keep: {100 - self.flash_loan_engine.tier_fees.get(user_tier, 0.05)*100:.0f}%
+• Platform fee: {self.flash_loan_engine.tier_fees.get(user_tier, 0.05)*100:.0f}%
+
+<i>Flash arbitrage is now active 24/7!</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def flash_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show system-wide flash arbitrage stats"""
+        stats = self.flash_loan_engine.get_system_stats()
+        
+        message = f"""⚡ <b>FLASH ARBITRAGE SYSTEM STATS</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>OPPORTUNITIES:</b>
+Total Found: {stats['total_opportunities_found']}
+Executed: {stats['total_executed']}
+Execution Rate: {stats['execution_rate']:.1%}
+
+<b>PROFITABILITY:</b>
+Total Profit: <b>{stats['total_profit_sol']:.4f} SOL</b>
+
+<b>STATUS:</b>
+Last Scan: {stats['last_scan'] or 'Never'}
+Scanning: <b>Every 2 seconds</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>💡 How to participate:</b>
+• Upgrade to Gold+ tier
+• Enable: /flash_enable
+• Earn passive income 24/7
+
+<i>Flash loans = 100x capital efficiency!</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
+    
+    async def flash_opportunities_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show current arbitrage opportunities"""
+        
+        await update.message.reply_text("🔍 <b>SCANNING FOR ARBITRAGE...</b>", parse_mode='HTML')
+        
+        # Scan for opportunities
+        opportunities = await self.flash_loan_engine.scan_for_opportunities()
+        
+        if not opportunities:
+            message = """⚡ <b>ARBITRAGE OPPORTUNITIES</b>
+
+<b>No profitable opportunities right now</b>
+
+<b>✅ Active Monitoring:</b>
+• Scanning: Every 2 seconds
+• DEXs: Raydium, Orca, Jupiter
+• Pairs: SOL/USDC, SOL/USDT, BONK/SOL, WIF/SOL
+• Min Profit: 0.5% (50 bps)
+
+<b>Why none now?</b>
+• Markets are efficient
+• Normal during low volatility
+• Opportunities appear during:
+  - High volume periods
+  - New token launches
+  - Market volatility spikes
+
+<b>💡 Solution:</b>
+Enable /flash_enable for 24/7 monitoring
+System will auto-execute when opportunities appear!
+
+<i>Check back during high market activity</i>"""
+            
+            await update.message.reply_text(message, parse_mode='HTML')
+            return
+        
+        # Format opportunities
+        message = f"""⚡ <b>ARBITRAGE OPPORTUNITIES!</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>Found {len(opportunities)} profitable arbitrages:</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+"""
+        
+        for i, opp in enumerate(opportunities[:5], 1):
+            emoji = "🔥" if opp.profit_bps > 100 else "⚡"
+            
+            message += f"""
+{emoji} <b>#{i} - {opp.token_mint[:8]}...</b>
+
+   <b>Buy:</b> {opp.source_dex} @ ${opp.source_price:.6f}
+   <b>Sell:</b> {opp.dest_dex} @ ${opp.dest_price:.6f}
+   <b>Profit:</b> {opp.profit_bps} bps ({opp.profit_bps/100:.2f}%)
+   
+   <b>Capital Needed:</b> {opp.required_capital} SOL
+   <b>Est. Profit:</b> {opp.estimated_profit:.4f} SOL
+   
+   <code>/execute_arb {i}</code>
+
+"""
+        
+        message += """━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 <i>Opportunities update every 2 seconds</i>
+⚡ <i>Enable /flash_enable for auto-execution</i>"""
+        
+        await update.message.reply_text(message, parse_mode='HTML')
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show help menu with all commands - Enterprise UI"""
@@ -2957,6 +3201,12 @@ Use /settings command to modify these settings
         app.add_handler(CommandHandler("predict", self.predict_command))
         app.add_handler(CommandHandler("autopredictions", self.autopredictions_command))
         app.add_handler(CommandHandler("prediction_stats", self.prediction_stats_command))
+        
+        # ⚡ FLASH LOAN ARBITRAGE COMMANDS (Phase 2 - NEW!)
+        app.add_handler(CommandHandler("flash_arb", self.flash_arb_command))
+        app.add_handler(CommandHandler("flash_enable", self.flash_enable_command))
+        app.add_handler(CommandHandler("flash_stats", self.flash_stats_command))
+        app.add_handler(CommandHandler("flash_opportunities", self.flash_opportunities_command))
         
         # Callback handler for all buttons
         app.add_handler(CallbackQueryHandler(self.button_callback))
