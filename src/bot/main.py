@@ -1172,8 +1172,8 @@ REDDIT_CLIENT_SECRET=your_secret_here</code>
         try:
             # 🔥 ACTIVELY SCAN Twitter & Reddit for trending tokens
             viral_tokens = await self.active_scanner.scan_for_trending_tokens()
-        
-        if not viral_tokens:
+            
+            if not viral_tokens:
                 message = """🔥 <b>TRENDING TOKENS</b>
 
 <b>No viral tokens detected right now</b>
