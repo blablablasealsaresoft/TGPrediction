@@ -1172,8 +1172,8 @@ REDDIT_CLIENT_SECRET=your_secret_here</code>
         try:
             # 🔥 ACTIVELY SCAN Twitter & Reddit for trending tokens
             viral_tokens = await self.active_scanner.scan_for_trending_tokens()
-            
-            if not viral_tokens:
+        
+        if not viral_tokens:
                 message = """🔥 <b>TRENDING TOKENS</b>
 
 <b>No viral tokens detected right now</b>
@@ -2152,7 +2152,7 @@ OPEN POSITIONS:
         except Exception as e:
             logger.error(f"Error generating metrics: {e}")
             await update.message.reply_text(f"❌ Error generating metrics: {e}")
-    
+
     async def predict_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """🎯 PROBABILITY PREDICTION - Show enhanced prediction with probabilities"""
         if len(context.args) < 1:
