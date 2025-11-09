@@ -241,6 +241,41 @@ sudo systemctl start trading-bot
 /my_stats                   - Detailed trading stats
 ```
 
+### **🎯 NEW: Probability Predictions (Phase 1)**
+
+```
+/predict <token>            - Full probability prediction with confidence
+/autopredictions            - Enable auto-trading on ULTRA predictions
+/prediction_stats           - Track prediction accuracy over time
+```
+
+### **⚡ NEW: Flash Loan Arbitrage (Phase 2)**
+
+```
+/flash_arb                  - Flash loan info and your stats
+/flash_enable               - Enable auto-arbitrage (Gold+ tier)
+/flash_stats                - System-wide arbitrage statistics
+/flash_opportunities        - View current arbitrage opportunities
+```
+
+### **🚀 NEW: Bundle Launch Predictor (Phase 3)**
+
+```
+/launch_predictions         - View upcoming launches (2-6h early)
+/launch_monitor             - Enable 24/7 pre-launch monitoring
+/launch_stats               - Launch prediction performance
+```
+
+### **🎲 NEW: Prediction Markets (Phase 4)**
+
+```
+/markets                    - Browse active prediction markets
+/create_market              - Create custom market (Elite tier)
+/stake <id> <up/down> <amt> - Stake SOL on predictions
+/my_predictions             - View your active predictions
+/market_leaderboard         - Top predictors leaderboard
+```
+
 ### **📚 Advanced Features**
 
 ```
