@@ -13,6 +13,8 @@ PROTECTION LAYERS:
 
 import asyncio
 import logging
+import os
+import aiohttp
 from typing import Dict, List, Optional, Tuple, Set
 from collections import defaultdict
 from dataclasses import dataclass
@@ -53,7 +55,40 @@ class EliteProtectionSystem:
         self.honeypot_cache: Dict[str, bool] = {}
         self.twitter_handle_history: Dict[str, Set[str]] = defaultdict(set)
         
-        logger.info("🛡️ Elite Protection System initialized")
+        # API Keys from environment - Core Security
+        self.rugcheck_enabled = os.getenv('RUGCHECK_ENABLED', 'true').lower() == 'true'
+        self.goplus_api_key = os.getenv('GOPLUS_API_KEY', '')
+        self.goplus_app_key = os.getenv('GOPLUS_APP_KEY', 'g0ZrDZ72Ar4GZbtAsk07')
+        self.goplus_app_secret = os.getenv('GOPLUS_APP_SECRET', '7ettH9JFqpBnpesU8FHJH7jmmY93vgu6')
+        self.solscan_api_key = os.getenv('SOLSCAN_API_KEY', '')
+        self.birdeye_api_key = os.getenv('BIRDEYE_API_KEY', '')
+        
+        # API ENHANCEMENTS - Additional free security APIs
+        self.tokensniffer_enabled = os.getenv('TOKEN_SNIFFER_ENABLED', 'true').lower() == 'true'
+        self.rugdoc_enabled = os.getenv('RUGDOC_ENABLED', 'true').lower() == 'true'
+        self.solana_beach_enabled = os.getenv('SOLANA_BEACH_ENABLED', 'true').lower() == 'true'
+        
+        # HTTP session for API calls
+        self.session: Optional[aiohttp.ClientSession] = None
+        
+        logger.info("🛡️ Elite Protection System initialized with multi-API support")
+        if self.rugcheck_enabled:
+            logger.info("  ✅ RugCheck API enabled")
+        if self.goplus_app_key:
+            logger.info("  ✅ GoPlus Security API enabled")
+        if self.birdeye_api_key:
+            logger.info("  ✅ Birdeye Security API enabled")
+        if self.tokensniffer_enabled:
+            logger.info("  ✅ TokenSniffer API enabled (7th layer)")
+        if self.rugdoc_enabled:
+            logger.info("  ✅ RugDoc API enabled (8th layer)")
+        if self.solana_beach_enabled:
+            logger.info("  ✅ Solana Beach API enabled")
+    
+    async def _ensure_session(self):
+        """Ensure HTTP session exists"""
+        if not self.session:
+            self.session = aiohttp.ClientSession()
     
     async def comprehensive_token_check(self, token_mint: str) -> Dict:
         """
@@ -216,9 +251,80 @@ class EliteProtectionSystem:
         return False  # Placeholder
     
     async def _check_scam_database(self, token_mint: str) -> bool:
-        """Method 4: Check against known scam databases"""
-        # Would query external APIs or maintain local database
-        return False  # Placeholder
+        """Method 4: Check against known scam databases (RugCheck + GoPlus)"""
+        await self._ensure_session()
+        
+        # Check 1: RugCheck API (free, no key needed)
+        if self.rugcheck_enabled:
+            try:
+                url = f"https://api.rugcheck.xyz/v1/tokens/{token_mint}/report"
+                async with self.session.get(url, timeout=10) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        risk_level = data.get('riskLevel', 'unknown')
+                        if risk_level in ['danger', 'warning']:
+                            logger.warning(f"🚨 RugCheck flagged {token_mint[:8]}... as {risk_level}")
+                            return True
+                        logger.info(f"✅ RugCheck passed for {token_mint[:8]}...")
+            except Exception as e:
+                logger.debug(f"RugCheck API error: {e}")
+        
+        # Check 2: GoPlus Security API
+        if self.goplus_app_key and self.goplus_app_secret:
+            try:
+                url = f"https://api.gopluslabs.io/api/v1/token_security/solana?contract_addresses={token_mint}"
+                headers = {}
+                if self.goplus_api_key:
+                    headers['Authorization'] = f"Bearer {self.goplus_api_key}"
+                    
+                async with self.session.get(url, headers=headers, timeout=10) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        result = data.get('result', {}).get(token_mint.lower(), {})
+                        
+                        # Check various red flags
+                        is_honeypot = result.get('is_honeypot', '0') == '1'
+                        is_proxy = result.get('is_proxy', '0') == '1'
+                        has_hidden_owner = result.get('hidden_owner', '0') == '1'
+                        
+                        if is_honeypot or is_proxy or has_hidden_owner:
+                            logger.warning(f"🚨 GoPlus flagged {token_mint[:8]}... as dangerous")
+                            return True
+                        logger.info(f"✅ GoPlus security passed for {token_mint[:8]}...")
+            except Exception as e:
+                logger.debug(f"GoPlus API error: {e}")
+        
+        # Check 3: TokenSniffer API (7th layer - FREE!)
+        if self.tokensniffer_enabled:
+            try:
+                url = f"https://tokensniffer.com/api/v2/tokens/solana/{token_mint}"
+                async with self.session.get(url, timeout=10) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        score = data.get('score', 100)
+                        if score < 60:  # TokenSniffer uses 0-100, lower is riskier
+                            logger.warning(f"🚨 TokenSniffer flagged {token_mint[:8]}... with score {score}/100")
+                            return True
+                        logger.info(f"✅ TokenSniffer passed for {token_mint[:8]}... (score: {score}/100)")
+            except Exception as e:
+                logger.debug(f"TokenSniffer API error: {e}")
+        
+        # Check 4: RugDoc API (8th layer - FREE!)
+        if self.rugdoc_enabled:
+            try:
+                url = f"https://api.rugdoc.io/v1/solana/{token_mint}"
+                async with self.session.get(url, timeout=10) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        status = data.get('status', 'unknown')
+                        if status in ['scam', 'warning', 'high_risk']:
+                            logger.warning(f"🚨 RugDoc flagged {token_mint[:8]}... as {status}")
+                            return True
+                        logger.info(f"✅ RugDoc passed for {token_mint[:8]}...")
+            except Exception as e:
+                logger.debug(f"RugDoc API error: {e}")
+        
+        return False
     
     async def _calculate_suspicion_score(self, token_mint: str) -> float:
         """Methods 5 & 6: Calculate overall suspicion score based on various factors"""

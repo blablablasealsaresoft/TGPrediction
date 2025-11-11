@@ -22,7 +22,7 @@ class ProbeServer:
     def __init__(
         self,
         health_check: HealthCallable,
-        host: str = "127.0.0.1",
+        host: str = "0.0.0.0",
         port: int = 8080,
         prometheus_enabled: bool = False,
     ):

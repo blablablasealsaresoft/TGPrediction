@@ -12,6 +12,7 @@ UNIQUE DIFFERENTIATORS:
 
 import asyncio
 import logging
+import os
 from typing import Any, Dict, List, Optional, Set
 from datetime import datetime, timedelta
 from dataclasses import dataclass
@@ -1034,6 +1035,7 @@ class CommunityIntelligence:
 class RewardSystem:
     """
     Reward users for contributing to community
+    Configurable from environment variables
     """
     
     def __init__(self):
@@ -1045,6 +1047,41 @@ class RewardSystem:
             5000: "Platinum Contributor",
             10000: "Diamond Contributor"
         }
+        
+        # READ GAMIFICATION CONFIG FROM ENVIRONMENT
+        self.gamification_enabled = os.getenv('ENABLE_GAMIFICATION', 'true').lower() == 'true'
+        self.rewards_enabled = os.getenv('REWARDS_ENABLED', 'true').lower() == 'true'
+        self.leaderboard_enabled = os.getenv('LEADERBOARD_ENABLED', 'true').lower() == 'true'
+        self.referral_program_enabled = os.getenv('ENABLE_REFERRAL_PROGRAM', 'true').lower() == 'true'
+        
+        # Point values from environment (with fallbacks to hardcoded defaults)
+        self.points_per_trade = int(os.getenv('POINTS_PER_TRADE', '10'))
+        self.points_per_wallet_track = int(os.getenv('POINTS_PER_WALLET_TRACK', '5'))
+        self.points_per_rating = int(os.getenv('POINTS_PER_RATING', '5'))
+        self.points_per_copy = int(os.getenv('POINTS_PER_COPY', '5'))
+        self.referral_bonus_pct = float(os.getenv('REFERRAL_BONUS_PERCENTAGE', '20.0'))
+        
+        # Platform economics
+        self.transaction_fee_pct = float(os.getenv('TRANSACTION_FEE_PERCENTAGE', '0.5'))
+        self.platform_fee_pct = float(os.getenv('PLATFORM_FEE_PERCENTAGE', '0.005'))
+        self.min_fee_sol = float(os.getenv('MIN_FEE_SOL', '0.001'))
+        self.max_fee_sol = float(os.getenv('MAX_FEE_SOL', '0.1'))
+        self.fee_model = os.getenv('FEE_MODEL', 'per_trade')
+        
+        logger.info("🎮 Reward System initialized from environment")
+        logger.info(f"  ✅ Gamification: {self.gamification_enabled}")
+        logger.info(f"  🎁 Rewards: {self.rewards_enabled}")
+        logger.info(f"  🏆 Leaderboard: {self.leaderboard_enabled}")
+        logger.info(f"  👥 Referral program: {self.referral_program_enabled} ({self.referral_bonus_pct}% bonus)")
+        logger.info(f"  📊 Points Structure:")
+        logger.info(f"     Per trade: {self.points_per_trade}")
+        logger.info(f"     Per wallet track: {self.points_per_wallet_track}")
+        logger.info(f"     Per rating: {self.points_per_rating}")
+        logger.info(f"     Per copy: {self.points_per_copy}")
+        logger.info(f"  💰 Platform Fees:")
+        logger.info(f"     Transaction fee: {self.transaction_fee_pct}%")
+        logger.info(f"     Platform fee: {self.platform_fee_pct}%")
+        logger.info(f"     Fee range: {self.min_fee_sol}-{self.max_fee_sol} SOL")
     
     async def award_points(
         self,
@@ -1097,6 +1134,8 @@ class RewardSystem:
 
 
 # Point rewards for various actions
+# REWARD_POINTS - Now loaded from environment in RewardSystem __init__
+# Keeping this for backwards compatibility
 REWARD_POINTS = {
     'successful_trade': 10,
     'rate_token': 5,

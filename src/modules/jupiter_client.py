@@ -15,6 +15,7 @@ import asyncio
 import logging
 import base64
 import random
+import os
 from typing import Dict, Optional, List, Tuple
 from decimal import Decimal
 from dataclasses import dataclass
@@ -63,16 +64,36 @@ class JupiterClient:
     - Route caching
     """
     
-    JUPITER_API_V6 = "https://quote-api.jup.ag/v6"
-    JUPITER_PRICE_API = "https://price.jup.ag/v4"
-    
     def __init__(self, rpc_client: AsyncClient):
         self.rpc_client = rpc_client
         self.session: Optional[aiohttp.ClientSession] = None
         
+        # READ JUPITER CONFIGURATION FROM ENVIRONMENT
+        self.JUPITER_API_V6 = os.getenv('JUPITER_API_URL', 'https://quote-api.jup.ag/v6')
+        self.JUPITER_PRICE_API = os.getenv('JUPITER_PRICE_API_V4_URL', 'https://price.jup.ag/v4')
+        self.jupiter_slippage_bps = int(os.getenv('JUPITER_SLIPPAGE_BPS', '50'))
+        self.use_versioned_txs = os.getenv('USE_VERSIONED_TRANSACTIONS', 'true').lower() == 'true'
+        self.only_direct_routes = os.getenv('JUPITER_ONLY_DIRECT_ROUTES', 'false').lower() == 'true'
+        self.max_accounts = int(os.getenv('JUPITER_MAX_ACCOUNTS', '64'))
+        
         # Elite features
         self.route_cache: Dict[Tuple[str, str], List[Dict]] = {}
-        self.jito_enabled = True
+        self.jito_enabled = os.getenv('ENABLE_JITO_BUNDLES', 'true').lower() == 'true'
+        
+        # API ENHANCEMENTS - Multi-source price feeds
+        self.pyth_enabled = os.getenv('PYTH_PRICE_FEED_ENABLED', 'true').lower() == 'true'
+        self.pyth_api_url = os.getenv('PYTH_API_URL', 'https://hermes.pyth.network/api')
+        
+        # Pyth price feed IDs from environment
+        self.pyth_sol_feed = os.getenv('PYTH_SOL_USD_FEED_ID', 'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d')
+        
+        logger.info("🚀 Jupiter Client initialized from environment")
+        logger.info(f"  🌐 API: {self.JUPITER_API_V6}")
+        logger.info(f"  📊 Default slippage: {self.jupiter_slippage_bps} bps ({self.jupiter_slippage_bps/100}%)")
+        logger.info(f"  📦 Versioned transactions: {self.use_versioned_txs}")
+        logger.info(f"  🛡️ Jito MEV protection: {self.jito_enabled}")
+        if self.pyth_enabled:
+            logger.info("  ✅ Pyth Network price feeds enabled (real-time oracle)")
     
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
@@ -293,7 +314,9 @@ class JupiterClient:
     
     async def get_token_price(self, token_mints: List[str]) -> Dict[str, float]:
         """
-        Get current prices for tokens
+        Get current prices for tokens with multi-source validation
+        
+        Uses Jupiter Price API as primary, Pyth Network as fallback
         
         Args:
             token_mints: List of token mint addresses
@@ -305,12 +328,13 @@ class JupiterClient:
             if not self.session:
                 self.session = aiohttp.ClientSession()
             
-            # Jupiter price API expects comma-separated list
+            # Try Jupiter price API first (primary source)
             ids = ",".join(token_mints)
             
             async with self.session.get(
                 f"{self.JUPITER_PRICE_API}/price",
-                params={"ids": ids}
+                params={"ids": ids},
+                timeout=10
             ) as response:
                 if response.status == 200:
                     data = await response.json()
@@ -318,13 +342,49 @@ class JupiterClient:
                     for mint in token_mints:
                         price_data = data.get("data", {}).get(mint, {})
                         prices[mint] = float(price_data.get("price", 0))
+                    
+                    logger.info(f"✅ Jupiter price API: Got prices for {len(prices)} tokens")
                     return prices
                 else:
-                    logger.error(f"Price API error: {response.status}")
-                    return {}
+                    logger.warning(f"⚠️ Jupiter price API returned status {response.status}, trying Pyth fallback...")
+            
+            # Fallback to Pyth Network if Jupiter fails
+            if self.pyth_enabled:
+                return await self._get_pyth_prices(token_mints)
+            
+            return {}
                     
         except Exception as e:
             logger.error(f"Error getting token prices: {e}")
+            # Try Pyth fallback on error
+            if self.pyth_enabled:
+                try:
+                    return await self._get_pyth_prices(token_mints)
+                except:
+                    pass
+            return {}
+    
+    async def _get_pyth_prices(self, token_mints: List[str]) -> Dict[str, float]:
+        """Get prices from Pyth Network oracle (fallback)"""
+        try:
+            # For SOL, use the configured feed ID
+            prices = {}
+            
+            SOL_MINT = "So11111111111111111111111111111111111111112"
+            if SOL_MINT in token_mints:
+                url = f"{self.pyth_api_url}/latest_price_feeds?ids[]={self.pyth_sol_feed}"
+                async with self.session.get(url, timeout=10) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data and len(data) > 0:
+                            price_feed = data[0]
+                            price = float(price_feed.get('price', {}).get('price', 0)) / 1e8  # Pyth uses 8 decimals
+                            prices[SOL_MINT] = price
+                            logger.info(f"✅ Pyth Network: SOL price ${price:.2f}")
+            
+            return prices
+        except Exception as e:
+            logger.debug(f"Pyth price feed error: {e}")
             return {}
     
     async def get_token_info(self, token_mint: str) -> Optional[Dict]:
@@ -531,7 +591,7 @@ class AntiMEVProtection:
     Prevents frontrunning and sandwich attacks
     """
     
-    JITO_BLOCK_ENGINE = "https://mainnet.block-engine.jito.wtf"
+    # Jito tip accounts (random selection for distribution)
     JITO_TIP_ACCOUNTS = [
         "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
         "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
@@ -546,6 +606,34 @@ class AntiMEVProtection:
     def __init__(self, rpc_client: AsyncClient):
         self.rpc_client = rpc_client
         self.session: Optional[aiohttp.ClientSession] = None
+        
+        # READ JITO CONFIGURATION FROM ENVIRONMENT
+        self.JITO_BLOCK_ENGINE = os.getenv('JITO_BLOCK_ENGINE_URL', 'https://mainnet.block-engine.jito.wtf')
+        self.jito_enabled = os.getenv('ENABLE_JITO_BUNDLES', 'true').lower() == 'true'
+        self.jito_min_tip = int(os.getenv('JITO_MIN_TIP_LAMPORTS', '50000'))
+        self.jito_max_tip = int(os.getenv('JITO_MAX_TIP_LAMPORTS', '1000000'))
+        self.jito_default_tip = int(os.getenv('JITO_TIP_LAMPORTS', '100000'))
+        self.bundle_timeout = int(os.getenv('JITO_BUNDLE_TIMEOUT', '30'))
+        self.max_bundle_size = int(os.getenv('JITO_MAX_BUNDLE_SIZE', '5'))
+        
+        # MEV Protection Strategy from env
+        self.mev_protection_level = os.getenv('MEV_PROTECTION_LEVEL', 'maximum')
+        self.anti_frontrun = os.getenv('ANTI_FRONTRUN_ENABLED', 'true').lower() == 'true'
+        self.anti_sandwich = os.getenv('ANTI_SANDWICH_ENABLED', 'true').lower() == 'true'
+        self.bundle_all_trades = os.getenv('BUNDLE_ALL_TRADES', 'true').lower() == 'true'
+        
+        # Override tip account if specified in env
+        env_tip_account = os.getenv('JITO_TIP_ACCOUNT', '')
+        if env_tip_account:
+            self.JITO_TIP_ACCOUNTS = [env_tip_account] + self.JITO_TIP_ACCOUNTS
+        
+        logger.info("🛡️ Anti-MEV Protection initialized from environment")
+        logger.info(f"  ✅ Jito bundles: {'ENABLED' if self.jito_enabled else 'DISABLED'}")
+        logger.info(f"  💰 Tip range: {self.jito_min_tip/1e6:.4f} - {self.jito_max_tip/1e6:.4f} SOL")
+        logger.info(f"  🌐 Block engine: {self.JITO_BLOCK_ENGINE}")
+        logger.info(f"  🛡️ Protection level: {self.mev_protection_level}")
+        logger.info(f"  ⚡ Anti-frontrun: {self.anti_frontrun}")
+        logger.info(f"  🥪 Anti-sandwich: {self.anti_sandwich}")
     
     async def send_bundle(
         self,

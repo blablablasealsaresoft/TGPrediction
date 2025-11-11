@@ -7,6 +7,7 @@ Integrates seamlessly with existing UnifiedNeuralEngine
 
 import asyncio
 import logging
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -69,7 +70,48 @@ class PredictionLayer:
         self.predictions = []
         self.outcomes = []
         
-        logger.info("🎯 Prediction Layer initialized")
+        # READ PREDICTION ENGINE CONFIG FROM ENVIRONMENT
+        self.prediction_mode = os.getenv('PREDICTION_MODE', 'confidence_scoring')
+        
+        # Prediction signal weights
+        self.sentiment_weight = float(os.getenv('PREDICTION_SENTIMENT_WEIGHT', '0.25'))
+        self.whale_activity_weight = float(os.getenv('PREDICTION_WHALE_ACTIVITY_WEIGHT', '0.30'))
+        self.onchain_metrics_weight = float(os.getenv('PREDICTION_ONCHAIN_METRICS_WEIGHT', '0.25'))
+        self.technical_analysis_weight = float(os.getenv('PREDICTION_TECHNICAL_ANALYSIS_WEIGHT', '0.20'))
+        
+        # Confidence thresholds
+        self.min_confidence = float(os.getenv('PREDICTION_MIN_CONFIDENCE', '0.65'))
+        self.high_confidence = float(os.getenv('PREDICTION_HIGH_CONFIDENCE', '0.80'))
+        self.ultra_confidence = float(os.getenv('PREDICTION_ULTRA_CONFIDENCE', '0.90'))
+        
+        # Automated prediction trading
+        self.prediction_auto_trade = os.getenv('PREDICTION_AUTO_TRADE', 'false').lower() == 'true'
+        self.ultra_only = os.getenv('PREDICTION_ULTRA_ONLY', 'true').lower() == 'true'
+        self.max_positions = int(os.getenv('PREDICTION_MAX_POSITIONS', '5'))
+        
+        # Prediction features
+        self.predict_direction = os.getenv('PREDICT_PRICE_DIRECTION', 'true').lower() == 'true'
+        self.predict_volatility = os.getenv('PREDICT_VOLATILITY', 'true').lower() == 'true'
+        self.predict_breakout = os.getenv('PREDICT_BREAKOUT_PROBABILITY', 'true').lower() == 'true'
+        self.predict_rugpull = os.getenv('PREDICT_RUGPULL_PROBABILITY', 'true').lower() == 'true'
+        
+        logger.info("🎯 Prediction Layer initialized from environment")
+        logger.info(f"  🎲 Mode: {self.prediction_mode}")
+        logger.info(f"  📊 Signal Weights:")
+        logger.info(f"     Sentiment: {self.sentiment_weight*100}%")
+        logger.info(f"     Whale activity: {self.whale_activity_weight*100}%")
+        logger.info(f"     On-chain metrics: {self.onchain_metrics_weight*100}%")
+        logger.info(f"     Technical analysis: {self.technical_analysis_weight*100}%")
+        logger.info(f"  🎯 Confidence Thresholds:")
+        logger.info(f"     MIN: {self.min_confidence*100}%")
+        logger.info(f"     HIGH: {self.high_confidence*100}%")
+        logger.info(f"     ULTRA: {self.ultra_confidence*100}%")
+        logger.info(f"  🤖 Auto-trade: {self.prediction_auto_trade} (ULTRA only: {self.ultra_only})")
+        logger.info(f"  🔮 Prediction Features:")
+        logger.info(f"     {'✅' if self.predict_direction else '❌'} Price direction")
+        logger.info(f"     {'✅' if self.predict_volatility else '❌'} Volatility")
+        logger.info(f"     {'✅' if self.predict_breakout else '❌'} Breakout probability")
+        logger.info(f"     {'✅' if self.predict_rugpull else '❌'} Rugpull detection")
     
     async def enhanced_analysis(
         self,

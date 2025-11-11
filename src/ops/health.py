@@ -47,15 +47,16 @@ async def _check_solana_rpc(config: Config, expected_network: str) -> Tuple[bool
     client = AsyncClient(config.solana_rpc_url)
     try:
         response = await client.get_version()
-        cluster = response.get("result", {})
-        network = config.solana_network
-        if expected_network == "mainnet":
-            expected_network = "mainnet-beta"
-        if network != expected_network:
-            return False, f"network mismatch (configured {network}, expected {expected_network})"
-        if "solana-core" not in str(cluster):
-            return False, "unexpected RPC response"
-        return True, "rpc ok"
+        # Response is an RPC response object with .value attribute, not a dict
+        if hasattr(response, 'value') and hasattr(response.value, 'solana_core'):
+            network = config.solana_network
+            if expected_network == "mainnet":
+                expected_network = "mainnet-beta"
+            if network != expected_network:
+                return False, f"network mismatch (configured {network}, expected {expected_network})"
+            return True, "rpc ok"
+        else:
+            return False, "unexpected RPC response format"
     except Exception as exc:  # pragma: no cover - protective
         return False, f"rpc error: {exc.__class__.__name__}"
     finally:

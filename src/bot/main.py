@@ -915,6 +915,57 @@ Select amount per trade:
         except ValueError:
             await update.message.reply_text("❌ Invalid trader ID")
     
+    async def my_copies_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show all active copy trades"""
+        follower_id = update.effective_user.id
+
+        # Check active copies
+        user_copies = self.social_marketplace.active_copies.get(follower_id, {})
+        active_traders = [
+            trader_id
+            for trader_id, copy_settings in user_copies.items()
+            if copy_settings.get('enabled')
+        ]
+
+        if not active_traders:
+            await update.message.reply_text(
+                "📊 *YOUR COPY TRADES*\n\n"
+                "You're not copying anyone yet.\n\n"
+                "Use /leaderboard to find traders to copy!",
+                parse_mode='Markdown'
+            )
+            return
+
+        # Limit to first 10 to avoid message too long error
+        traders_to_show = active_traders[:10]
+        
+        lines = []
+        for trader_id in traders_to_show:
+            trader = await self.social_marketplace.get_trader_profile(trader_id)
+            copy_settings = user_copies.get(trader_id, {})
+            trader_name = trader.username if trader else f"Trader {trader_id}"
+            max_amount = copy_settings.get('max_copy_amount', 0) or 0
+            total_copied = copy_settings.get('total_copied', 0)
+            lines.append(
+                f"• *{trader_name}* (ID: {trader_id})\n"
+                f"  Copied: {total_copied} trades | Max: {max_amount:.4f} SOL\n"
+                f"  /stop_copy {trader_id}\n"
+            )
+
+        more_note = f"\n\n_...and {len(active_traders) - 10} more_" if len(active_traders) > 10 else ""
+        
+        message = f"""📊 *YOUR COPY TRADES*
+
+Active: {len(active_traders)} trader(s)
+
+{chr(10).join(lines)}{more_note}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 Use /stop_copy <trader_id> to stop copying
+"""
+
+        await update.message.reply_text(message, parse_mode='Markdown')
+    
     async def stop_copy_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Stop copying a trader"""
         if len(context.args) < 1:
@@ -951,7 +1002,7 @@ Select amount per trade:
             message = """👥 *ACTIVE COPY TRADES*
 
 {details}
-Use `/stop_copy <trader_id>` to stop copying a trader.
+Use /stop_copy <trader_id> to stop copying a trader.
 """.format(details="\n".join(lines))
 
             await update.message.reply_text(message, parse_mode='Markdown')
@@ -970,7 +1021,7 @@ Use `/stop_copy <trader_id>` to stop copying a trader.
 You stopped copying trader {trader_id}
 
 You can start copying again anytime with:
-/copy_trader {trader_id}
+`/copy {trader_id}`
 
 Or find new traders:
 /leaderboard
@@ -2157,7 +2208,7 @@ OPEN POSITIONS:
         """🎯 PROBABILITY PREDICTION - Show enhanced prediction with probabilities"""
         if len(context.args) < 1:
             await update.message.reply_text(
-                "Usage: /predict <token_address>\n\n"
+                "Usage: /predict &lt;token_address&gt;\n\n"
                 "Get probability-based prediction with recommended action, "
                 "position size, and targets.",
                 parse_mode='HTML'
@@ -3029,6 +3080,199 @@ Platform Fees: {stats['total_fees_collected']:.4f} SOL
             reply_markup=keyboard
         )
     
+    async def positions_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """View all open positions"""
+        user_id = update.effective_user.id
+        
+        try:
+            # Get open positions from database
+            async with self.db.async_session() as session:
+                from sqlalchemy import select
+                from src.modules.database import Position
+                stmt = select(Position).where(
+                    Position.user_id == user_id,
+                    Position.is_open == True
+                )
+                result = await session.execute(stmt)
+                positions = result.scalars().all()
+            
+            if not positions:
+                await update.message.reply_text(
+                    "📊 No open positions\n\n"
+                    "Use /buy to open a position!"
+                )
+                return
+            
+            message = "📊 <b>YOUR OPEN POSITIONS</b>\n\n"
+            message += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            
+            for i, pos in enumerate(positions, 1):
+                # Calculate unrealized P&L
+                if pos.exit_price and pos.entry_price:
+                    pnl_pct = ((pos.exit_price / pos.entry_price - 1) * 100)
+                    pnl_sol = pos.pnl_sol or 0
+                else:
+                    pnl_pct = 0
+                    pnl_sol = 0
+                
+                emoji = "🟢" if pnl_sol > 0 else "🔴" if pnl_sol < 0 else "⚪"
+                
+                message += f"<b>#{i} {pos.token_symbol or 'Unknown'}</b>\n"
+                message += f"   Token: <code>{pos.token_mint[:16]}...</code>\n"
+                message += f"   Size: {pos.entry_amount_sol:.4f} SOL\n"
+                message += f"   Tokens: {pos.remaining_amount_tokens:.2f}\n"
+                message += f"   Entry: ${pos.entry_price:.6f}\n"
+                if pos.pnl_sol:
+                    message += f"   {emoji} P&L: {pnl_sol:+.4f} SOL ({pnl_pct:+.1f}%)\n\n"
+                else:
+                    message += f"   {emoji} Unrealized P&L not calculated yet\n\n"
+            
+            message += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            message += f"💡 Use <code>/sell &lt;token&gt; all</code> to close a position"
+            
+            await update.message.reply_text(message, parse_mode='HTML')
+            
+        except Exception as e:
+            logger.error(f"Error fetching positions: {e}")
+            await update.message.reply_text(
+                f"❌ Error fetching positions: {str(e)}"
+            )
+    
+    async def history_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """View trade history"""
+        user_id = update.effective_user.id
+        
+        try:
+            # Get recent trade history
+            async with self.db.async_session() as session:
+                from sqlalchemy import select, desc
+                from src.modules.database import Position
+                stmt = select(Position).where(
+                    Position.user_id == user_id,
+                    Position.is_open == False
+                ).order_by(desc(Position.exit_timestamp)).limit(10)
+                result = await session.execute(stmt)
+                history = result.scalars().all()
+            
+            if not history:
+                await update.message.reply_text(
+                    "📜 No trade history yet\n\n"
+                    "Start trading to build your history!"
+                )
+                return
+            
+            message = "📜 <b>RECENT TRADE HISTORY</b>\n\n"
+            message += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            
+            total_pnl = 0
+            wins = 0
+            
+            for trade in history:
+                pnl = trade.realized_pnl_sol or 0
+                total_pnl += pnl
+                if pnl > 0:
+                    wins += 1
+                
+                emoji = "✅" if pnl > 0 else "❌" if pnl < 0 else "⚪"
+                
+                message += f"{emoji} <b>{trade.token_symbol or 'Token'}</b>\n"
+                message += f"   Size: {trade.entry_amount_sol:.4f} SOL\n"
+                message += f"   P&L: <b>{pnl:+.4f} SOL</b>\n"
+                exit_time = trade.exit_timestamp.strftime('%m/%d %H:%M') if trade.exit_timestamp else 'N/A'
+                message += f"   Date: {exit_time}\n\n"
+            
+            win_rate = (wins / len(history) * 100) if history else 0
+            
+            message += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            message += f"📊 <b>Summary:</b>\n"
+            message += f"   Total Trades: {len(history)}\n"
+            message += f"   Win Rate: {win_rate:.1f}%\n"
+            message += f"   Total P&L: <b>{total_pnl:+.4f} SOL</b>\n\n"
+            message += f"💡 Showing last 10 trades"
+            
+            await update.message.reply_text(message, parse_mode='HTML')
+            
+        except Exception as e:
+            logger.error(f"Error fetching history: {e}")
+            await update.message.reply_text(
+                f"❌ Error fetching history: {str(e)}"
+            )
+    
+    async def sniper_status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show auto-sniper status"""
+        user_id = update.effective_user.id
+        
+        try:
+            # Get user settings from database to check sniper status
+            async with self.db.async_session() as session:
+                from sqlalchemy import select
+                from src.modules.database import UserSettings
+                stmt = select(UserSettings).where(UserSettings.user_id == user_id)
+                result = await session.execute(stmt)
+                settings = result.scalar_one_or_none()
+            
+            # Check if auto-sniper is enabled (part of auto_trading)
+            sniper_enabled = settings.auto_trading_enabled if settings else False
+            
+            if not sniper_enabled:
+                message = """🎯 <b>AUTO-SNIPER STATUS</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>Status:</b> ❌ DISABLED
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The auto-sniper is currently <b>OFF</b>
+
+<b>To enable:</b>
+Use <code>/snipe_enable</code> to activate automatic sniping of new token launches.
+
+<b>What it does:</b>
+• Monitors for new launches 24/7
+• Checks Birdeye + DexScreener every 10s
+• Auto-buys tokens that meet your criteria
+• Uses AI analysis for safety
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 Enable to catch launches early!"""
+            else:
+                # Sniper is enabled, show configuration
+                max_trade = settings.max_trade_size_sol if settings else 1.0
+                slippage = settings.slippage_percentage if settings else 5.0
+                
+                message = f"""🎯 <b>AUTO-SNIPER STATUS</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>Status:</b> ✅ ENABLED
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>Configuration:</b>
+   Max trade size: {max_trade:.4f} SOL
+   Max slippage: {slippage:.1f}%
+   Daily loss limit: {settings.daily_loss_limit_sol if settings else 5.0:.1f} SOL
+   Require confirmation: {'Yes' if settings.require_confirmation else 'No'}
+
+<b>Monitoring:</b>
+   Checking every 10 seconds
+   Sources: Birdeye + DexScreener
+   AI analysis enabled
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 <code>/snipe_disable</code> to turn off"""
+            
+            await update.message.reply_text(message, parse_mode='HTML')
+            
+        except Exception as e:
+            logger.error(f"Error fetching sniper status: {e}")
+            await update.message.reply_text(
+                f"❌ Error fetching status: {str(e)}"
+            )
+    
     async def features_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Show all bot features"""
         message = """🎯 *ALL FEATURES*
@@ -3596,6 +3840,8 @@ Use /settings command to modify these settings
         # Trading commands
         app.add_handler(CommandHandler("buy", self.buy_command))
         app.add_handler(CommandHandler("sell", self.sell_command))
+        app.add_handler(CommandHandler("positions", self.positions_command))
+        app.add_handler(CommandHandler("history", self.history_command))
         
         # Analysis commands (with short aliases)
         app.add_handler(CommandHandler("ai_analyze", self.ai_analyze_command))
@@ -3610,6 +3856,7 @@ Use /settings command to modify these settings
         app.add_handler(CommandHandler("snipe", self.snipe_command))
         app.add_handler(CommandHandler("snipe_enable", self.snipe_enable_command))
         app.add_handler(CommandHandler("snipe_disable", self.snipe_disable_command))
+        app.add_handler(CommandHandler("sniper_status", self.sniper_status_command))
         
         # 🧠 ELITE COMMANDS
         app.add_handler(CommandHandler("track", self.track_wallet_command))
@@ -3625,6 +3872,7 @@ Use /settings command to modify these settings
         app.add_handler(CommandHandler("copy_trader", self.copy_trader_command))
         app.add_handler(CommandHandler("copy", self.copy_trader_command))
         app.add_handler(CommandHandler("stop_copy", self.stop_copy_command))
+        app.add_handler(CommandHandler("my_copies", self.my_copies_command))
         
         # Stats & rewards
         app.add_handler(CommandHandler("my_stats", self.my_stats_command))
@@ -3725,6 +3973,22 @@ Use /settings command to modify these settings
             except Exception as e:
                 logger.error(f"Error during shutdown: {e}")
     
+    @staticmethod
+    def _extract_confirm_token(args: List[str]) -> Tuple[Optional[str], List[str]]:
+        """Return (confirm_token, remaining_args) parsed from Telegram arguments."""
+        remainder: List[str] = []
+        confirm_token: Optional[str] = None
+        for arg in args:
+            lowered = arg.lower()
+            if lowered.startswith("confirm="):
+                confirm_token = arg.split("=", 1)[1]
+                continue
+            if lowered.startswith("confirm:"):
+                confirm_token = arg.split(":", 1)[1]
+                continue
+            remainder.append(arg)
+        return confirm_token, remainder
+    
     def run(self):
         """Start the revolutionary bot (sync version for direct use)"""
         self.app = Application.builder().token(self.config.telegram_bot_token).build()
@@ -3769,18 +4033,3 @@ if __name__ == "__main__":
         bot.run()
     finally:
         asyncio.run(bot.stop())
-    @staticmethod
-    def _extract_confirm_token(args: List[str]) -> Tuple[Optional[str], List[str]]:
-        """Return (confirm_token, remaining_args) parsed from Telegram arguments."""
-        remainder: List[str] = []
-        confirm_token: Optional[str] = None
-        for arg in args:
-            lowered = arg.lower()
-            if lowered.startswith("confirm="):
-                confirm_token = arg.split("=", 1)[1]
-                continue
-            if lowered.startswith("confirm:"):
-                confirm_token = arg.split(":", 1)[1]
-                continue
-            remainder.append(arg)
-        return confirm_token, remainder

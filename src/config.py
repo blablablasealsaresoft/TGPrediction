@@ -188,6 +188,18 @@ class TradingConfig:
     stop_loss_percentage: float
     take_profit_percentage: float
     trailing_stop_percentage: float
+    
+    # Kelly Criterion position sizing
+    enable_kelly_criterion: bool = True
+    kelly_fraction: float = 0.25
+    min_kelly_position_sol: float = 0.1
+    max_kelly_position_sol: float = 5.0
+    
+    # Circuit breakers
+    enable_circuit_breaker: bool = True
+    circuit_breaker_loss_threshold: float = 5.0
+    circuit_breaker_consecutive_losses: int = 5
+    circuit_breaker_cooldown_minutes: int = 60
 
 
 @dataclass
@@ -198,8 +210,13 @@ class Config:
     telegram_bot_token: str
     admin_chat_id: Optional[int]
 
-    # Solana
+    # Solana RPC (with failover support)
     solana_rpc_url: str
+    fallback_rpc_urls: list
+    rpc_timeout: int
+    rpc_max_retries: int
+    rpc_failover_delay: int
+    
     wallet_private_key: str
     solana_network: str
 
@@ -240,12 +257,26 @@ class Config:
         admin_chat_id_str = os.getenv('ADMIN_CHAT_ID')
         admin_chat_id = int(admin_chat_id_str) if admin_chat_id_str else None
 
-        # Solana
+        # Solana RPC with failover support
         solana_rpc_url = os.getenv('SOLANA_RPC_URL', 'https://api.mainnet-beta.solana.com')
         wallet_private_key = os.getenv('WALLET_PRIVATE_KEY', '')
         solana_network = os.getenv('SOLANA_NETWORK', 'mainnet-beta')
+        
+        # Multi-RPC failover architecture
+        fallback_rpc_urls = [
+            os.getenv('FALLBACK_RPC_1', ''),
+            os.getenv('FALLBACK_RPC_2', ''),
+            os.getenv('FALLBACK_RPC_3', ''),
+            os.getenv('FALLBACK_RPC_4', ''),
+            os.getenv('FALLBACK_RPC_5', ''),
+        ]
+        fallback_rpc_urls = [url for url in fallback_rpc_urls if url]  # Remove empty
+        
+        rpc_timeout = int(os.getenv('RPC_TIMEOUT', '30'))
+        rpc_max_retries = int(os.getenv('RPC_MAX_RETRIES', '3'))
+        rpc_failover_delay = int(os.getenv('RPC_FAILOVER_DELAY', '2'))
 
-        # Trading
+        # Trading limits and Kelly Criterion
         trading = TradingConfig(
             max_slippage=_normalize_percentage(_get_float('MAX_SLIPPAGE', '5.0')),
             default_buy_amount_sol=_get_float('DEFAULT_BUY_AMOUNT', os.getenv('DEFAULT_BUY_AMOUNT_SOL', '0.1') or '0.1'),
@@ -262,6 +293,18 @@ class Config:
             stop_loss_percentage=_normalize_percentage(_get_float('STOP_LOSS_PERCENTAGE', '10.0')),
             take_profit_percentage=_normalize_percentage(_get_float('TAKE_PROFIT_PERCENTAGE', '20.0')),
             trailing_stop_percentage=_normalize_percentage(_get_float('TRAILING_STOP_PERCENTAGE', '0.0')),
+            
+            # Kelly Criterion
+            enable_kelly_criterion=_get_bool('ENABLE_KELLY_CRITERION', 'true'),
+            kelly_fraction=_get_float('KELLY_FRACTION', '0.25'),
+            min_kelly_position_sol=_get_float('MIN_KELLY_POSITION_SOL', '0.1'),
+            max_kelly_position_sol=_get_float('MAX_KELLY_POSITION_SOL', '5.0'),
+            
+            # Circuit breakers
+            enable_circuit_breaker=_get_bool('ENABLE_CIRCUIT_BREAKER', 'true'),
+            circuit_breaker_loss_threshold=_get_float('CIRCUIT_BREAKER_LOSS_THRESHOLD', '5.0'),
+            circuit_breaker_consecutive_losses=int(os.getenv('CIRCUIT_BREAKER_CONSECUTIVE_LOSSES', '5')),
+            circuit_breaker_cooldown_minutes=int(os.getenv('CIRCUIT_BREAKER_COOLDOWN_MINUTES', '60')),
         )
 
         # Social Media (optional)
@@ -290,6 +333,10 @@ class Config:
             telegram_bot_token=telegram_bot_token,
             admin_chat_id=admin_chat_id,
             solana_rpc_url=solana_rpc_url,
+            fallback_rpc_urls=fallback_rpc_urls,
+            rpc_timeout=rpc_timeout,
+            rpc_max_retries=rpc_max_retries,
+            rpc_failover_delay=rpc_failover_delay,
             wallet_private_key=wallet_private_key,
             solana_network=solana_network,
             trading=trading,
@@ -327,6 +374,30 @@ class Config:
 
         if self.trading.daily_loss_limit_sol <= 0:
             errors.append("MAX_DAILY_LOSS_SOL must be positive")
+        
+        # Log configuration summary
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("📋 Configuration loaded from environment:")
+        logger.info(f"  🌐 Primary RPC: {self.solana_rpc_url[:50]}...")
+        logger.info(f"  🔄 Fallback RPCs: {len(self.fallback_rpc_urls)} configured")
+        logger.info(f"  ⏱️ RPC timeout: {self.rpc_timeout}s, retries: {self.rpc_max_retries}")
+        logger.info(f"  💰 Trading Limits:")
+        logger.info(f"     Max trade size: {self.trading.max_trade_size_sol} SOL")
+        logger.info(f"     Daily loss limit: {self.trading.daily_loss_limit_sol} SOL")
+        logger.info(f"     Max slippage: {self.trading.max_slippage}%")
+        logger.info(f"  📊 Risk Management:")
+        logger.info(f"     Stop loss: {self.trading.stop_loss_percentage}%")
+        logger.info(f"     Take profit: {self.trading.take_profit_percentage}%")
+        logger.info(f"  🎯 Kelly Criterion: {'ENABLED' if self.trading.enable_kelly_criterion else 'DISABLED'}")
+        if self.trading.enable_kelly_criterion:
+            logger.info(f"     Kelly fraction: {self.trading.kelly_fraction}")
+            logger.info(f"     Position range: {self.trading.min_kelly_position_sol}-{self.trading.max_kelly_position_sol} SOL")
+        logger.info(f"  🚨 Circuit Breaker: {'ENABLED' if self.trading.enable_circuit_breaker else 'DISABLED'}")
+        if self.trading.enable_circuit_breaker:
+            logger.info(f"     Loss threshold: {self.trading.circuit_breaker_loss_threshold} SOL")
+            logger.info(f"     Consecutive losses: {self.trading.circuit_breaker_consecutive_losses}")
+            logger.info(f"     Cooldown: {self.trading.circuit_breaker_cooldown_minutes} minutes")
 
         if errors:
             raise ValueError(

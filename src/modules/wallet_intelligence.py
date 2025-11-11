@@ -13,6 +13,7 @@ REVOLUTIONARY FEATURES:
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Set
 from dataclasses import dataclass, field
@@ -57,25 +58,32 @@ class WalletMetrics:
         """
         Calculate overall wallet performance score (0-100)
         
-        Factors:
-        - Win rate (30%)
-        - Profit factor (25%)
-        - Consistency (20%)
-        - Recent performance (15%)
-        - Trade volume (10%)
+        Factors (weights from environment):
+        - Win rate (default 30%)
+        - Avg profit (default 25%)
+        - Trade count (default 15%)
+        - Volume (default 15%)
+        - Timing (default 15%)
         """
-        win_rate_score = self.win_rate * 30
+        # READ SCORING WEIGHTS FROM ENVIRONMENT
+        win_rate_weight = int(os.getenv('WALLET_SCORE_WIN_RATE_WEIGHT', '30'))
+        avg_profit_weight = int(os.getenv('WALLET_SCORE_AVG_PROFIT_WEIGHT', '25'))
+        trade_count_weight = int(os.getenv('WALLET_SCORE_TRADE_COUNT_WEIGHT', '15'))
+        volume_weight = int(os.getenv('WALLET_SCORE_VOLUME_WEIGHT', '15'))
+        timing_weight = int(os.getenv('WALLET_SCORE_TIMING_WEIGHT', '15'))
+        
+        win_rate_score = self.win_rate * win_rate_weight
         
         # Normalize profit factor (1.0 = break even, 2.0+ = excellent)
-        profit_factor_score = min(self.profit_factor / 3.0, 1.0) * 25
+        profit_factor_score = min(self.profit_factor / 3.0, 1.0) * avg_profit_weight
         
-        consistency_score_weighted = self.consistency_score * 20
+        consistency_score_weighted = self.consistency_score * (trade_count_weight / 1.5)
         
         # Recent performance (30d)
-        recent_score = min(max(self.recent_performance_30d / 10.0, -1.0), 1.0) * 7.5 + 7.5
+        recent_score = min(max(self.recent_performance_30d / 10.0, -1.0), 1.0) * (timing_weight / 2) + (timing_weight / 2)
         
         # Volume score (more trades = more data reliability)
-        volume_score = min(self.total_trades / 100.0, 1.0) * 10
+        volume_score = min(self.total_trades / 100.0, 1.0) * volume_weight
         
         total_score = (
             win_rate_score +
@@ -103,7 +111,33 @@ class WalletIntelligenceEngine:
         self.wallet_rankings: List[Tuple[str, float]] = []
         self.trade_history: Dict[str, List[Dict]] = defaultdict(list)
         
-        logger.info("🧠 Wallet Intelligence Engine initialized")
+        # READ WALLET INTELLIGENCE CONFIG FROM ENVIRONMENT
+        self.track_wallets_auto = os.getenv('TRACK_WALLETS_AUTO', 'true').lower() == 'true'
+        self.min_wallet_score = int(os.getenv('MIN_WALLET_SCORE', '70'))
+        self.max_tracked_wallets = int(os.getenv('MAX_TRACKED_WALLETS', '200'))
+        
+        # Whale detection settings
+        self.auto_detect_whales = os.getenv('AUTO_DETECT_WHALE_WALLETS', 'true').lower() == 'true'
+        self.whale_min_balance = float(os.getenv('WHALE_MIN_BALANCE_SOL', '1000'))
+        self.whale_min_win_rate = float(os.getenv('WHALE_MIN_WIN_RATE', '0.70'))
+        
+        # Smart money tracking
+        self.track_smart_money = os.getenv('TRACK_SMART_MONEY', 'true').lower() == 'true'
+        self.smart_money_min_pnl = float(os.getenv('SMART_MONEY_MIN_PNL_SOL', '100'))
+        self.smart_money_min_trades = int(os.getenv('SMART_MONEY_MIN_TRADES', '50'))
+        
+        logger.info("🧠 Wallet Intelligence Engine initialized from environment")
+        logger.info(f"  📊 Auto-tracking: {self.track_wallets_auto}")
+        logger.info(f"  🎯 Min score threshold: {self.min_wallet_score}/100")
+        logger.info(f"  📈 Max tracked wallets: {self.max_tracked_wallets}")
+        logger.info(f"  🐋 Whale detection: {self.auto_detect_whales}")
+        if self.auto_detect_whales:
+            logger.info(f"     Min balance: {self.whale_min_balance} SOL")
+            logger.info(f"     Min win rate: {self.whale_min_win_rate*100}%")
+        logger.info(f"  💎 Smart money tracking: {self.track_smart_money}")
+        if self.track_smart_money:
+            logger.info(f"     Min PnL: {self.smart_money_min_pnl} SOL")
+            logger.info(f"     Min trades: {self.smart_money_min_trades}")
     
     async def track_wallet(self, address: str, analyze: bool = True):
         """

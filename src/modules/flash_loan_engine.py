@@ -9,6 +9,8 @@ Executes in atomic Jito bundles for MEV protection
 
 import asyncio
 import logging
+import os
+import aiohttp
 from typing import Dict, List, Optional, Tuple
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -93,8 +95,53 @@ class FlashLoanArbitrageEngine:
         self.total_executed = 0
         self.total_profit = Decimal('0')
         
-        logger.info("⚡ Flash Loan Arbitrage Engine initialized")
-        logger.info(f"   Tier limits: Gold=50 SOL, Platinum=150 SOL, Elite=500 SOL")
+        # ARBITRAGE CONFIGURATION FROM ENVIRONMENT
+        self.arbitrage_enabled = os.getenv('ARBITRAGE_ENABLED', 'true').lower() == 'true'
+        self.arbitrage_auto_execute = os.getenv('ARBITRAGE_AUTO_EXECUTE', 'false').lower() == 'true'
+        self.min_profit_bps = int(os.getenv('ARBITRAGE_MIN_PROFIT_BPS', '50'))
+        self.min_profit_usd = float(os.getenv('ARBITRAGE_MIN_PROFIT_USD', '5'))
+        self.check_interval = int(os.getenv('ARBITRAGE_CHECK_INTERVAL', '2'))
+        self.max_position_sol = float(os.getenv('ARBITRAGE_MAX_POSITION_SOL', '50'))
+        self.max_slippage = float(os.getenv('ARBITRAGE_MAX_SLIPPAGE_PERCENT', '1.0'))
+        
+        # Multi-hop arbitrage settings
+        self.enable_multi_hop = os.getenv('ARBITRAGE_ENABLE_MULTI_HOP', 'true').lower() == 'true'
+        self.find_triangular = os.getenv('ARBITRAGE_FIND_TRIANGULAR', 'true').lower() == 'true'
+        
+        # API ENHANCEMENTS - Direct DEX APIs for better arbitrage detection
+        self.raydium_enabled = os.getenv('MONITOR_RAYDIUM', 'true').lower() == 'true'
+        self.orca_enabled = os.getenv('MONITOR_ORCA', 'true').lower() == 'true'
+        self.meteora_enabled = os.getenv('MONITOR_METEORA', 'true').lower() == 'true'
+        self.jupiter_enabled = os.getenv('MONITOR_JUPITER', 'true').lower() == 'true'
+        
+        self.raydium_api_url = os.getenv('RAYDIUM_API_URL', 'https://api-v3.raydium.io')
+        self.orca_api_url = os.getenv('ORCA_API_URL', 'https://api.orca.so')
+        self.meteora_api_url = os.getenv('METEORA_API_URL', 'https://api.meteora.ag')
+        
+        # HTTP session for API calls
+        self.session: Optional[aiohttp.ClientSession] = None
+        
+        logger.info("⚡ Flash Loan Arbitrage Engine initialized from environment")
+        logger.info(f"  💎 Tier limits: Gold=50 SOL, Platinum=150 SOL, Elite=500 SOL")
+        logger.info(f"  📊 Min profit: {self.min_profit_bps} bps ({self.min_profit_bps/100}%)")
+        logger.info(f"  🔍 Scan interval: Every {self.check_interval} seconds")
+        logger.info(f"  ⚡ Auto-execute: {'ENABLED' if self.arbitrage_auto_execute else 'DISABLED'}")
+        logger.info(f"  🔀 Multi-hop: {'ENABLED' if self.enable_multi_hop else 'DISABLED'}")
+        logger.info(f"  🔺 Triangular: {'ENABLED' if self.find_triangular else 'DISABLED'}")
+        logger.info("  📡 DEX Monitoring:")
+        if self.raydium_enabled:
+            logger.info("    ✅ Raydium direct API")
+        if self.orca_enabled:
+            logger.info("    ✅ Orca direct API")
+        if self.meteora_enabled:
+            logger.info("    ✅ Meteora direct API")
+        if self.jupiter_enabled:
+            logger.info("    ✅ Jupiter aggregator")
+    
+    async def _ensure_session(self):
+        """Ensure HTTP session exists"""
+        if not self.session:
+            self.session = aiohttp.ClientSession()
     
     async def scan_for_opportunities(self) -> List[ArbitrageOpportunity]:
         """
@@ -327,9 +374,17 @@ class MarginfiClient:
     def __init__(self, client: AsyncClient, config):
         self.client = client
         self.config = config
-        self.program_id = Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
         
-        logger.info("💎 Marginfi flash loan client initialized")
+        # READ MARGINFI CONFIGURATION FROM ENVIRONMENT
+        marginfi_program = os.getenv('MARGINFI_PROGRAM_ID', 'MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA')
+        self.program_id = Pubkey.from_string(marginfi_program)
+        self.max_borrow_sol = int(os.getenv('MARGINFI_MAX_BORROW_SOL', '100'))
+        self.fee_bps = int(os.getenv('MARGINFI_FEE_BPS', '1'))
+        
+        logger.info("💎 Marginfi flash loan client initialized from environment")
+        logger.info(f"  📋 Program ID: {marginfi_program[:16]}...")
+        logger.info(f"  💰 Max borrow: {self.max_borrow_sol} SOL")
+        logger.info(f"  💸 Fee: {self.fee_bps} bps (0.001%)")
     
     async def get_max_flash_loan(self, token_mint: str) -> Decimal:
         """Get maximum flash loan available for token"""

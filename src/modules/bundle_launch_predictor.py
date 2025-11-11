@@ -15,6 +15,7 @@ Intelligence Sources:
 
 import asyncio
 import logging
+import os
 from typing import Dict, List, Optional, Set
 from datetime import datetime, timedelta
 from dataclasses import dataclass
@@ -112,8 +113,36 @@ class BundleLaunchPredictor:
         self.predictions_correct = 0
         self.ultra_predictions_correct = 0
         
-        logger.info("🎯 Bundle Launch Predictor initialized")
-        logger.info("   Mode: Pre-launch signal monitoring")
+        # READ BUNDLE LAUNCH CONFIGURATION FROM ENVIRONMENT
+        self.bundle_launches_enabled = os.getenv('ENABLE_BUNDLE_LAUNCHES', 'true').lower() == 'true'
+        self.bundle_launch_mode = os.getenv('BUNDLE_LAUNCH_MODE', 'jito_exclusive')
+        self.detect_new_launches = os.getenv('DETECT_NEW_LAUNCHES', 'true').lower() == 'true'
+        self.auto_buy_launches = os.getenv('AUTO_BUY_NEW_LAUNCHES', 'false').lower() == 'true'
+        self.launch_auto_buy_amount = float(os.getenv('LAUNCH_AUTO_BUY_AMOUNT_SOL', '0.3'))
+        
+        # Bundle launch filters from env
+        self.require_verified_team = os.getenv('LAUNCH_REQUIRE_VERIFIED_TEAM', 'true').lower() == 'true'
+        self.min_twitter_engagement = int(os.getenv('LAUNCH_MIN_TWITTER_ENGAGEMENT', '1000'))
+        self.check_team_history = os.getenv('LAUNCH_CHECK_TEAM_HISTORY', 'true').lower() == 'true'
+        self.blacklist_scammers = os.getenv('LAUNCH_BLACKLIST_KNOWN_SCAMMERS', 'true').lower() == 'true'
+        self.min_initial_liquidity = float(os.getenv('LAUNCH_MIN_INITIAL_LIQUIDITY_SOL', '10'))
+        
+        # Detection settings
+        self.detection_interval = int(os.getenv('LAUNCH_DETECTION_INTERVAL', '1'))
+        
+        logger.info("🎯 Bundle Launch Predictor initialized from environment")
+        logger.info(f"  🚀 Bundle launches: {'ENABLED' if self.bundle_launches_enabled else 'DISABLED'}")
+        logger.info(f"  ⚡ Mode: {self.bundle_launch_mode}")
+        logger.info(f"  🔍 Detection interval: {self.detection_interval}s")
+        logger.info(f"  🤖 Auto-buy: {'ENABLED' if self.auto_buy_launches else 'DISABLED'}")
+        if self.auto_buy_launches:
+            logger.info(f"     Amount: {self.launch_auto_buy_amount} SOL")
+        logger.info("  🛡️ Safety Filters:")
+        logger.info(f"    {'✅' if self.require_verified_team else '❌'} Verified team required")
+        logger.info(f"    {'✅' if self.check_team_history else '❌'} Team history check")
+        logger.info(f"    {'✅' if self.blacklist_scammers else '❌'} Known scammer blacklist")
+        logger.info(f"    💰 Min liquidity: {self.min_initial_liquidity} SOL")
+        logger.info(f"    🐦 Min Twitter engagement: {self.min_twitter_engagement}")
     
     async def monitor_pre_launch_signals(self):
         """

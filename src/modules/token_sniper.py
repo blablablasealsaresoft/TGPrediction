@@ -90,9 +90,10 @@ class PumpFunMonitor:
         """Main monitoring loop"""
         while self.running:
             try:
-                # Check both Pump.fun API and DexScreener
-                await self._check_pumpfun_tokens()
-                await self._check_dexscreener_tokens()
+                # Check multiple sources for comprehensive coverage
+                await self._check_pump_fun_direct()  # Pump.fun direct API
+                await self._check_pumpfun_tokens()  # Birdeye (if API key available)
+                await self._check_dexscreener_tokens()  # DexScreener (4 base tokens)
             except Exception as e:
                 logger.error(f"Monitor loop error: {e}")
             
@@ -162,35 +163,48 @@ class PumpFunMonitor:
             logger.debug(f"Pump.fun direct API error: {e}")
     
     async def _check_pumpfun_tokens(self):
-        """Check Birdeye API for new Solana tokens (Most reliable!)"""
+        """Check Birdeye API for new Solana tokens using configured API key"""
         try:
-            # Birdeye new listing endpoint - requires no API key for basic usage
-            url = "https://public-api.birdeye.so/defi/token_creation?chain=solana&sort_by=creation_time&sort_type=desc&offset=0&limit=20"
+            # Get Birdeye API key from environment
+            import os
+            birdeye_key = os.getenv('BIRDEYE_API_KEY', '')
             
-            logger.info(f"🚀 Checking Birdeye for new tokens...")
+            if not birdeye_key:
+                # Skip if no API key configured
+                return
+            
+            # Birdeye new listing endpoint with API key (using correct v3 endpoint)
+            url = "https://public-api.birdeye.so/defi/tokenlist?sort_by=v24hChangePercent&sort_type=desc&offset=0&limit=50"
+            
+            logger.info(f"🚀 Checking Birdeye for new tokens (using API key)...")
             
             headers = {
                 'Accept': 'application/json',
-                'X-API-KEY': 'public'  # Use public endpoint
+                'X-API-KEY': birdeye_key
             }
             
             async with self.session.get(url, headers=headers, timeout=10) as response:
                 if response.status != 200:
-                    logger.debug(f"Birdeye returned status {response.status}")
+                    logger.warning(f"⚠️ Birdeye returned status {response.status}")
                     return
                 
                 data = await response.json()
-                tokens = data.get('data', {}).get('items', [])
                 
+                # Handle different response formats
+                tokens = data.get('data', {}).get('items', [])
                 if not tokens:
                     tokens = data.get('data', []) if isinstance(data.get('data'), list) else []
+                if not tokens:
+                    # Try direct list format
+                    tokens = data if isinstance(data, list) else []
                 
-                logger.info(f"📊 Found {len(tokens)} new tokens from Birdeye")
+                logger.info(f"📊 Birdeye returned {len(tokens)} tokens (checking all for new launches)")
                 
                 new_tokens_found = 0
                 now = datetime.now().timestamp()
                 
-                for token in tokens[:20]:  # Check top 20 newest
+                # Check ALL returned tokens (up to 50) for better coverage
+                for token in tokens:
                     try:
                         token_address = token.get('address') or token.get('mint')
                         symbol = token.get('symbol', 'UNKNOWN')
@@ -238,10 +252,12 @@ class PumpFunMonitor:
                         continue
                 
                 if new_tokens_found == 0:
-                    logger.info(f"✓ No new tokens in last hour from Birdeye")
+                    logger.info(f"✓ No new tokens in last hour from Birdeye (checked {len(tokens)} total tokens)")
+                else:
+                    logger.info(f"✅ Found {new_tokens_found} new tokens from Birdeye!")
         
         except Exception as e:
-            logger.debug(f"Error checking Birdeye: {e}")
+            logger.warning(f"Error checking Birdeye: {e}")
     
     async def _check_dexscreener_recent_pairs(self):
         """Check DexScreener for recently created Solana pairs"""
@@ -323,143 +339,187 @@ class PumpFunMonitor:
     async def _check_dexscreener_tokens(self):
         """Check DexScreener PAIRS for new Solana launches with timestamps"""
         try:
-            # Use latest pairs endpoint - this has pairCreatedAt timestamps!
-            url = "https://api.dexscreener.com/latest/dex/search?q=SOL"
+            # COMPREHENSIVE SCAN: Check multiple popular Solana tokens to get wide coverage
+            # Each token endpoint returns 30 pairs, so we get 200+ total pairs
+            base_tokens = [
+                "So11111111111111111111111111111111111111112",  # Wrapped SOL (most pairs!)
+                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
+                "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",  # USDT
+                "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",  # BONK
+                "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",  # WIF  
+                "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",    # JUP (Jupiter)
+                "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",   # JTO (Jito)
+            ]
             
-            logger.info(f"🔍 Checking DexScreener pairs...")
+            all_pairs = []
             
-            async with self.session.get(url, timeout=10) as response:
-                if response.status != 200:
-                    logger.warning(f"⚠️ DexScreener profiles returned status {response.status}")
-                    # Fallback to search endpoint
-                    await self._check_dexscreener_search()
-                    return
+            for token in base_tokens:
+                url = f"https://api.dexscreener.com/latest/dex/tokens/{token}"
                 
-                data = await response.json()
-                pairs = data.get('pairs', [])
-                
-                if not pairs:
-                    return
-                
-                # Filter Solana pairs only
-                solana_pairs = [p for p in pairs if p.get('chainId') == 'solana']
-                
-                logger.info(f"📊 Found {len(solana_pairs)} Solana pairs")
-                
-                now = datetime.now().timestamp() * 1000
-                two_hours_ago = now - (2 * 60 * 60 * 1000)
-                new_tokens_found = 0
-                
-                for pair in solana_pairs[:50]:
-                    try:
-                        base_token = pair.get('baseToken', {})
-                        token_address = base_token.get('address')
-                        
-                        if not token_address or token_address in self.seen_tokens:
-                            continue
-                        
-                        # Get pair creation timestamp
-                        pair_created_at = pair.get('pairCreatedAt')
-                        
-                        if not pair_created_at:
-                            continue
-                        
-                        age_ms = now - pair_created_at
-                        age_minutes = age_ms / 60000
-                        
-                        # Only process tokens < 2 hours old
-                        if pair_created_at > two_hours_ago:
-                            self.seen_tokens.add(token_address)
-                            new_tokens_found += 1
-                            
-                            liquidity_usd = pair.get('liquidity', {}).get('usd', 0)
-                            
-                            token_info = {
-                                'address': token_address,
-                                'symbol': base_token.get('symbol', 'UNKNOWN'),
-                                'name': base_token.get('name', 'Unknown'),
-                                'liquidity_usd': liquidity_usd,
-                                'price_usd': float(pair.get('priceUsd', 0) or 0),
-                                'created_at': pair_created_at,
-                                'age_minutes': age_minutes,
-                                'dex': pair.get('dexId', 'unknown'),
-                                'source': 'dexscreener'
-                            }
-                            
-                            logger.info(f"🎯 NEW LAUNCH: {token_info['symbol']} ({token_address[:8]}...) - Age: {age_minutes:.0f}min - Liq: ${liquidity_usd:,.0f}")
-                            
-                            # Notify callbacks
-                            for callback in self.callbacks:
-                                try:
-                                    await callback(token_info)
-                                except Exception as e:
-                                    logger.error(f"Callback error: {e}")
+                async with self.session.get(url, timeout=10) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        token_pairs = data.get('pairs', [])
+                        # Filter for Solana only
+                        solana_pairs = [p for p in token_pairs if p.get('chainId') == 'solana']
+                        all_pairs.extend(solana_pairs)
+            
+            if not all_pairs:
+                logger.warning(f"⚠️ No pairs from token endpoints, trying search fallback...")
+                await self._check_dexscreener_search()
+                return
+            
+            # Remove duplicates by pairAddress
+            seen_addresses = set()
+            unique_pairs = []
+            for pair in all_pairs:
+                pair_addr = pair.get('pairAddress')
+                if pair_addr and pair_addr not in seen_addresses:
+                    seen_addresses.add(pair_addr)
+                    unique_pairs.append(pair)
+            
+            pairs = unique_pairs
+            logger.info(f"🔍 Checked DexScreener - scanned {len(base_tokens)} base tokens")
+            logger.info(f"📊 Found {len(pairs)} unique Solana pairs from DexScreener")
+            
+            now = datetime.now().timestamp() * 1000
+            two_hours_ago = now - (2 * 60 * 60 * 1000)
+            new_tokens_found = 0
+            
+            # Check ALL unique pairs for better coverage
+            for pair in pairs:
+                try:
+                    base_token = pair.get('baseToken', {})
+                    token_address = base_token.get('address')
                     
-                    except Exception as e:
-                        logger.debug(f"Error processing pair: {e}")
+                    if not token_address or token_address in self.seen_tokens:
                         continue
+                    
+                    # Get pair creation timestamp
+                    pair_created_at = pair.get('pairCreatedAt')
+                    
+                    if not pair_created_at:
+                        continue
+                    
+                    age_ms = now - pair_created_at
+                    age_minutes = age_ms / 60000
+                    
+                    # Only process tokens < 2 hours old
+                    if pair_created_at > two_hours_ago:
+                        self.seen_tokens.add(token_address)
+                        new_tokens_found += 1
+                        
+                        liquidity_usd = pair.get('liquidity', {}).get('usd', 0)
+                        
+                        token_info = {
+                            'address': token_address,
+                            'symbol': base_token.get('symbol', 'UNKNOWN'),
+                            'name': base_token.get('name', 'Unknown'),
+                            'liquidity_usd': liquidity_usd,
+                            'price_usd': float(pair.get('priceUsd', 0) or 0),
+                            'created_at': pair_created_at,
+                            'age_minutes': age_minutes,
+                            'dex': pair.get('dexId', 'unknown'),
+                            'source': 'dexscreener'
+                        }
+                        
+                        logger.info(f"🎯 NEW LAUNCH: {token_info['symbol']} ({token_address[:8]}...) - Age: {age_minutes:.0f}min - Liq: ${liquidity_usd:,.0f}")
+                        
+                        # Notify callbacks
+                        for callback in self.callbacks:
+                            try:
+                                await callback(token_info)
+                            except Exception as e:
+                                logger.error(f"Callback error: {e}")
                 
-                if new_tokens_found == 0:
-                    logger.info(f"✓ No launches < 2 hours old (checked {len(solana_pairs)} Solana pairs)")
-                else:
-                    logger.info(f"✅ Found {new_tokens_found} fresh launches!")
+                except Exception as e:
+                    logger.debug(f"Error processing pair: {e}")
+                    continue
                 
-                # Limit seen_tokens size to prevent memory issues
-                if len(self.seen_tokens) > 1000:
-                    # Keep only recent 500
-                    self.seen_tokens = set(list(self.seen_tokens)[-500:])
+            if new_tokens_found == 0:
+                logger.info(f"✓ No launches < 2 hours old (scanned {len(pairs)} Solana pairs)")
+            else:
+                logger.info(f"✅ Found {new_tokens_found} fresh launches from {len(pairs)} total pairs!")
+            
+            # Limit seen_tokens size to prevent memory issues
+            if len(self.seen_tokens) > 1000:
+                # Keep only recent 500
+                self.seen_tokens = set(list(self.seen_tokens)[-500:])
         
         except Exception as e:
             logger.error(f"Error checking DexScreener: {e}")
     
     async def _check_dexscreener_search(self):
-        """Fallback: Search for newest Solana pairs via search endpoint"""
+        """Fallback: Search for newest Solana pairs via multiple search terms"""
         try:
-            # Use search endpoint with Solana filter
-            url = "https://api.dexscreener.com/latest/dex/search?q=solana"
+            # Try multiple search terms to get broader coverage
+            search_terms = ['SOL', 'USDC', 'pump', 'bonk']
+            all_pairs = []
             
-            async with self.session.get(url, timeout=10) as response:
-                if response.status != 200:
-                    return
+            for term in search_terms:
+                url = f"https://api.dexscreener.com/latest/dex/search?q={term}"
                 
-                data = await response.json()
-                pairs = data.get('pairs', [])
-                
-                # Filter for new pairs
-                now = datetime.now().timestamp() * 1000
-                one_hour_ago = now - (60 * 60 * 1000)
-                
-                for pair in pairs[:20]:
-                    if pair.get('chainId') != 'solana':
+                async with self.session.get(url, timeout=10) as response:
+                    if response.status != 200:
                         continue
                     
-                    created_at = pair.get('pairCreatedAt', 0)
-                    if created_at < one_hour_ago:
-                        continue
+                    data = await response.json()
+                    pairs = data.get('pairs', [])
                     
-                    token_address = pair.get('baseToken', {}).get('address')
-                    if not token_address or token_address in self.seen_tokens:
-                        continue
-                    
-                    self.seen_tokens.add(token_address)
-                    
-                    token_info = {
-                        'address': token_address,
-                        'symbol': pair.get('baseToken', {}).get('symbol', 'UNKNOWN'),
-                        'name': pair.get('baseToken', {}).get('name', 'Unknown'),
-                        'liquidity_usd': float(pair.get('liquidity', {}).get('usd', 0) or 0),
-                        'price_usd': float(pair.get('priceUsd', 0) or 0),
-                        'created_at': created_at,
-                        'dex': pair.get('dexId', 'raydium')
-                    }
-                    
-                    logger.info(f"🎯 NEW TOKEN (search): {token_info['symbol']}")
-                    
-                    for callback in self.callbacks:
-                        try:
-                            await callback(token_info)
-                        except Exception as e:
-                            logger.error(f"Callback error: {e}")
+                    # Filter for Solana only
+                    solana_pairs = [p for p in pairs if p.get('chainId') == 'solana']
+                    all_pairs.extend(solana_pairs)
+            
+            if not all_pairs:
+                return
+            
+            # Remove duplicates
+            seen_addresses = set()
+            unique_pairs = []
+            for pair in all_pairs:
+                addr = pair.get('pairAddress')
+                if addr and addr not in seen_addresses:
+                    seen_addresses.add(addr)
+                    unique_pairs.append(pair)
+            
+            pairs = unique_pairs
+            logger.info(f"📊 Search fallback found {len(pairs)} unique Solana pairs")
+            
+            # Filter for new pairs
+            now = datetime.now().timestamp() * 1000
+            one_hour_ago = now - (60 * 60 * 1000)
+            
+            for pair in pairs[:50]:  # Check more pairs
+                if pair.get('chainId') != 'solana':
+                    continue
+                
+                created_at = pair.get('pairCreatedAt', 0)
+                if created_at < one_hour_ago:
+                    continue
+                
+                token_address = pair.get('baseToken', {}).get('address')
+                if not token_address or token_address in self.seen_tokens:
+                    continue
+                
+                self.seen_tokens.add(token_address)
+                
+                token_info = {
+                    'address': token_address,
+                    'symbol': pair.get('baseToken', {}).get('symbol', 'UNKNOWN'),
+                    'name': pair.get('baseToken', {}).get('name', 'Unknown'),
+                    'liquidity_usd': float(pair.get('liquidity', {}).get('usd', 0) or 0),
+                    'price_usd': float(pair.get('priceUsd', 0) or 0),
+                    'created_at': created_at,
+                    'dex': pair.get('dexId', 'raydium')
+                }
+                
+                logger.info(f"🎯 NEW TOKEN (search): {token_info['symbol']}")
+                
+                for callback in self.callbacks:
+                    try:
+                        await callback(token_info)
+                    except Exception as e:
+                        logger.error(f"Callback error: {e}")
         
         except Exception as e:
             logger.debug(f"Search fallback error: {e}")

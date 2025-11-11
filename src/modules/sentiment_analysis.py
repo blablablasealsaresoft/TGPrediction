@@ -12,6 +12,7 @@ UNIQUE DIFFERENTIATORS:
 
 import asyncio
 import aiohttp
+import os
 import re
 from typing import Dict, List, Optional, Set
 from datetime import datetime, timedelta
@@ -648,9 +649,40 @@ class SocialMediaAggregator:
         )
         self.discord = DiscordMonitor(discord_token)
         
+        # Additional API integrations from environment
+        self.lunarcrush_api_key = os.getenv('LUNARCRUSH_API_KEY', '')
+        self.santiment_api_key = os.getenv('SANTIMENT_API_KEY', '')
+        self.cryptopanic_api_key = os.getenv('CRYPTOPANIC_API_KEY', '')
+        self.coingecko_api_key = os.getenv('COINGECKO_API_KEY', '')
+        
+        # HTTP session for API calls
+        self.session: Optional[aiohttp.ClientSession] = None
+        
         # Aggregated data cache
         self.social_scores: Dict[str, Dict] = {}
         self.update_intervals = {}
+        
+        # Additional market data APIs
+        self.solscan_api_key = os.getenv('SOLSCAN_API_KEY', '')
+        
+        # Log enabled APIs
+        logger.info("📱 Social Media Aggregator initialized with comprehensive API coverage")
+        logger.info("  📊 Sentiment Sources:")
+        if self.lunarcrush_api_key:
+            logger.info("    ✅ LunarCrush API (galaxy scores)")
+        if self.santiment_api_key:
+            logger.info("    ✅ Santiment API (on-chain social)")
+        if self.cryptopanic_api_key:
+            logger.info("    ✅ CryptoPanic API (crypto news)")
+        if self.coingecko_api_key:
+            logger.info("    ✅ CoinGecko API (market data)")
+        if self.solscan_api_key:
+            logger.info("    ✅ Solscan API (Solana analytics)")
+    
+    async def _ensure_session(self):
+        """Ensure HTTP session exists"""
+        if not self.session:
+            self.session = aiohttp.ClientSession()
     
     async def analyze_token_sentiment(
         self,
@@ -671,21 +703,32 @@ class SocialMediaAggregator:
         # Search keywords
         keywords = [token_address[:8], token_symbol, f"${token_symbol}"]
         
-        # Gather data from all sources
+        # Gather data from all sources (traditional social media)
         twitter_data = await self.twitter.monitor_token(token_address, keywords)
         reddit_data = await self.reddit.monitor_token(token_address, keywords)
         discord_data = await self.discord.monitor_mentions(token_address, keywords)
         
-        # Aggregate scores
-        # Weight Twitter more heavily (real-time, high signal)
-        twitter_weight = 0.5
-        reddit_weight = 0.3
-        discord_weight = 0.2
+        # Gather data from advanced APIs
+        lunarcrush_data = await self._get_lunarcrush_data(token_symbol)
+        santiment_data = await self._get_santiment_data(token_symbol)
+        cryptopanic_data = await self._get_cryptopanic_data(token_symbol)
+        
+        # Aggregate scores with enhanced weighting
+        # Weight all sources based on reliability and real-time nature
+        twitter_weight = 0.30
+        reddit_weight = 0.20
+        discord_weight = 0.10
+        lunarcrush_weight = 0.20
+        santiment_weight = 0.10
+        cryptopanic_weight = 0.10
 
         aggregated_sentiment = (
             twitter_data.get('sentiment_score', 50) * twitter_weight +
             reddit_data.get('sentiment_score', 50) * reddit_weight +
-            discord_data.get('sentiment_score', 50) * discord_weight
+            discord_data.get('sentiment_score', 50) * discord_weight +
+            lunarcrush_data.get('sentiment_score', 50) * lunarcrush_weight +
+            santiment_data.get('sentiment_score', 50) * santiment_weight +
+            cryptopanic_data.get('sentiment_score', 50) * cryptopanic_weight
         )
 
         # Calculate overall social score (0-100)
@@ -700,6 +743,9 @@ class SocialMediaAggregator:
             + reddit_data.get('posts', 0)
             + reddit_data.get('comments', 0)
             + discord_data.get('mentions', 0)
+            + lunarcrush_data.get('mentions', 0)
+            + santiment_data.get('mentions', 0)
+            + cryptopanic_data.get('mentions', 0)
         )
 
         result = {
@@ -708,9 +754,13 @@ class SocialMediaAggregator:
             'twitter': twitter_data,
             'reddit': reddit_data,
             'discord': discord_data,
+            'lunarcrush': lunarcrush_data,
+            'santiment': santiment_data,
+            'cryptopanic': cryptopanic_data,
             'viral_potential': twitter_data.get('viral_potential', 0.0),
             'overall_recommendation': self._get_recommendation(social_score, aggregated_sentiment),
             'total_mentions': total_mentions,
+            'data_sources': 6,  # Twitter, Reddit, Discord, LunarCrush, Santiment, CryptoPanic
             'last_updated': datetime.utcnow()
         }
         
@@ -835,6 +885,121 @@ class SocialMediaAggregator:
         # Return tokens they're talking about
         
         return []
+    
+    async def _get_lunarcrush_data(self, token_symbol: str) -> Dict:
+        """Fetch sentiment data from LunarCrush API"""
+        if not self.lunarcrush_api_key:
+            return {'sentiment_score': 50, 'mentions': 0}
+        
+        await self._ensure_session()
+        
+        try:
+            url = f"https://api.lunarcrush.com/v2?data=assets&key={self.lunarcrush_api_key}&symbol={token_symbol}"
+            
+            async with self.session.get(url, timeout=10) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    assets = data.get('data', [])
+                    if assets:
+                        asset = assets[0]
+                        # LunarCrush galaxy_score is 0-100
+                        galaxy_score = asset.get('galaxy_score', 50)
+                        social_volume = asset.get('social_volume', 0)
+                        
+                        logger.info(f"✅ LunarCrush: {token_symbol} - Score: {galaxy_score}, Volume: {social_volume}")
+                        return {
+                            'sentiment_score': galaxy_score,
+                            'mentions': social_volume,
+                            'social_contributors': asset.get('social_contributors', 0)
+                        }
+        except Exception as e:
+            logger.debug(f"LunarCrush API error for {token_symbol}: {e}")
+        
+        return {'sentiment_score': 50, 'mentions': 0}
+    
+    async def _get_santiment_data(self, token_symbol: str) -> Dict:
+        """Fetch sentiment data from Santiment API"""
+        if not self.santiment_api_key:
+            return {'sentiment_score': 50, 'mentions': 0}
+        
+        await self._ensure_session()
+        
+        try:
+            # Santiment requires GraphQL queries
+            # Simplified version for social volume
+            headers = {'Authorization': f'Apikey {self.santiment_api_key}'}
+            query = '''
+            {
+              getMetric(metric: "social_volume_total") {
+                timeseriesData(
+                  slug: "%s"
+                  from: "utc_now-24h"
+                  to: "utc_now"
+                  interval: "1d"
+                ) {
+                  datetime
+                  value
+                }
+              }
+            }
+            ''' % token_symbol.lower()
+            
+            async with self.session.post(
+                'https://api.santiment.net/graphql',
+                json={'query': query},
+                headers=headers,
+                timeout=10
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    timeseries = data.get('data', {}).get('getMetric', {}).get('timeseriesData', [])
+                    if timeseries:
+                        social_volume = timeseries[-1].get('value', 0)
+                        # Convert volume to sentiment score (normalized)
+                        sentiment_score = min(50 + social_volume / 10, 100)
+                        
+                        logger.info(f"✅ Santiment: {token_symbol} - Volume: {social_volume}")
+                        return {
+                            'sentiment_score': sentiment_score,
+                            'mentions': social_volume
+                        }
+        except Exception as e:
+            logger.debug(f"Santiment API error for {token_symbol}: {e}")
+        
+        return {'sentiment_score': 50, 'mentions': 0}
+    
+    async def _get_cryptopanic_data(self, token_symbol: str) -> Dict:
+        """Fetch news sentiment from CryptoPanic API"""
+        if not self.cryptopanic_api_key:
+            return {'sentiment_score': 50, 'mentions': 0}
+        
+        await self._ensure_session()
+        
+        try:
+            url = f"https://cryptopanic.com/api/v1/posts/?auth_token={self.cryptopanic_api_key}&currencies=SOL&filter=hot"
+            
+            async with self.session.get(url, timeout=10) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    posts = data.get('results', [])
+                    
+                    # Count mentions of token symbol in posts
+                    mentions = sum(1 for post in posts if token_symbol.lower() in post.get('title', '').lower())
+                    
+                    # Calculate sentiment from votes
+                    positive = sum(1 for post in posts if post.get('votes', {}).get('positive', 0) > post.get('votes', {}).get('negative', 0))
+                    total = len(posts) if posts else 1
+                    sentiment_score = (positive / total) * 100
+                    
+                    logger.info(f"✅ CryptoPanic: {token_symbol} - {mentions} mentions, {sentiment_score:.1f}% positive")
+                    return {
+                        'sentiment_score': sentiment_score,
+                        'mentions': mentions
+                    }
+        except Exception as e:
+            logger.debug(f"CryptoPanic API error for {token_symbol}: {e}")
+        
+        return {'sentiment_score': 50, 'mentions': 0}
 
 
 class TrendDetector:
