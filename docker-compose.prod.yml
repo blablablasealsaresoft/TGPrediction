@@ -1,0 +1,130 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: trading-bot-db
+    environment:
+      POSTGRES_DB: trading_bot
+      POSTGRES_USER: trader
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trader -d trading_bot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - trading-network
+
+  # Redis for caching (optional but recommended)
+  redis:
+    image: redis:7-alpine
+    container_name: trading-bot-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - trading-network
+
+  # Trading Bot Application
+  trading-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading-bot-app
+    env_file: .env
+    environment:
+      # Override database URL to use PostgreSQL
+      DATABASE_URL: postgresql+asyncpg://trader:${POSTGRES_PASSWORD:-changeme}@postgres:5432/trading_bot
+      # Redis connection (if using)
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
+      # Network mode
+      SOLANA_NETWORK: ${SOLANA_NETWORK:-mainnet-beta}
+      # Production settings
+      ENV: prod
+      ENABLE_HEALTH_CHECK_SERVER: "true"
+      HEALTH_CHECK_PORT: "8080"
+    command: ["--network", "mainnet"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - bot_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - trading-network
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Optional: Database backup service
+  db-backup:
+    image: postgres:15-alpine
+    container_name: trading-bot-backup
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: trading_bot
+      PGUSER: trader
+      PGPASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}  # Daily at 2 AM
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup_db.sh:/backup_db.sh
+    depends_on:
+      - postgres
+    command: >
+      sh -c "
+        apk add --no-cache dcron &&
+        chmod +x /backup_db.sh &&
+        echo '${BACKUP_SCHEDULE:-0 2 * * *} /backup_db.sh' | crontab - &&
+        crond -f
+      "
+    restart: unless-stopped
+    networks:
+      - trading-network
+    profiles:
+      - backup
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  bot_data:
+    driver: local
+
+networks:
+  trading-network:
+    driver: bridge
+
