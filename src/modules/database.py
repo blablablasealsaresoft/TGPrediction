@@ -6,7 +6,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Boolean, Text
+from sqlalchemy import create_engine, Column, Integer, BigInteger, String, Float, DateTime, Boolean, Text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import select, func, and_, or_
@@ -21,7 +21,7 @@ class Trade(Base):
     __tablename__ = 'trades'
     
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, index=True)
+    user_id = Column(BigInteger, index=True)
     signature = Column(String, unique=True)
     trade_type = Column(String)  # 'buy' or 'sell'
     token_mint = Column(String, index=True)
@@ -53,7 +53,7 @@ class UserWallet(Base):
     __tablename__ = 'user_wallets'
     
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, unique=True, index=True)
+    user_id = Column(BigInteger, unique=True, index=True)
     telegram_username = Column(String)
     
     # Wallet credentials (encrypted)
@@ -75,7 +75,7 @@ class TrackedWallet(Base):
     __tablename__ = 'tracked_wallets'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, index=True)
+    user_id = Column(BigInteger, index=True)
     wallet_address = Column(String, index=True)
     label = Column(String)
     added_at = Column(DateTime, default=datetime.utcnow)
@@ -102,7 +102,7 @@ class TrackedWallet(Base):
     is_verified = Column(Boolean, default=False)
 
     # Copy relationship metadata
-    copy_trader_id = Column(Integer, nullable=True, index=True)
+    copy_trader_id = Column(BigInteger, nullable=True, index=True)
     copy_percentage = Column(Float, default=100.0)
     copy_started_at = Column(DateTime, nullable=True)
     copy_max_daily_trades = Column(Integer, default=10)
@@ -115,7 +115,7 @@ class Position(Base):
     __tablename__ = 'positions'
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, index=True)
+    user_id = Column(BigInteger, index=True)
     position_id = Column(String, unique=True, index=True)
     token_mint = Column(String, index=True)
     token_symbol = Column(String)
@@ -164,7 +164,7 @@ class UserSettings(Base):
     """User configuration"""
     __tablename__ = 'user_settings'
     
-    user_id = Column(Integer, primary_key=True)
+    user_id = Column(BigInteger, primary_key=True)
     auto_trading_enabled = Column(Boolean, default=False)
     max_trade_size_sol = Column(Float, default=1.0)
     daily_loss_limit_sol = Column(Float, default=5.0)
@@ -202,7 +202,7 @@ class SnipeRun(Base):
 
     id = Column(Integer, primary_key=True)
     snipe_id = Column(String, unique=True, index=True)
-    user_id = Column(Integer, index=True)
+    user_id = Column(BigInteger, index=True)
     token_mint = Column(String, index=True)
     token_symbol = Column(String)
     amount_sol = Column(Float, default=0.0)

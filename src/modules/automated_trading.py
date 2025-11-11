@@ -15,12 +15,19 @@ FEATURES:
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple, Set
 
 from solders.pubkey import Pubkey
 from dataclasses import dataclass
+
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -432,13 +439,11 @@ class AutomatedTradingEngine:
 
         try:
             # METHOD 0: Try Helius Enhanced Transaction API first (if Helius RPC)
-            import os
             helius_api_key = os.getenv('HELIUS_API_KEY')
 
-            if helius_api_key:
+            if helius_api_key and HTTPX_AVAILABLE:
                 try:
                     # Use Helius enhanced transaction endpoint
-                    import httpx
                     async with httpx.AsyncClient() as client:
                         if self.monitor:
                             self.monitor.record_request()

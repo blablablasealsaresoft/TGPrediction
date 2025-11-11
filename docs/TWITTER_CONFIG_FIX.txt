@@ -1,0 +1,99 @@
+# ============================================================================
+# 🐦 TWITTER CONFIGURATION - CLEANED UP & FIXED
+# ============================================================================
+# Replace your Twitter sections with THIS clean version
+# ============================================================================
+
+# ============================================================================
+# 🐦 TWITTER MONITORING (Twikit - Unlimited & FREE!)
+# ============================================================================
+
+# Primary Method: Twikit (RECOMMENDED - No API limits!)
+TWITTER_MONITORING_ENABLED=true
+TWITTER_METHOD=twikit  # Options: twikit, official_api, both
+
+# Twikit Credentials (Your Twitter Login)
+TWITTER_USERNAME=romainofm1
+TWITTER_EMAIL=jamesbjorn097@gmail.com
+TWITTER_PASSWORD=323232@#
+TWITTER_COOKIES_PATH=./cookies/twitter.json
+
+# Monitoring Configuration
+TWITTER_ACCOUNTS_TO_MONITOR=solana_whale_1,crypto_influencer,sol_alpha_signals
+TWITTER_KEYWORDS=Solana gem,$SOL new token,contract:,moonshot,pump.fun
+TWITTER_CHECK_INTERVAL=180  # Check every 3 minutes
+TWITTER_MIN_FOLLOWER_THRESHOLD=1000  # Unified: Use 1000 (higher quality)
+
+# Authenticity Protection (Unified Settings)
+TWITTER_HANDLE_CHECK=true
+TWITTER_CHECK_REUSED_HANDLES=true
+TWITTER_VERIFY_BLUE_CHECKMARK=false
+TWITTER_CHECK_SIMILAR_HANDLES=true
+TWITTER_MIN_ACCOUNT_AGE_DAYS=60  # Unified: Use 60 (stricter)
+TWITTER_KNOWN_SCAMMER_DATABASE=./data/twitter_scammers.json
+VERIFY_TWITTER_AUTHENTICITY=true
+
+# ============================================================================
+# 🐦 TWITTER OFFICIAL API v2 (FALLBACK - Use if Twikit fails)
+# ============================================================================
+
+# Official API Credentials (Keep as fallback)
+TWITTER_API_ENABLED=false  # Disabled by default (use Twikit)
+TWITTER_API_KEY=SrEqKHwaXpj3R28d7RcnZjJIE
+TWITTER_API_SECRET=Lli2wtX1ifkDXwsB9v23DtJaKvFEk2rhqReItSzfoMuB8U7Dse
+TWITTER_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAAHY%2F1wEAAAAAnj8bmnYBp5pvGrUamSySm4Uzfdw%3DUopwOJrEuPFtvj6GRzjTj2dEAX0dtYbLTNsE5qaYMBesseEP7B
+TWITTER_CLIENT_ID=Z3NITmlwMkZxQ3hpdFVlQ3Q3NS06MTpjaQ
+TWITTER_CLIENT_SECRET=BrT7t3BgwOqEfAVoBonDdydonE1JfSWKzt3qleYFIVkyL-VZHd
+
+# API Rate Limiting (Only applies if using official API)
+TWITTER_API_RATE_LIMIT=500000  # tweets/month (free tier)
+TWITTER_API_SEARCH_LIMIT=100  # per request
+
+# ============================================================================
+# 🎯 TWITTER FALLBACK STRATEGY
+# ============================================================================
+
+# Try Twikit first (unlimited), fall back to official API if it fails
+TWITTER_FALLBACK_TO_OFFICIAL_API=true
+TWITTER_PREFER_TWIKIT=true  # Always prefer Twikit (no limits)
+
+# If both fail, use mock data (for testing)
+TWITTER_USE_MOCK_ON_FAILURE=false  # Set true for dev/testing
+
+# ============================================================================
+# 📝 TWITTER CONFIGURATION NOTES
+# ============================================================================
+
+# WHAT'S FIXED:
+# ✅ Removed duplicate MIN_TWITTER_FOLLOWERS (unified to 1000)
+# ✅ Removed duplicate MIN_TWITTER_ACCOUNT_AGE_DAYS (unified to 60)
+# ✅ Removed duplicate TWITTER_CHECK_REUSED_HANDLES (single definition)
+# ✅ Separated Twikit config from Official API config
+# ✅ Disabled Official API by default (Twikit has no limits!)
+# ✅ Added fallback strategy (Twikit → Official API → Mock)
+
+# WHY USE TWIKIT:
+# ✅ Unlimited scraping (no rate limits)
+# ✅ FREE (no API costs)
+# ✅ More data access (official API is restricted)
+# ✅ No approval needed (official API needs approval)
+
+# WHY KEEP OFFICIAL API:
+# ✅ Fallback if Twikit login fails
+# ✅ More reliable long-term
+# ✅ Official support
+
+# CURRENT STATUS:
+# ✅ Twikit will be used (TWITTER_METHOD=twikit)
+# ✅ Official API kept as fallback
+# ✅ No 429 errors with Twikit!
+
+# WHAT TO REMOVE FROM YOUR CURRENT .env:
+# ❌ Delete the scattered duplicate Twitter settings
+# ❌ Delete the "Layer 5: Twitter/Social Verification" section (consolidated here)
+# ❌ Keep only THIS section
+
+# ================================
+# END OF TWITTER CONFIGURATION
+# ================================
+

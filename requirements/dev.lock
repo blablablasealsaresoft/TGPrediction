@@ -2,6 +2,7 @@
 # Locked dependency set for CI and production builds.
 aiohttp==3.9.1
 aiosqlite==0.19.0
+asyncpg==0.29.0
 base58==2.1.1
 black==23.12.1
 cryptography==41.0.7
