@@ -62,6 +62,8 @@ from src.modules.jupiter_client import JupiterClient, AntiMEVProtection
 from src.modules.monitoring import BotMonitor, PerformanceTracker
 from src.modules.trade_execution import TradeExecutionService
 from src.config import Config, get_config
+from src.modules.web_api import WebAPIServer
+from src.modules.web_auth import setup_auth_routes, DashboardAuth
 
 # 🚀 ELITE ENHANCEMENTS
 from src.modules.wallet_intelligence import WalletIntelligenceEngine, WalletMetrics
@@ -104,6 +106,22 @@ class RevolutionaryTradingBot:
 
         # Default risk settings for new users
         self.default_user_settings = self._build_default_user_settings()
+        
+        # 🌐 WEB API SERVER - Dashboard backend
+        self.web_api_enabled = os.getenv('WEB_API_ENABLED', 'true').lower() == 'true'
+        self.web_api_server: Optional[WebAPIServer] = None
+        if self.web_api_enabled:
+            cors_origins = os.getenv('WEB_API_CORS_ORIGINS', 'http://localhost:3000,http://localhost').split(',')
+            self.web_api_server = WebAPIServer(
+                database=self.db,
+                host=os.getenv('WEB_API_HOST', '0.0.0.0'),
+                port=int(os.getenv('WEB_API_PORT', '8080')),
+                cors_origins=[origin.strip() for origin in cors_origins]
+            )
+            # Setup authentication routes
+            dashboard_auth = DashboardAuth(master_api_key=os.getenv('DASHBOARD_API_KEY'))
+            setup_auth_routes(self.web_api_server.app, dashboard_auth)
+            logger.info("Web API server configured")
 
         # 🔐 USER WALLET MANAGEMENT - Each user gets their own wallet
         self.wallet_manager = UserWalletManager(
@@ -219,12 +237,16 @@ class RevolutionaryTradingBot:
         # Shutdown coordination
         self._stop_event: Optional[asyncio.Event] = None
 
+        # Note: Web API modules will be injected after all modules are initialized
+
         logger.info("🚀 Revolutionary Trading Bot initialized!")
         logger.info("🔐 Individual user wallets enabled")
         logger.info("🎯 Elite Auto-sniper ready")
         logger.info("🧠 Wallet Intelligence System ready")
         logger.info("🛡️ Elite Protection System (6-layer) ready")
         logger.info("🤖 Automated Trading Engine ready")
+        if self.web_api_enabled:
+            logger.info("🌐 Web API Dashboard ready")
 
     def _build_default_user_settings(self) -> Dict:
         """Build default user settings from config"""
@@ -3934,7 +3956,12 @@ Use /settings command to modify these settings
         logger.info("✅ Strategy Marketplace")
         logger.info("✅ Anti-MEV Protection")
         logger.info("✅ Professional Risk Management")
+        if self.web_api_enabled:
+            logger.info("✅ Web Dashboard API")
         logger.info("=" * 50)
+        
+        # Note: Web API modules are injected before bot.start() is called
+        # Web API server is integrated with probe server in run_bot.py
         
         # Initialize and start polling
         await app.initialize()
@@ -3957,6 +3984,8 @@ Use /settings command to modify these settings
             try:
                 # Stop sniper first
                 await self.sniper.stop()
+
+                # Note: Web API server is stopped by probe server in run_bot.py
 
                 # Stop Telegram updater and app
                 if getattr(self.app, "updater", None):

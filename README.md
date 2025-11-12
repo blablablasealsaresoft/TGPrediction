@@ -1,4 +1,4 @@
-# 🦄 The ONLY AI Trading Bot That Actually Learns From Its Mistakes
+# 🦄 APOLLO CyberSentinel - AI Trading Bot + Epic Web Dashboard
 
 <div align="center">
 
@@ -7,13 +7,15 @@
 ![APIs](https://img.shields.io/badge/API%20Integrations-26+-ff6b6b?style=for-the-badge)
 ![Security](https://img.shields.io/badge/Security%20Layers-8-ffd93d?style=for-the-badge)
 
-### **Stop Losing Money to Bots That Can't Think**
+### **Telegram Bot + Stunning Web Dashboard**
 
-**This bot predicts launches 2-6 hours BEFORE they happen. Executes flash loan arbitrage at 100x leverage. And gets smarter with every single trade.**
+**🤖 Telegram**: AI-powered trading bot that predicts launches 2-6 hours early, executes flash loans at 100x leverage, and learns from every trade.
 
-**🆕 Latest Update (Nov 2025):** 70x improvement in Solana coverage (208 pairs), 26+ API integrations, 8-layer security, institutional-grade infrastructure!
+**🌐 Web Dashboard**: Epic neural network animations, real-time metrics, prediction market, and complete platform control.
 
-[Start Trading Now](#-instant-setup-60-seconds) • [See What Makes Us Different](#-why-every-other-bot-sucks) • [View Live Results](#-live-platform-stats)
+**🆕 Latest Update (Nov 2025):** Complete web dashboard integration with unified neon theme, neural network animations, and real-time data visualization!
+
+[Start Trading Now](#-instant-setup-60-seconds) • [See Web Dashboard](#-web-dashboard-features) • [View Live Results](#-live-platform-stats)
 
 </div>
 
@@ -167,39 +169,126 @@ Market creator gets 1% bonus.
 
 ---
 
+## 🌐 Web Dashboard Features
+
+**NEW!** Stunning web interface with epic neural network animations!
+
+### 🎨 **Landing Page** - http://localhost:8080
+- 🌀 **Spinning hero card** with 3D perspective
+- ✨ Neural network E8 lattice background (120 nodes)
+- 💫 80 floating particles (3 types)
+- 🔮 3 glowing orbs moving independently
+- 📐 Animated grid overlay + scan line effect
+- 🎯 Interactive stat boxes with 3D hover
+
+### 📊 **Dashboard** - http://localhost:8080/dashboard
+**5 Complete Sections:**
+1. **Overview** - System status, key metrics, live activity feed
+2. **Trading** - Auto-sniper, Flash loans, Elite wallets (441), Launch predictor
+3. **AI Intelligence** - Neural network status, Predictions (78.5% accuracy), Sentiment analysis
+4. **Security** - All 8 security layers + statistics
+5. **Monitoring** - API status (26/26), Resources, Database performance
+
+**9 Navigation Buttons:**
+- Section tabs + Prediction Market + Documentation + Telegram Bot (@gonehuntingbot) + Home
+
+### 🎯 **Prediction Market** - http://localhost:8080/prediction-market
+**7 Tabs:**
+1. **Strategy Marketplace** - Buy premium strategies (Flash Arbitrage Pro, Sentiment Analyzer, Whale Tracker)
+2. **Community Intelligence** - Token reviews with star ratings
+3. **Leaderboards** - Top traders & publishers
+4. **My Profile** - Stats, achievements, progress tracking
+5. **Publish Strategy** - Submit your own strategies
+6. **Dashboard** - Navigate back
+7. **Home** - To landing page
+
+**Features:**
+- Wallet connection UI (Web3 ready)
+- 5 stats cards (2,847 strategies, 15.2K members, $2.8M volume)
+- Purchase system with $WIN tokens
+- Review system with stars
+- Achievement badges (8 total)
+
+### 📚 **Documentation** - http://localhost:8080/docs
+- Complete API reference
+- Telegram command guide
+- WebSocket documentation
+- Architecture diagrams
+
+### ✨ **Unified Theme:**
+All pages feature:
+- Neural network animations
+- Floating particles & glowing orbs
+- Glassmorphism cards with backdrop blur
+- Neon color scheme (cyan, purple, green, gold)
+- 3D hover effects
+- Button ripple animations
+- Smooth transitions
+
+**Web dashboard runs alongside Telegram bot - both use same database, zero interference!**
+
+---
+
 ## 🎮 Instant Setup (60 Seconds)
 
-### Step 1: Open Telegram (10 seconds)
+### Option A: Telegram Bot Only (60 seconds)
+
+**Step 1:** Open Telegram
 ```
 Search: @gonehuntingbot
 Click: Start
 ```
 
-### Step 2: Get Your Wallet (10 seconds)
+**Step 2:** Get Your Wallet
 ```
 Bot creates encrypted wallet automatically
 You get: Address + Private key backup
 ```
 
-### Step 3: Fund It (30 seconds)
+**Step 3:** Fund It
 ```
 /deposit
 Send 0.5-1 SOL from Phantom/Solflare
 ```
 
-### Step 4: Let It Print (10 seconds)
+**Step 4:** Let It Print
 ```
 /autopredictions     ← AI trades 24/7
 /launch_monitor enable  ← Catch early launches
 /flash_enable        ← 100x arbitrage (Gold tier)
 ```
 
-**Done. The bot is now:**
+### Option B: Full Platform with Web Dashboard (5 minutes)
+
+**Step 1:** Clone and Start
+```bash
+git clone https://github.com/YOUR_USERNAME/TGbot.git
+cd TGbot
+docker-compose up -d
+```
+
+**Step 2:** Access Web Dashboard
+```
+Landing Page: http://localhost:8080
+Dashboard: http://localhost:8080/dashboard
+Prediction Market: http://localhost:8080/prediction-market
+```
+
+**Step 3:** Open Telegram Bot
+```
+Search: @gonehuntingbot
+Send: /start
+```
+
+**Done. You now have:**
+- 🤖 **Telegram bot** running and listening for commands
+- 🌐 **Web dashboard** with epic neural network animations
 - 🔍 Scanning **208 Solana pairs** for arbitrage every 2 seconds (7 base tokens: SOL, USDC, USDT, BONK, WIF, JUP, JTO)
 - 🚀 Monitoring for launches every 10 seconds across **3 data sources** (DexScreener, Pump.fun, Birdeye)
 - 🧠 Analyzing **441 elite wallets** 24/7 with 100-point scoring algorithm
 - 💎 Auto-executing ULTRA confidence trades (90%+) with **Jito MEV protection**
 - 🛡️ Validating all trades through **8 security layers** (RugCheck, GoPlus, TokenSniffer, RugDoc, Birdeye, Solana Beach + 2 internal)
+- 📊 Real-time metrics displayed on web dashboard
 - 📊 Aggregating sentiment from **8 sources** (Twitter, Reddit, Discord, LunarCrush, Santiment, CryptoPanic, CoinGecko, Solscan)
 
 ---

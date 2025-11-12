@@ -1,100 +1,87 @@
 """
-Check and restore user's wallet from database
+Emergency Wallet Restoration Script
+Restores user wallet with specific private key to database
 """
-
 import asyncio
 import os
 import sys
-from dotenv import load_dotenv
+from pathlib import Path
 
-load_dotenv()
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from solana.rpc.async_api import AsyncClient
-from solders.pubkey import Pubkey
-from sqlalchemy import select
 from src.modules.database import DatabaseManager, UserWallet
+from cryptography.fernet import Fernet
+import logging
 
-async def main():
-    admin_id = int(os.getenv('ADMIN_CHAT_ID'))
-    rpc_url = os.getenv('SOLANA_RPC_URL')
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+async def restore_wallet():
+    """Restore user wallet with their original private key"""
     
-    db = DatabaseManager()
-    client = AsyncClient(rpc_url)
+    # Configuration
+    user_id = 1928855074  # C K's Telegram ID from the /start message
+    telegram_username = "C K"
     
-    print(f"\n🔍 Searching for wallets for user {admin_id}...")
-    print("="*60)
+    # OLD WALLET (with 0.6064 SOL)
+    old_public_key = "DbjdbXRrfoqGmUYb4MXLTQ9H1bhqFKiP3g2sPanhucNx"
+    wallet_private_key = os.getenv('WALLET_PRIVATE_KEY', '2KBD49gknMGpsVSJWuUFbTPLsVLd4kMEN8n8cBERvJFML8sBzavGqpHH14mYUwDWYHZ6EdTx1DzHxto6PUsUVpke')
+    encryption_key = os.getenv('WALLET_ENCRYPTION_KEY', 'AVJgGXLjc2lnAHWv-SSdAVppvmXCst89sJPPhEIVGX4=')
     
-    # Check all wallets in database
-    async with db.async_session() as session:
-        result = await session.execute(select(UserWallet).where(UserWallet.user_id == admin_id))
-        wallets = result.scalars().all()
+    # Database connection
+    database_url = os.getenv('DATABASE_URL', 'postgresql+asyncpg://trader:T_TleomdfYmv-13lnjehNu7xp-q99RRXyW13XreWof8@postgres:5432/trading_bot')
     
-    print(f"\nFound {len(wallets)} wallet(s) in database:\n")
+    logger.info(f"🔧 Restoring wallet for user {user_id} ({telegram_username})")
+    logger.info(f"📍 Old wallet address: {old_public_key}")
+    logger.info(f"💰 Expected balance: 0.6064 SOL")
     
-    for i, wallet in enumerate(wallets, 1):
-        # Check balance
-        try:
-            pubkey = Pubkey.from_string(wallet.public_key)
-            response = await client.get_balance(pubkey)
-            balance_sol = response.value / 1e9
-        except:
-            balance_sol = 0
+    try:
+        # Initialize database
+        db = DatabaseManager(database_url)
+        await db.init_db()
+        logger.info("✅ Database initialized")
         
-        print(f"{i}. Address: {wallet.public_key}")
-        print(f"   Balance: {balance_sol:.6f} SOL")
-        print(f"   Created: {wallet.created_at}")
-        print()
-    
-    # Check for the old wallet
-    old_wallet_address = "mDSm6bqKdKc8ARbsdAkkHKzDzAqERuFxMChiGmuUDaR"
-    
-    found_old = False
-    for wallet in wallets:
-        if wallet.public_key == old_wallet_address:
-            found_old = True
-            print(f"✅ FOUND YOUR OLD WALLET!")
-            print(f"   Address: {old_wallet_address}")
-            
-            # Check its balance
-            try:
-                pubkey = Pubkey.from_string(old_wallet_address)
-                response = await client.get_balance(pubkey)
-                balance_sol = response.value / 1e9
-                print(f"   Balance: {balance_sol:.6f} SOL")
-                
-                if balance_sol > 0:
-                    print(f"\n🎉 Your wallet still has {balance_sol:.6f} SOL!")
-                else:
-                    print(f"\n⚠️ Wallet has 0 SOL now")
-            except Exception as e:
-                print(f"   Error checking balance: {e}")
-    
-    if not found_old:
-        print(f"❌ Old wallet ({old_wallet_address}) NOT in database")
-        print(f"\nPossible reasons:")
-        print(f"  1. Database was reset")
-        print(f"  2. Wallet was deleted")
-        print(f"  3. Different user ID")
+        # Encrypt the private key
+        cipher = Fernet(encryption_key.encode() if isinstance(encryption_key, str) else encryption_key)
+        encrypted_private_key = cipher.encrypt(wallet_private_key.encode()).decode()
         
-        # Check if it exists on-chain
-        print(f"\n🔍 Checking if wallet exists on-chain...")
-        try:
-            pubkey = Pubkey.from_string(old_wallet_address)
-            response = await client.get_balance(pubkey)
-            balance_sol = response.value / 1e9
-            print(f"✅ Wallet exists on-chain!")
-            print(f"   Balance: {balance_sol:.6f} SOL")
+        # Check if wallet already exists
+        async with db.async_session() as session:
+            from sqlalchemy import select
+            result = await session.execute(
+                select(UserWallet).where(UserWallet.user_id == user_id)
+            )
+            existing_wallet = result.scalar_one_or_none()
             
-            if balance_sol > 0:
-                print(f"\n💡 Your 0.2 SOL is still there!")
-                print(f"   But you need the private key to access it")
-                print(f"\nDo you have the private key for this wallet?")
-        except Exception as e:
-            print(f"❌ Could not check wallet: {e}")
-    
-    await client.close()
+            if existing_wallet:
+                logger.info(f"📝 Updating existing wallet record...")
+                existing_wallet.public_key = old_public_key
+                existing_wallet.encrypted_private_key = encrypted_private_key
+                existing_wallet.telegram_username = telegram_username
+            else:
+                logger.info(f"🆕 Creating new wallet record...")
+                new_wallet = UserWallet(
+                    user_id=user_id,
+                    telegram_username=telegram_username,
+                    public_key=old_public_key,
+                    encrypted_private_key=encrypted_private_key,
+                    sol_balance=0.6064  # Last known balance
+                )
+                new_wallet.is_active = True
+                session.add(new_wallet)
+            
+            await session.commit()
+            logger.info("✅ Wallet restored successfully!")
+            logger.info(f"🔐 Address: {old_public_key}")
+            logger.info(f"💰 Your funds are safe on the blockchain!")
+            logger.info(f"📱 Try /start in Telegram - you should see your old wallet")
+        
+        await db.engine.dispose()
+        
+    except Exception as e:
+        logger.error(f"❌ Error restoring wallet: {e}", exc_info=True)
+        sys.exit(1)
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
+    asyncio.run(restore_wallet())

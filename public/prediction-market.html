@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APOLLO CyberSentinel | Prediction Market & Strategy Hub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Universal Enhanced Style -->
+    <link rel="stylesheet" href="/static/css/apollo-enhanced-style.css">
+    <script src="/static/js/apollo-enhanced-effects.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --neon-cyan: #00f5ff;
+            --neon-purple: #bd00ff;
+            --neon-green: #00ff88;
+            --neon-gold: #ffd700;
+            --neon-pink: #ff006e;
+            --neon-blue: #4d4dff;
+            --bg-deep: #0a0014;
+            --bg-dark: #150028;
+            --bg-darker: #1a0033;
+            --text-bright: #ffffff;
+            --text-dim: #a0a0a0;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(0, 245, 255, 0.2);
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: radial-gradient(ellipse at top, var(--bg-dark), var(--bg-deep));
+            color: var(--text-bright);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Main Container */
+        .main-container {
+            position: relative;
+            z-index: 10;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header with Wallet */
+        .market-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-icon {
+            font-size: 3rem;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: iconFloat 3s ease-in-out infinite;
+        }
+
+        .header-text h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-text p {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+        }
+
+        /* Wallet Connection */
+        .wallet-section {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .wallet-btn {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(189, 0, 255, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .wallet-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 40px rgba(189, 0, 255, 0.6);
+        }
+
+        .wallet-connected {
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid var(--neon-green);
+            border-radius: 30px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: breathe 4s ease-in-out infinite;
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            color: var(--neon-green);
+            font-weight: 600;
+        }
+
+        .wallet-balance {
+            color: var(--neon-gold);
+            font-weight: 700;
+        }
+
+        /* Stats Overview */
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 20px 60px rgba(0, 245, 255, 0.4);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            animation: iconFloat 3s ease-in-out infinite;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 245, 255, 0.2);
+            border-radius: 25px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover, .tab-btn.active {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+            color: var(--bg-deep);
+            border-color: var(--neon-cyan);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 245, 255, 0.4);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Strategy Marketplace */
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .strategy-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(189, 0, 255, 0.2);
+            border-radius: 25px;
+            padding: 2rem;
+            transition: all 0.4s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .strategy-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(189, 0, 255, 0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .strategy-card:hover::before {
+            left: 100%;
+        }
+
+        .strategy-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            border-color: var(--neon-purple);
+            box-shadow: 0 25px 70px rgba(189, 0, 255, 0.4);
+        }
+
+        .strategy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .strategy-title {
+            font-size: 1.4rem;
+            color: var(--neon-cyan);
+            font-weight: 700;
+        }
+
+        .strategy-badge {
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 2px solid;
+        }
+
+        .badge-premium {
+            background: rgba(255, 215, 0, 0.2);
+            color: var(--neon-gold);
+            border-color: var(--neon-gold);
+        }
+
+        .badge-trending {
+            background: rgba(255, 0, 110, 0.2);
+            color: var(--neon-pink);
+            border-color: var(--neon-pink);
+        }
+
+        .strategy-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .strategy-stat {
+            text-align: center;
+        }
+
+        .strategy-stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--neon-green);
+        }
+
+        .strategy-stat-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .strategy-price {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .price-tag {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--neon-gold);
+        }
+
+        .buy-btn {
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+            border: none;
+            border-radius: 20px;
+            color: var(--bg-deep);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .buy-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 245, 255, 0.5);
+        }
+
+        /* Community Intelligence */
+        .token-feed {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .token-review {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(0, 245, 255, 0.2);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .token-review:hover {
+            transform: translateX(10px);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 10px 40px rgba(0, 245, 255, 0.3);
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .token-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--neon-cyan);
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 0.3rem;
+        }
+
+        .star {
+            color: var(--neon-gold);
+            font-size: 1.2rem;
+        }
+
+        .star.empty {
+            opacity: 0.3;
+        }
+
+        .review-content {
+            color: var(--text-dim);
+            line-height: 1.6;
+            margin: 1rem 0;
+        }
+
+        .review-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .reviewer-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        .helpful-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--neon-green);
+            border-radius: 15px;
+            color: var(--neon-green);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .helpful-btn:hover {
+            background: rgba(0, 255, 136, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* Leaderboard */
+        .leaderboard {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--glass-border);
+            border-radius: 25px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .leaderboard-title {
+            font-size: 1.8rem;
+            color: var(--neon-cyan);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .leaderboard-table th {
+            text-align: left;
+            padding: 1rem;
+            background: rgba(0, 245, 255, 0.1);
+            color: var(--neon-cyan);
+            font-weight: 600;
+            border-bottom: 2px solid var(--neon-cyan);
+        }
+
+        .leaderboard-table td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-dim);
+        }
+
+        .leaderboard-table tr:hover {
+            background: rgba(0, 245, 255, 0.05);
+            transform: translateX(5px);
+            transition: all 0.3s;
+        }
+
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .rank-1 {
+            background: linear-gradient(135deg, var(--neon-gold), #ff6b00);
+            color: white;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .rank-2 {
+            background: linear-gradient(135deg, #c0c0c0, #808080);
+            color: white;
+            box-shadow: 0 5px 20px rgba(192, 192, 192, 0.5);
+        }
+
+        .rank-3 {
+            background: linear-gradient(135deg, #cd7f32, #8b4513);
+            color: white;
+            box-shadow: 0 5px 20px rgba(205, 127, 50, 0.5);
+        }
+
+        .rank-default {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-dim);
+        }
+
+        /* User Profile Card */
+        .profile-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--glass-border);
+            border-radius: 25px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+            box-shadow: 0 10px 40px rgba(0, 245, 255, 0.5);
+        }
+
+        .profile-info h2 {
+            font-size: 2rem;
+            color: var(--neon-cyan);
+            margin-bottom: 0.5rem;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background: linear-gradient(135deg, var(--neon-gold), #ff6b00);
+            border-radius: 20px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .progress-section {
+            margin-top: 2rem;
+        }
+
+        .progress-bar-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            height: 30px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-green));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            transition: width 0.5s;
+            animation: progressShimmer 2s linear infinite;
+        }
+
+        /* Achievements */
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .achievement-badge {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .achievement-badge:hover {
+            transform: translateY(-10px) scale(1.05);
+            border-color: var(--neon-gold);
+            box-shadow: 0 20px 50px rgba(255, 215, 0, 0.4);
+        }
+
+        .achievement-badge.locked {
+            opacity: 0.4;
+            filter: grayscale(100%);
+        }
+
+        .achievement-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .achievement-name {
+            font-weight: 600;
+            color: var(--neon-cyan);
+            font-size: 0.9rem;
+        }
+
+        /* Publish Strategy Form */
+        .publish-form {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--glass-border);
+            border-radius: 25px;
+            padding: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--neon-cyan);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 245, 255, 0.2);
+            border-radius: 15px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1.2rem;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+            border: none;
+            border-radius: 25px;
+            color: var(--bg-deep);
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 50px rgba(0, 245, 255, 0.6);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem;
+            }
+
+            .header-title {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .market-header {
+                flex-direction: column;
+            }
+
+            .strategy-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tab-nav {
+                flex-direction: column;
+            }
+
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Header -->
+        <div class="market-header">
+            <div class="header-title">
+                <i class="fas fa-chart-line header-icon"></i>
+                <div class="header-text">
+                    <h1>Prediction Market</h1>
+                    <p>Strategy Hub & Community Intelligence</p>
+                </div>
+            </div>
+            
+            <!-- Wallet Section -->
+            <div class="wallet-section">
+                <button class="wallet-btn" id="connectWalletBtn" onclick="connectWallet()">
+                    <i class="fas fa-wallet"></i>
+                    Connect Wallet
+                </button>
+                <div class="wallet-connected" id="walletConnected" style="display: none;">
+                    <div>
+                        <div class="wallet-address" id="walletAddress">0x1234...5678</div>
+                        <div class="wallet-balance" id="walletBalance">1,250 $WIN</div>
+                    </div>
+                    <button class="wallet-btn" onclick="disconnectWallet()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value">2,847</div>
+                <div class="stat-label">Active Strategies</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value">15.2K</div>
+                <div class="stat-label">Community Members</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value">$2.8M</div>
+                <div class="stat-label">Total Volume</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-value">8,921</div>
+                <div class="stat-label">Token Reviews</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-value">1,234</div>
+                <div class="stat-label">Top Traders</div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('marketplace')">
+                <i class="fas fa-store"></i>
+                Strategy Marketplace
+            </button>
+            <button class="tab-btn" onclick="switchTab('community')">
+                <i class="fas fa-users"></i>
+                Community Intelligence
+            </button>
+            <button class="tab-btn" onclick="switchTab('leaderboard')">
+                <i class="fas fa-trophy"></i>
+                Leaderboards
+            </button>
+            <button class="tab-btn" onclick="switchTab('profile')">
+                <i class="fas fa-user"></i>
+                My Profile
+            </button>
+            <button class="tab-btn" onclick="switchTab('publish')">
+                <i class="fas fa-plus-circle"></i>
+                Publish Strategy
+            </button>
+            <button class="tab-btn" onclick="window.location.href='/dashboard'">
+                <i class="fas fa-tachometer-alt"></i>
+                Dashboard
+            </button>
+            <button class="tab-btn" onclick="window.location.href='/'">
+                <i class="fas fa-home"></i>
+                Home
+            </button>
+        </div>
+
+        <!-- Strategy Marketplace Tab -->
+        <div id="marketplace" class="tab-content active">
+            <div class="strategy-grid">
+                <!-- Strategy Card 1 -->
+                <div class="strategy-card">
+                    <div class="strategy-header">
+                        <h3 class="strategy-title">Flash Arbitrage Pro</h3>
+                        <span class="strategy-badge badge-premium">PREMIUM</span>
+                    </div>
+                    <p style="color: var(--text-dim); margin-bottom: 1rem;">
+                        Advanced arbitrage detection across 15+ DEXs with 92% success rate
+                    </p>
+                    <div class="strategy-stats">
+                        <div class="strategy-stat">
+                            <div class="strategy-stat-value">92%</div>
+                            <div class="strategy-stat-label">Success</div>
+                        </div>
+                        <div class="strategy-stat">
+                            <div class="strategy-stat-value">847</div>
+                            <div class="strategy-stat-label">Users</div>
+                        </div>
+                        <div class="strategy-stat">
+                            <div class="strategy-stat-value">4.8★</div>
+                            <div class="strategy-stat-label">Rating</div>
+                        </div>
+                    </div>
+                    <div class="strategy-price">
+                        <div class="price-tag">250 $WIN</div>
+                        <button class="buy-btn">Purchase</button>
+                    </div>
+                </div>
+
+                <!-- Strategy Card 2 -->
+                <div class="strategy-card">
+                    <div class="strategy-header">
+                        <h3 class="strategy-title">Sentiment Analyzer</h3>
+                        <span class="strategy-badge badge-trending">TRENDING</span>
+                    </div>
+                    <p style="color: var(--text-dim); margin-bottom: 1rem;">
+                        AI-powered social sentiment analysis for early token detection
+                    </p>
+                    <div class="strategy-stats">
+                        <div class="strategy-stat">
+                            <div class="strategy-stat-value">85%</div>
+                            <div class="strategy-stat-label">Accuracy</div>
+                        </div>
+                        <div class="strategy-stat">
+                            <div class="strategy-stat-value">1.2K</div>
+                            <div class="strategy-stat-label">Users</div>
+                        </div>
+                        <div class="strategy-stat">
+                            <div class="strategy-stat-value">4.6★</div>
+                            <div class="strategy-stat-label">Rating</div>
+                        </div>
+                    </div>
+                    <div class="strategy-price">
+                        <div class="price-tag">180 $WIN</div>
+                        <button class="buy-btn">Purchase</button>
+                    </div>
+                </div>
+
+                <!-- Strategy Card 3 -->
+                <div class="strategy-card">
+                    <div class="strategy-header">
+                        <h3 class="strategy-title">Whale Tracker Elite</h3>
+                        <span class="strategy-badge badge-premium">PREMIUM</span>
+                    </div>
+                    <p style="color: var(--text-dim); margin-bottom: 1rem;">
+                        Track top 441 elite wallets and copy their strategies in real-time
+                    </p>
+                    <div class="strategy-stats">
+                        <div class="strategy-stat">
+                            <div class="strategy-stat-value">78%</div>
+                            <div class="strategy-stat-label">Win Rate</div>
+                        </div>
+                        <div class="strategy-stat">
+                            <div class="strategy-stat-value">623</div>
+                            <div class="strategy-stat-label">Users</div>
+                        </div>
+                        <div class="strategy-stat">
+                            <div class="strategy-stat-value">4.9★</div>
+                            <div class="strategy-stat-label">Rating</div>
+                        </div>
+                    </div>
+                    <div class="strategy-price">
+                        <div class="price-tag">320 $WIN</div>
+                        <button class="buy-btn">Purchase</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Community Intelligence Tab -->
+        <div id="community" class="tab-content">
+            <div class="token-feed">
+                <!-- Review 1 -->
+                <div class="token-review">
+                    <div class="review-header">
+                        <div class="token-name">$APOLLO</div>
+                        <div class="star-rating">
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star"></i>
+                        </div>
+                    </div>
+                    <div class="review-content">
+                        "Incredible platform! The AI predictions are spot-on 78% of the time. Made 15% gains in the first week. The flash arbitrage feature is a game-changer. Highly recommend!"
+                    </div>
+                    <div class="review-footer">
+                        <div class="reviewer-info">
+                            <i class="fas fa-user-circle"></i>
+                            <span>CryptoWhale47</span>
+                            <span>•</span>
+                            <span>2 hours ago</span>
+                        </div>
+                        <button class="helpful-btn">
+                            <i class="fas fa-thumbs-up"></i>
+                            Helpful (127)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Review 2 -->
+                <div class="token-review">
+                    <div class="review-header">
+                        <div class="token-name">$PEPE</div>
+                        <div class="star-rating">
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star empty"></i>
+                        </div>
+                    </div>
+                    <div class="review-content">
+                        "Caught the pump 6 hours early thanks to the launch predictor. 4.2x gains! The community intelligence is incredibly accurate. Only wish I had found this platform sooner."
+                    </div>
+                    <div class="review-footer">
+                        <div class="reviewer-info">
+                            <i class="fas fa-user-circle"></i>
+                            <span>MemeTrader2024</span>
+                            <span>•</span>
+                            <span>5 hours ago</span>
+                        </div>
+                        <button class="helpful-btn">
+                            <i class="fas fa-thumbs-up"></i>
+                            Helpful (89)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Review 3 -->
+                <div class="token-review">
+                    <div class="review-header">
+                        <div class="token-name">$SHIB</div>
+                        <div class="star-rating">
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star"></i>
+                            <i class="fas fa-star star empty"></i>
+                            <i class="fas fa-star star empty"></i>
+                        </div>
+                    </div>
+                    <div class="review-content">
+                        "Good platform but the whale tracker didn't catch this pump in time. Still made some profit but expected better. The strategy marketplace is solid though - 3 stars."
+                    </div>
+                    <div class="review-footer">
+                        <div class="reviewer-info">
+                            <i class="fas fa-user-circle"></i>
+                            <span>DeFiExplorer</span>
+                            <span>•</span>
+                            <span>1 day ago</span>
+                        </div>
+                        <button class="helpful-btn">
+                            <i class="fas fa-thumbs-up"></i>
+                            Helpful (43)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboards Tab -->
+        <div id="leaderboard" class="tab-content">
+            <div class="leaderboard">
+                <h2 class="leaderboard-title">
+                    <i class="fas fa-trophy"></i>
+                    Top Traders This Month
+                </h2>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Trader</th>
+                            <th>Total Profit</th>
+                            <th>Win Rate</th>
+                            <th>Trades</th>
+                            <th>Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="rank-badge rank-1">1</span></td>
+                            <td>CryptoKing777</td>
+                            <td style="color: var(--neon-green); font-weight: 700;">+$127,450</td>
+                            <td>94.2%</td>
+                            <td>847</td>
+                            <td style="color: var(--neon-gold); font-weight: 700;">15,892</td>
+                        </tr>
+                        <tr>
+                            <td><span class="rank-badge rank-2">2</span></td>
+                            <td>WhaleWatcher</td>
+                            <td style="color: var(--neon-green); font-weight: 700;">+$98,320</td>
+                            <td>91.7%</td>
+                            <td>623</td>
+                            <td style="color: var(--neon-gold); font-weight: 700;">12,764</td>
+                        </tr>
+                        <tr>
+                            <td><span class="rank-badge rank-3">3</span></td>
+                            <td>DeFiMaster</td>
+                            <td style="color: var(--neon-green); font-weight: 700;">+$85,190</td>
+                            <td>88.5%</td>
+                            <td>541</td>
+                            <td style="color: var(--neon-gold); font-weight: 700;">10,938</td>
+                        </tr>
+                        <tr>
+                            <td><span class="rank-badge rank-default">4</span></td>
+                            <td>FlashTrader99</td>
+                            <td style="color: var(--neon-green); font-weight: 700;">+$72,840</td>
+                            <td>86.3%</td>
+                            <td>489</td>
+                            <td style="color: var(--neon-gold); font-weight: 700;">9,521</td>
+                        </tr>
+                        <tr>
+                            <td><span class="rank-badge rank-default">5</span></td>
+                            <td>ApeInvestor</td>
+                            <td style="color: var(--neon-green); font-weight: 700;">+$68,230</td>
+                            <td>83.9%</td>
+                            <td>412</td>
+                            <td style="color: var(--neon-gold); font-weight: 700;">8,847</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="leaderboard" style="margin-top: 2rem;">
+                <h2 class="leaderboard-title">
+                    <i class="fas fa-star"></i>
+                    Top Strategy Publishers
+                </h2>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Publisher</th>
+                            <th>Strategies</th>
+                            <th>Sales</th>
+                            <th>Earnings</th>
+                            <th>Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="rank-badge rank-1">1</span></td>
+                            <td>StrategyGuru</td>
+                            <td>12</td>
+                            <td>2,847</td>
+                            <td style="color: var(--neon-gold); font-weight: 700;">$284,700</td>
+                            <td>4.9★</td>
+                        </tr>
+                        <tr>
+                            <td><span class="rank-badge rank-2">2</span></td>
+                            <td>AlgoTrader</td>
+                            <td>8</td>
+                            <td>1,923</td>
+                            <td style="color: var(--neon-gold); font-weight: 700;">$192,300</td>
+                            <td>4.8★</td>
+                        </tr>
+                        <tr>
+                            <td><span class="rank-badge rank-3">3</span></td>
+                            <td>CodeMaster</td>
+                            <td>15</td>
+                            <td>1,654</td>
+                            <td style="color: var(--neon-gold); font-weight: 700;">$165,400</td>
+                            <td>4.7★</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="profile" class="tab-content">
+            <div class="profile-card">
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="profile-info">
+                        <h2>CryptoTrader2024</h2>
+                        <span class="tier-badge">🏆 ELITE Tier</span>
+                        <p style="color: var(--text-dim); margin-top: 1rem;">
+                            Member since: January 2024 • Rank: #847 • Total Points: 8,521
+                        </p>
+                    </div>
+                </div>
+
+                <div class="stats-overview">
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value">$42.8K</div>
+                        <div class="stat-label">Total Profit</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-value">87.3%</div>
+                        <div class="stat-label">Win Rate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-value">342</div>
+                        <div class="stat-label">Successful Trades</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-value">47</div>
+                        <div class="stat-label">Reviews Posted</div>
+                    </div>
+                </div>
+
+                <div class="progress-section">
+                    <h3 style="color: var(--neon-cyan); margin-bottom: 1rem;">Progress to Legend Tier</h3>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: 65%;">
+                            8,521 / 15,000 Points
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievements -->
+            <h2 style="color: var(--neon-cyan); margin: 2rem 0 1rem; font-size: 1.8rem;">
+                <i class="fas fa-medal"></i> Achievements
+            </h2>
+            <div class="achievements-grid">
+                <div class="achievement-badge">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="achievement-name">First Trade</div>
+                </div>
+                <div class="achievement-badge">
+                    <div class="achievement-icon">💯</div>
+                    <div class="achievement-name">100 Trades</div>
+                </div>
+                <div class="achievement-badge">
+                    <div class="achievement-icon">⭐</div>
+                    <div class="achievement-name">First Review</div>
+                </div>
+                <div class="achievement-badge">
+                    <div class="achievement-icon">🏆</div>
+                    <div class="achievement-name">Elite Status</div>
+                </div>
+                <div class="achievement-badge">
+                    <div class="achievement-icon">💎</div>
+                    <div class="achievement-name">Diamond Hands</div>
+                </div>
+                <div class="achievement-badge locked">
+                    <div class="achievement-icon">👑</div>
+                    <div class="achievement-name">Legend (Locked)</div>
+                </div>
+                <div class="achievement-badge locked">
+                    <div class="achievement-icon">🚀</div>
+                    <div class="achievement-name">Moonshot (Locked)</div>
+                </div>
+                <div class="achievement-badge locked">
+                    <div class="achievement-icon">🌟</div>
+                    <div class="achievement-name">Superstar (Locked)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Publish Strategy Tab -->
+        <div id="publish" class="tab-content">
+            <div class="publish-form">
+                <h2 style="color: var(--neon-cyan); margin-bottom: 2rem; text-align: center; font-size: 2rem;">
+                    <i class="fas fa-plus-circle"></i> Publish Your Strategy
+                </h2>
+                <p style="color: var(--text-dim); text-align: center; margin-bottom: 2rem;">
+                    Share your trading strategy and earn 10% commission on every sale
+                </p>
+
+                <form id="publishForm">
+                    <div class="form-group">
+                        <label>Strategy Name *</label>
+                        <input type="text" placeholder="e.g., Flash Arbitrage Pro" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description *</label>
+                        <textarea placeholder="Describe your strategy, its features, and expected performance..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Category *</label>
+                        <select required>
+                            <option value="">Select a category</option>
+                            <option value="arbitrage">Arbitrage</option>
+                            <option value="sentiment">Sentiment Analysis</option>
+                            <option value="technical">Technical Analysis</option>
+                            <option value="whale">Whale Tracking</option>
+                            <option value="ai">AI/ML Powered</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Price ($WIN) *</label>
+                        <input type="number" placeholder="e.g., 250" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Expected Win Rate (%)</label>
+                        <input type="number" placeholder="e.g., 85" min="0" max="100">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Strategy Code/Files *</label>
+                        <input type="file" accept=".py,.js,.txt,.zip" style="padding: 0.5rem;">
+                    </div>
+
+                    <button type="submit" class="submit-btn">
+                        <i class="fas fa-rocket"></i> Publish Strategy
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab Switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+
+            // Add active class to clicked button
+            event.target.closest('.tab-btn').classList.add('active');
+        }
+
+        // Wallet Connection
+        let walletConnected = false;
+
+        async function connectWallet() {
+            try {
+                // Simulate wallet connection (replace with actual Web3 integration)
+                if (typeof window.ethereum !== 'undefined') {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const address = accounts[0];
+                    showConnectedWallet(address);
+                } else {
+                    // Simulation for demo
+                    setTimeout(() => {
+                        const mockAddress = '0x' + Math.random().toString(16).substr(2, 40);
+                        showConnectedWallet(mockAddress);
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                alert('Failed to connect wallet. Please try again.');
+            }
+        }
+
+        function showConnectedWallet(address) {
+            walletConnected = true;
+            const shortAddress = address.substring(0, 6) + '...' + address.substring(address.length - 4);
+            
+            document.getElementById('walletAddress').textContent = shortAddress;
+            document.getElementById('walletBalance').textContent = (Math.random() * 10000 + 1000).toFixed(0) + ' $WIN';
+            document.getElementById('connectWalletBtn').style.display = 'none';
+            document.getElementById('walletConnected').style.display = 'flex';
+        }
+
+        function disconnectWallet() {
+            walletConnected = false;
+            document.getElementById('connectWalletBtn').style.display = 'flex';
+            document.getElementById('walletConnected').style.display = 'none';
+        }
+
+        // Form Submission
+        document.getElementById('publishForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Strategy submitted for review! You will be notified within 24 hours.');
+            this.reset();
+        });
+
+        // Helpful Button
+        document.querySelectorAll('.helpful-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const count = parseInt(this.textContent.match(/\d+/)[0]);
+                this.innerHTML = `<i class="fas fa-thumbs-up"></i> Helpful (${count + 1})`;
+                this.style.background = 'rgba(0, 255, 136, 0.3)';
+            });
+        });
+
+        // Purchase Button
+        document.querySelectorAll('.buy-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (!walletConnected) {
+                    alert('Please connect your wallet first!');
+                    return;
+                }
+                const card = this.closest('.strategy-card');
+                const title = card.querySelector('.strategy-title').textContent;
+                const price = card.querySelector('.price-tag').textContent;
+                
+                if (confirm(`Purchase "${title}" for ${price}?`)) {
+                    alert('Purchase successful! Strategy added to your account.');
+                }
+            });
+        });
+
+        // Auto-connect if wallet was previously connected (using localStorage)
+        window.addEventListener('load', () => {
+            const wasConnected = localStorage.getItem('walletConnected');
+            if (wasConnected === 'true') {
+                connectWallet();
+            }
+        });
+    </script>
+</body>
+</html>
