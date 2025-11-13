@@ -78,7 +78,8 @@ class WebAPIServer:
     def _setup_routes(self):
         """Setup all API routes"""
         # Frontend pages
-        self.app.router.add_get('/', self.serve_index)
+        self.app.router.add_get('/', self.serve_waitlist)
+        self.app.router.add_get('/app', self.serve_index)
         self.app.router.add_get('/dashboard', self.serve_dashboard)
         self.app.router.add_get('/prediction-market', self.serve_prediction_market)
         self.app.router.add_get('/docs', self.serve_docs)
@@ -91,6 +92,10 @@ class WebAPIServer:
         self.app.router.add_get('/health', self.health_check)
         self.app.router.add_get('/live', self.live_check)
         self.app.router.add_get('/ready', self.ready_check)
+        
+        # Waitlist endpoints
+        self.app.router.add_post('/api/v1/waitlist', self.add_to_waitlist)
+        self.app.router.add_get('/api/v1/waitlist/count', self.get_waitlist_count)
         
         # Dashboard endpoints
         self.app.router.add_get('/api/v1/metrics', self.get_metrics)
@@ -189,6 +194,15 @@ class WebAPIServer:
     
     # ==================== Frontend Pages ====================
     
+    async def serve_waitlist(self, request: web.Request) -> web.Response:
+        """Serve waitlist page"""
+        try:
+            with open('./public/waitlist.html', 'r', encoding='utf-8') as f:
+                content = f.read()
+            return web.Response(text=content, content_type='text/html')
+        except FileNotFoundError:
+            return web.Response(text='Waitlist page not found', status=404)
+    
     async def serve_index(self, request: web.Request) -> web.Response:
         """Serve main landing page"""
         try:
@@ -272,6 +286,85 @@ class WebAPIServer:
                 },
                 status=503
             )
+    
+    # ==================== Waitlist Endpoints ====================
+    
+    async def add_to_waitlist(self, request: web.Request) -> web.Response:
+        """Add email to waitlist"""
+        try:
+            data = await request.json()
+            email = data.get('email', '').strip().lower()
+            
+            if not email:
+                return web.json_response({'error': 'Email is required'}, status=400)
+            
+            # Basic email validation
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, email):
+                return web.json_response({'error': 'Invalid email address'}, status=400)
+            
+            # Get IP and user agent
+            ip_address = request.remote
+            user_agent = request.headers.get('User-Agent', '')
+            
+            from src.modules.database import WaitlistSignup
+            
+            async with self.database.async_session() as session:
+                # Check if email already exists
+                from sqlalchemy import select
+                result = await session.execute(
+                    select(WaitlistSignup).where(WaitlistSignup.email == email)
+                )
+                existing = result.scalar_one_or_none()
+                
+                if existing:
+                    return web.json_response({
+                        'message': 'You are already on the waitlist!',
+                        'signup_date': existing.signup_date.isoformat()
+                    })
+                
+                # Add new signup
+                new_signup = WaitlistSignup(
+                    email=email,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+                session.add(new_signup)
+                await session.commit()
+                
+                logger.info(f"New waitlist signup: {email}")
+                
+                return web.json_response({
+                    'message': 'Successfully added to waitlist!',
+                    'email': email,
+                    'signup_date': new_signup.signup_date.isoformat()
+                })
+                
+        except Exception as e:
+            logger.error(f"Error adding to waitlist: {e}")
+            return web.json_response({'error': 'Internal server error'}, status=500)
+    
+    async def get_waitlist_count(self, request: web.Request) -> web.Response:
+        """Get total number of waitlist signups"""
+        try:
+            from src.modules.database import WaitlistSignup
+            from sqlalchemy import func, select
+            
+            async with self.database.async_session() as session:
+                result = await session.execute(
+                    select(func.count(WaitlistSignup.id))
+                )
+                count = result.scalar() or 0
+                
+                return web.json_response({
+                    'count': count,
+                    'message': f'{count} people on the waitlist'
+                })
+                
+        except Exception as e:
+            logger.error(f"Error getting waitlist count: {e}")
+            return web.json_response({'error': 'Internal server error'}, status=500)
     
     # ==================== Dashboard Endpoints ====================
     

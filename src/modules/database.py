@@ -70,6 +70,19 @@ class UserWallet(Base):
     is_active = Column(Boolean, default=True)
 
 
+class WaitlistSignup(Base):
+    """Waitlist email signup"""
+    __tablename__ = 'waitlist_signups'
+    
+    id = Column(Integer, primary_key=True)
+    email = Column(String, unique=True, index=True)
+    signup_date = Column(DateTime, default=datetime.utcnow)
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    is_approved = Column(Boolean, default=False)
+    approved_date = Column(DateTime, nullable=True)
+
+
 class TrackedWallet(Base):
     """Tracked wallet for copy trading"""
     __tablename__ = 'tracked_wallets'
