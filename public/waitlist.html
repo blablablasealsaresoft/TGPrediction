@@ -581,6 +581,101 @@
             50% { transform: scale(1.05); opacity: 0.8; }
         }
 
+        /* Scan Lines */
+        .scan-line {
+            position: fixed;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                transparent, 
+                var(--neon-cyan) 50%, 
+                transparent
+            );
+            box-shadow: 0 0 20px var(--neon-cyan);
+            opacity: 0.5;
+            animation: scanMove 8s ease-in-out infinite;
+            z-index: 2;
+        }
+
+        @keyframes scanMove {
+            0%, 100% { transform: translateY(0); opacity: 0.5; }
+            50% { transform: translateY(100vh); opacity: 0.8; }
+        }
+
+        /* Hexagons */
+        #hexagons {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.1;
+        }
+
+        .hexagon {
+            position: absolute;
+            width: 60px;
+            height: 70px;
+            opacity: 0.3;
+            animation: hexFloat 20s ease-in-out infinite;
+        }
+
+        .hexagon::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: var(--neon-cyan);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            border: 1px solid var(--neon-cyan);
+        }
+
+        @keyframes hexFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 0.3; }
+            25% { transform: translate(30px, -30px) rotate(90deg); opacity: 0.5; }
+            50% { transform: translate(0, -60px) rotate(180deg); opacity: 0.3; }
+            75% { transform: translate(-30px, -30px) rotate(270deg); opacity: 0.5; }
+        }
+
+        /* Data Streams */
+        #data-streams {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .data-stream {
+            position: absolute;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--neon-green);
+            opacity: 0.3;
+            animation: streamFall 10s linear infinite;
+            white-space: nowrap;
+        }
+
+        @keyframes streamFall {
+            0% {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.3;
+            }
+            90% {
+                opacity: 0.3;
+            }
+            100% {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .logo { font-size: 48px; }
@@ -633,6 +728,18 @@
     <div class="orb orb2"></div>
     <div class="orb orb3"></div>
 
+    <!-- Hexagon Pattern -->
+    <div id="hexagons"></div>
+
+    <!-- Scan Lines -->
+    <div class="scan-line" style="top: 20%; animation-delay: 0s;"></div>
+    <div class="scan-line" style="top: 40%; animation-delay: 2s;"></div>
+    <div class="scan-line" style="top: 60%; animation-delay: 4s;"></div>
+    <div class="scan-line" style="top: 80%; animation-delay: 6s;"></div>
+
+    <!-- Data Streams -->
+    <div id="data-streams"></div>
+
     <!-- Main Container -->
     <div class="container">
         <!-- Logo -->
@@ -645,14 +752,12 @@
 
         <!-- Headline -->
         <h1 class="headline">
-            Join <span class="gradient-text">The Future</span><br>
-            of AI Trading
+            <span class="gradient-text">Access Denied</span>
         </h1>
 
         <!-- Subheadline -->
         <p class="subheadline">
-            Get early access to the world's first trading bot that actually learns from its mistakes. 
-            Limited to 100 beta users.
+            Unless invited.
         </p>
 
         <!-- Countdown Timer -->
@@ -700,8 +805,8 @@
 
         <!-- Waitlist Form -->
         <div class="waitlist-form">
-            <h2 class="form-title">Secure Your Spot</h2>
-            <p class="form-subtitle">Join the exclusive beta program</p>
+            <h2 class="form-title">Request Access</h2>
+            <p class="form-subtitle">Elite traders only</p>
             
             <form id="waitlist-form">
                 <div class="input-group">
@@ -737,39 +842,31 @@
         <div class="features-list">
             <div class="feature-item">
                 <i class="fas fa-brain feature-icon"></i>
-                <span class="feature-text">AI that learns from every trade</span>
+                <span class="feature-text">Self-Evolving AI</span>
             </div>
             <div class="feature-item">
                 <i class="fas fa-shield-alt feature-icon"></i>
-                <span class="feature-text">8-layer security system</span>
+                <span class="feature-text">Military-Grade Security</span>
             </div>
             <div class="feature-item">
                 <i class="fas fa-bolt feature-icon"></i>
-                <span class="feature-text">Flash loan arbitrage (100x)</span>
+                <span class="feature-text">Quantum Arbitrage</span>
             </div>
             <div class="feature-item">
-                <i class="fas fa-users feature-icon"></i>
-                <span class="feature-text">Copy 441 elite traders</span>
-            </div>
-            <div class="feature-item">
-                <i class="fas fa-chart-line feature-icon"></i>
-                <span class="feature-text">Predict launches 2-6 hours early</span>
-            </div>
-            <div class="feature-item">
-                <i class="fas fa-robot feature-icon"></i>
-                <span class="feature-text">24/7 automated trading</span>
+                <i class="fas fa-eye feature-icon"></i>
+                <span class="feature-text">Predictive Intelligence</span>
             </div>
         </div>
 
         <!-- Social Proof -->
         <div class="social-proof">
             <p class="social-proof-text">
-                <i class="fas fa-fire"></i> 
-                <span id="recent-signups">23</span> people joined in the last hour
+                <i class="fas fa-lock"></i> 
+                <span id="recent-signups">23</span> access grants in progress
             </p>
             <div class="spots-remaining">
                 <i class="fas fa-exclamation-triangle"></i> 
-                Only <span id="spots-left">53</span> spots remaining
+                <span id="spots-left">53</span> slots available
             </div>
         </div>
     </div>
@@ -778,7 +875,7 @@
         // Create Particles
         function createParticles() {
             const container = document.body;
-            for (let i = 0; i < 50; i++) {
+            for (let i = 0; i < 100; i++) {
                 const particle = document.createElement('div');
                 particle.className = 'particle';
                 particle.style.left = Math.random() * 100 + '%';
@@ -994,8 +1091,46 @@
             }
         });
 
+        // Create Hexagons
+        function createHexagons() {
+            const container = document.getElementById('hexagons');
+            for (let i = 0; i < 20; i++) {
+                const hex = document.createElement('div');
+                hex.className = 'hexagon';
+                hex.style.left = Math.random() * 100 + '%';
+                hex.style.top = Math.random() * 100 + '%';
+                hex.style.animationDelay = Math.random() * 20 + 's';
+                hex.style.animationDuration = (15 + Math.random() * 10) + 's';
+                container.appendChild(hex);
+            }
+        }
+
+        // Create Data Streams
+        function createDataStreams() {
+            const container = document.getElementById('data-streams');
+            const codes = ['0x', '1x', 'FF', '00', 'A7', '3E', 'B9', 'C2', 'D4', '5F'];
+            
+            for (let i = 0; i < 15; i++) {
+                const stream = document.createElement('div');
+                stream.className = 'data-stream';
+                stream.style.left = (i * 7) + '%';
+                stream.style.animationDelay = Math.random() * 10 + 's';
+                stream.style.animationDuration = (8 + Math.random() * 4) + 's';
+                
+                let text = '';
+                for (let j = 0; j < 30; j++) {
+                    text += codes[Math.floor(Math.random() * codes.length)] + ' ';
+                }
+                stream.textContent = text;
+                
+                container.appendChild(stream);
+            }
+        }
+
         // Initialize
         createParticles();
+        createHexagons();
+        createDataStreams();
         initNeuralNetwork();
         initCountdown();
         animateStats();
