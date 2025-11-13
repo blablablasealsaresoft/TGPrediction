@@ -760,48 +760,6 @@
             Unless invited.
         </p>
 
-        <!-- Countdown Timer -->
-        <div class="countdown-container">
-            <div class="countdown-label">Beta Launch In:</div>
-            <div class="countdown">
-                <div class="countdown-item">
-                    <span class="countdown-number" id="days">00</span>
-                    <span class="countdown-text">Days</span>
-                </div>
-                <div class="countdown-item">
-                    <span class="countdown-number" id="hours">00</span>
-                    <span class="countdown-text">Hours</span>
-                </div>
-                <div class="countdown-item">
-                    <span class="countdown-number" id="minutes">00</span>
-                    <span class="countdown-text">Min</span>
-                </div>
-                <div class="countdown-item">
-                    <span class="countdown-number" id="seconds">00</span>
-                    <span class="countdown-text">Sec</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Stats Grid -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number" id="stat-users">847</div>
-                <div class="stat-label">On Waitlist</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">78.5%</div>
-                <div class="stat-label">Win Rate</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">$2.4M</div>
-                <div class="stat-label">Volume (24h)</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">208</div>
-                <div class="stat-label">Token Pairs</div>
-            </div>
-        </div>
 
         <!-- Waitlist Form -->
         <div class="waitlist-form">
@@ -838,37 +796,6 @@
             </div>
         </div>
 
-        <!-- Features List -->
-        <div class="features-list">
-            <div class="feature-item">
-                <i class="fas fa-brain feature-icon"></i>
-                <span class="feature-text">Self-Evolving AI</span>
-            </div>
-            <div class="feature-item">
-                <i class="fas fa-shield-alt feature-icon"></i>
-                <span class="feature-text">Military-Grade Security</span>
-            </div>
-            <div class="feature-item">
-                <i class="fas fa-bolt feature-icon"></i>
-                <span class="feature-text">Quantum Arbitrage</span>
-            </div>
-            <div class="feature-item">
-                <i class="fas fa-eye feature-icon"></i>
-                <span class="feature-text">Predictive Intelligence</span>
-            </div>
-        </div>
-
-        <!-- Social Proof -->
-        <div class="social-proof">
-            <p class="social-proof-text">
-                <i class="fas fa-lock"></i> 
-                <span id="recent-signups">23</span> access grants in progress
-            </p>
-            <div class="spots-remaining">
-                <i class="fas fa-exclamation-triangle"></i> 
-                <span id="spots-left">53</span> slots available
-            </div>
-        </div>
     </div>
 
     <script>
@@ -952,64 +879,6 @@
             animate();
         }
 
-        // Countdown Timer
-        function initCountdown() {
-            // Set launch date to 7 days from now
-            const launchDate = new Date();
-            launchDate.setDate(launchDate.getDate() + 7);
-
-            function updateCountdown() {
-                const now = new Date();
-                const diff = launchDate - now;
-
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-                document.getElementById('days').textContent = String(days).padStart(2, '0');
-                document.getElementById('hours').textContent = String(hours).padStart(2, '0');
-                document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
-                document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
-            }
-
-            updateCountdown();
-            setInterval(updateCountdown, 1000);
-        }
-
-        // Animate Stats
-        function animateStats() {
-            const statUsers = document.getElementById('stat-users');
-            let count = 750;
-            const target = 847;
-            const increment = Math.ceil((target - count) / 50);
-
-            const interval = setInterval(() => {
-                count += increment + Math.floor(Math.random() * 3);
-                if (count >= target) {
-                    count = target;
-                    clearInterval(interval);
-                }
-                statUsers.textContent = count;
-            }, 50);
-
-            // Animate recent signups
-            setInterval(() => {
-                const signups = document.getElementById('recent-signups');
-                const current = parseInt(signups.textContent);
-                signups.textContent = current + Math.floor(Math.random() * 3) - 1;
-            }, 5000);
-
-            // Animate spots remaining
-            setInterval(() => {
-                const spots = document.getElementById('spots-left');
-                let current = parseInt(spots.textContent);
-                if (current > 10 && Math.random() > 0.7) {
-                    current--;
-                    spots.textContent = current;
-                }
-            }, 8000);
-        }
 
         // Form Submission
         document.getElementById('waitlist-form').addEventListener('submit', async (e) => {
@@ -1072,14 +941,6 @@
                             animate();
                         }, i * 30);
                     }
-
-                    // Increment waitlist counter
-                    const statUsers = document.getElementById('stat-users');
-                    statUsers.textContent = parseInt(statUsers.textContent) + 1;
-
-                    // Decrement spots remaining
-                    const spotsLeft = document.getElementById('spots-left');
-                    spotsLeft.textContent = parseInt(spotsLeft.textContent) - 1;
                 } else {
                     alert('Something went wrong. Please try again.');
                 }
@@ -1132,8 +993,6 @@
         createHexagons();
         createDataStreams();
         initNeuralNetwork();
-        initCountdown();
-        animateStats();
 
         // Resize canvas on window resize
         window.addEventListener('resize', () => {
