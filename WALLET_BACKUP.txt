@@ -1,0 +1,29 @@
+================================================================================
+APOLLO WALLET BACKUP
+================================================================================
+
+Telegram User: @CKFidel
+Telegram ID: 8059844643
+
+Public Address:
+DbjdbXRrfoqGmUYb4MXLTQ9H1bhqFKiP3g2sPanhucNx
+
+Private Key (hex):
+324b42443439676b6e4d47707356534a577555466254504c73564c64346b4d454e386e3863424552764a464d4c3873427a6176477170484831346d595577445759485a364564547831447a4878746f365055735556706b65
+
+================================================================================
+IMPORTANT: SAVE THIS INFORMATION SECURELY!
+================================================================================
+
+This is YOUR Solana wallet that contains your funds.
+
+To import into Phantom/Solflare:
+1. Open Phantom wallet
+2. Click "Add/Import Wallet"
+3. Select "Import Private Key"
+4. Paste the hex private key above
+5. Your wallet with your funds will appear!
+
+================================================================================
+DELETE THIS FILE AFTER SAVING THE KEY SOMEWHERE SECURE!
+================================================================================

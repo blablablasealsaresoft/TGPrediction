@@ -1,5 +1,6 @@
 """HTTP probes for liveness/readiness (and optional Prometheus metrics)."""
 
+import asyncio
 from typing import Awaitable, Callable, Dict, Optional, Tuple
 
 from aiohttp import web
@@ -33,14 +34,21 @@ class ProbeServer:
         self._runner: Optional[web.AppRunner] = None
         self._site: Optional[web.TCPSite] = None
 
-    async def start(self) -> None:
+    def create_app(self) -> web.Application:
+        """Create the aiohttp application (can be called before start)"""
         app = web.Application()
         app.router.add_get("/live", self._live_handler)
         app.router.add_get("/ready", self._ready_handler)
+        app.router.add_get("/health", self._live_handler)  # Alias for /live
         if self._prometheus_enabled:
             app.router.add_get("/metrics", self._metrics_handler)
+        return app
+    
+    async def start(self) -> None:
+        if not hasattr(self, '_app') or self._app is None:
+            self._app = self.create_app()
 
-        self._runner = web.AppRunner(app)
+        self._runner = web.AppRunner(self._app)
         await self._runner.setup()
         self._site = web.TCPSite(self._runner, self._host, self._port)
         await self._site.start()
@@ -70,7 +78,45 @@ class ProbeServer:
         return web.Response(body=payload, content_type=CONTENT_TYPE_LATEST)
 
 
-async def start_probe_server(health_check: HealthCallable, prometheus_enabled: bool) -> ProbeServer:
+async def start_probe_server(
+    health_check: HealthCallable, 
+    prometheus_enabled: bool,
+    web_api_server=None
+) -> ProbeServer:
+    """
+    Start probe server, optionally integrating Web API routes
+    If web_api_server is provided, its routes will be added to the probe server's app
+    """
     server = ProbeServer(health_check, prometheus_enabled=prometheus_enabled)
+    
+    # Create the app first
+    server._app = server.create_app()
+    
+    # If Web API server provided, merge its routes into the probe server
+    if web_api_server:
+        # Setup CORS first (before adding routes)
+        web_api_server._setup_cors_on_app(server._app)
+        
+        # Add all Web API routes to the probe server's app
+        for route in web_api_server.app.router.routes():
+            # Skip health/live/ready as they're already in ProbeServer
+            if route.resource and route.resource.canonical in ['/health', '/live', '/ready']:
+                continue
+            try:
+                server._app.router.add_route(
+                    route.method,
+                    route.resource.canonical if route.resource else '/',
+                    route._handler
+                )
+            except Exception as e:
+                # Route may already exist, skip
+                pass
+        
+        # Store WebSocket clients list reference
+        server._ws_clients = web_api_server.ws_clients
+        
+        # Start broadcast task
+        server._broadcast_task = asyncio.create_task(web_api_server._broadcast_loop())
+    
     await server.start()
     return server

@@ -486,6 +486,19 @@
                     <i class="fas fa-clock"></i>
                     <span id="currentTime">Loading...</span>
                 </div>
+                <button id="walletBtn" onclick="connectWallet()" style="padding: 0.6rem 1.5rem; background: linear-gradient(45deg, var(--primary), var(--secondary)); color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0, 245, 255, 0.3);">
+                    <i class="fas fa-wallet"></i>
+                    <span id="walletText">Connect Wallet</span>
+                </button>
+                <a href="/profile?user_id=123456789" style="padding: 0.6rem 1.5rem; background: linear-gradient(45deg, var(--primary), var(--secondary)); color: #000; border: none; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0, 245, 255, 0.5); animation: profilePulse 2s ease-in-out infinite;">
+                    <i class="fas fa-user-circle"></i> My Profile
+                </a>
+                <style>
+                    @keyframes profilePulse {
+                        0%, 100% { box-shadow: 0 4px 15px rgba(0, 245, 255, 0.5); }
+                        50% { box-shadow: 0 4px 25px rgba(0, 245, 255, 0.8), 0 0 30px rgba(189, 0, 255, 0.5); }
+                    }
+                </style>
             </div>
         </div>
     </header>
@@ -1646,6 +1659,59 @@
             // In production, this would fetch real data from API
             console.log('Refreshing dashboard data...');
         }, 30000);
+
+        // Wallet Connect Functionality
+        let walletConnected = false;
+        let walletAddress = null;
+
+        async function connectWallet() {
+            try {
+                const { solana } = window;
+                
+                if (solana && solana.isPhantom) {
+                    const response = await solana.connect();
+                    walletAddress = response.publicKey.toString();
+                    walletConnected = true;
+                    
+                    localStorage.setItem('apollo_wallet', walletAddress);
+                    updateWalletUI();
+                    
+                    alert('✅ Wallet Connected!\n\n' + walletAddress.substring(0, 8) + '...' + walletAddress.slice(-8));
+                } else {
+                    const install = confirm('Phantom wallet not detected!\n\nInstall Phantom to connect your Solana wallet.\n\nClick OK to open installation page.');
+                    if (install) {
+                        window.open('https://phantom.app/', '_blank');
+                    }
+                }
+            } catch (error) {
+                console.error('Wallet error:', error);
+                alert('❌ Connection failed');
+            }
+        }
+
+        function updateWalletUI() {
+            const walletBtn = document.getElementById('walletBtn');
+            const walletText = document.getElementById('walletText');
+            
+            if (walletConnected && walletAddress) {
+                walletBtn.style.background = 'linear-gradient(45deg, var(--success), var(--primary))';
+                walletText.innerHTML = '<span style="font-family: monospace;">' + 
+                    walletAddress.substring(0, 4) + '...' + walletAddress.slice(-4) + 
+                    '</span>';
+            } else {
+                walletText.textContent = 'Connect Wallet';
+            }
+        }
+
+        // Check saved wallet on load
+        window.addEventListener('load', () => {
+            const savedWallet = localStorage.getItem('apollo_wallet');
+            if (savedWallet) {
+                walletAddress = savedWallet;
+                walletConnected = true;
+                updateWalletUI();
+            }
+        });
     </script>
 </body>
 </html>

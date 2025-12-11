@@ -1,0 +1,744 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🚀 ULTIMATE ENHANCED TRADING BOT - MARKET DOMINATION CONFIG
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Features: Flash Loans | Bundle Launches | Social Intelligence | MEV Protection
+# Advanced Sniping | Arbitrage Detection | Predictive Markets | Whale Tracking
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# ============================================================================
+# 🔒 PRODUCTION GUARDRAILS (START SAFE, SCALE AGGRESSIVE)
+# ============================================================================
+
+ENV=prod
+READ_ONLY_MODE=false
+ALLOW_AUTOTRADE=true
+ALLOW_BROADCAST=false
+CONFIRM_TOKEN=lYBjdXRJLcMFCLKCcOmTCCUniHOdi31A
+REQUIRE_CONFIRMATION=true
+ENABLE_HEALTH_CHECK_SERVER=true
+HEALTH_CHECK_PORT=8080
+LOG_FILE=logs/trading_bot.jsonl
+LOG_LEVEL=INFO
+
+# ============================================================================
+# 🔐 CORE SECRETS
+# ============================================================================
+
+TELEGRAM_BOT_TOKEN=8455438652:AAFvrxM6GFZ91BwoohvMCezhsj7N16YFju0
+ADMIN_CHAT_ID=8059844643
+SOLANA_NETWORK=mainnet-beta
+SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+SOLANA_WS_URL=wss://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+SIMULATE_RPC=https://mainnet.helius-rpc.com/?api-key=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+WALLET_PRIVATE_KEY=2KBD49gknMGpsVSJWuUFbTPLsVLd4kMEN8n8cBERvJFML8sBzavGqpHH14mYUwDWYHZ6EdTx1DzHxto6PUsUVpke
+WALLET_ENCRYPTION_KEY=i6RtLA9zCQ7vtNwOdej8eekndp7AKKJclOzYeBEaDJY
+
+# ============================================================================
+# 🌐 MULTI-RPC FAILOVER ARCHITECTURE (TIER 1 RELIABILITY)
+# ============================================================================
+
+# Primary: Helius (100 req/sec free)
+HELIUS_API_KEY=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+HELIUS_PROJECT_ID=6a9a1a3c-79f8-4265-a86f-199bc33ffa56
+
+# Backup RPC Endpoints (12M+ free monthly calls)
+FALLBACK_RPC_1=https://solana-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_KEY
+FALLBACK_RPC_2=https://your-endpoint.solana-mainnet.quiknode.pro/YOUR_QUICKNODE_KEY
+FALLBACK_RPC_3=https://rpc.ankr.com/solana/YOUR_ANKR_KEY
+FALLBACK_RPC_4=https://api.mainnet-beta.solana.com
+FALLBACK_RPC_5=https://solana-api.projectserum.com
+
+# RPC Failover Settings
+RPC_TIMEOUT=30
+RPC_MAX_RETRIES=3
+RPC_FAILOVER_DELAY=2
+RPC_HEALTH_CHECK_INTERVAL=60
+
+# ============================================================================
+# 💰 TRADING LIMITS (KELLY CRITERION OPTIMIZED)
+# ============================================================================
+
+DEFAULT_BUY_AMOUNT=0.5
+DEFAULT_BUY_AMOUNT_SOL=0.5
+MAX_POSITION_SIZE_SOL=5.0
+MAX_TRADE_SIZE_SOL=5.0
+MAX_DAILY_LOSS_SOL=2.0
+DAILY_LOSS_LIMIT_SOL=2.0
+AUTO_TRADE_MIN_CONFIDENCE=0.75
+AUTO_TRADE_MAX_DAILY_TRADES=25
+AUTO_TRADE_DAILY_LIMIT_SOL=10.0
+MAX_SLIPPAGE=5.0
+
+# Kelly Criterion Position Sizing
+ENABLE_KELLY_CRITERION=true
+KELLY_FRACTION=0.25
+MIN_KELLY_POSITION_SOL=0.1
+MAX_KELLY_POSITION_SOL=5.0
+
+# ============================================================================
+# 🛡️ ELITE PROTECTION SYSTEM (6-LAYER SECURITY)
+# ============================================================================
+
+# Layer 1: Honeypot Detection
+HONEYPOT_DETECTION_METHODS=6
+HONEYPOT_CHECK_ENABLED=true
+CHECK_HONEYPOTS=true
+HONEYPOT_SIMULATION_ENABLED=true
+
+# Layer 2: Liquidity Analysis
+MIN_LIQUIDITY_USD=5000
+MIN_LIQUIDITY_SOL=10
+CHECK_LIQUIDITY_LOCKED=true
+MIN_LIQUIDITY_LOCK_DAYS=30
+
+# Layer 3: Authority Checks
+CHECK_MINT_AUTHORITY=true
+CHECK_FREEZE_AUTHORITY=true
+CHECK_UPDATE_AUTHORITY=true
+ALLOW_MINT_AUTHORITY=false
+ALLOW_FREEZE_AUTHORITY=false
+
+# Layer 4: Holder Analysis
+CHECK_TOP_HOLDERS=true
+MAX_TOP_HOLDER_PERCENTAGE=0.15
+MIN_HOLDER_COUNT=50
+CHECK_HOLDER_DISTRIBUTION=true
+
+# Layer 5: Twitter/Social Verification
+TWITTER_HANDLE_CHECK=true
+VERIFY_TWITTER_AUTHENTICITY=true
+CHECK_TWITTER_REUSED_NAMES=true
+MIN_TWITTER_FOLLOWERS=100
+MIN_TWITTER_ACCOUNT_AGE_DAYS=30
+
+# Layer 6: Contract Analysis
+CONTRACT_ANALYSIS_DEPTH=MAXIMUM
+CHECK_PROGRAM_AUTHORITY=true
+VERIFY_METADATA=true
+CHECK_SUSPICIOUS_PATTERNS=true
+
+# ============================================================================
+# ⚡ LIGHTNING-FAST SNIPING ENGINE (ENHANCED)
+# ============================================================================
+
+SNIPE_ENABLED=true
+SNIPE_USE_JITO=true
+SNIPE_TIP_LAMPORTS=500000
+SNIPE_PRIORITY_FEE=5000000
+SNIPE_AMOUNT_SOL=0.5
+SNIPE_MIN_LIQUIDITY_SOL=5
+SNIPE_MAX_DAILY=10
+
+# Advanced Sniping Strategy
+SNIPE_MODE=aggressive
+SNIPE_PARALLEL_SUBMISSIONS=3
+SNIPE_TARGET_BLOCK_DELAY=0
+SNIPE_USE_MEMPOOL_MONITORING=true
+SNIPE_FRONTRUN_PROTECTION=true
+
+# New Pool Detection
+MONITOR_NEW_POOLS=true
+NEW_POOL_CHECK_INTERVAL=1
+RAYDIUM_POOL_MONITOR=true
+ORCA_POOL_MONITOR=true
+METEORA_POOL_MONITOR=true
+
+# Auto-Snipe Criteria
+AUTO_SNIPE_ENABLED=false
+AUTO_SNIPE_MIN_SCORE=85
+AUTO_SNIPE_REQUIRE_TWITTER=true
+AUTO_SNIPE_REQUIRE_TELEGRAM_SIGNAL=true
+AUTO_SNIPE_MAX_MARKET_CAP=100000
+
+# ============================================================================
+# 📊 RISK MANAGEMENT (PROFESSIONAL GRADE)
+# ============================================================================
+
+STOP_LOSS_PERCENTAGE=15.0
+TAKE_PROFIT_PERCENTAGE=75.0
+TRAILING_STOP_PERCENTAGE=10.0
+TRAILING_STOP_ACTIVATION=20.0
+
+# Advanced Risk Controls
+ENABLE_DYNAMIC_STOPS=true
+VOLATILITY_ADJUSTED_STOPS=true
+TIME_BASED_STOPS=true
+MAX_POSITION_HOLD_HOURS=48
+
+# Circuit Breakers
+ENABLE_CIRCUIT_BREAKER=true
+CIRCUIT_BREAKER_LOSS_THRESHOLD=5.0
+CIRCUIT_BREAKER_CONSECUTIVE_LOSSES=5
+CIRCUIT_BREAKER_COOLDOWN_MINUTES=60
+
+# ============================================================================
+# 🎯 JITO MEV PROTECTION & BUNDLE OPTIMIZATION
+# ============================================================================
+
+# Jito Block Engine (95%+ MEV volume)
+JITO_BLOCK_ENGINE_URL=https://mainnet.block-engine.jito.wtf/api/v1
+JITO_TIP_ACCOUNT=96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5
+JITO_TIP_LAMPORTS=100000
+ENABLE_JITO_BUNDLES=true
+
+# Advanced Jito Configuration
+JITO_SEARCHER_KEYPAIR_PATH=./keys/jito_searcher.json
+JITO_MIN_TIP_LAMPORTS=50000
+JITO_MAX_TIP_LAMPORTS=1000000
+JITO_TIP_STRATEGY=dynamic
+JITO_BUNDLE_TIMEOUT=30
+JITO_MAX_BUNDLE_SIZE=5
+
+# MEV Protection Strategy
+MEV_PROTECTION_LEVEL=maximum
+PRIVATE_MEMPOOL_ONLY=false
+ANTI_FRONTRUN_ENABLED=true
+ANTI_SANDWICH_ENABLED=true
+BUNDLE_ALL_TRADES=true
+
+# ============================================================================
+# 🚀 BUNDLE LAUNCHES (NEW FEATURE)
+# ============================================================================
+
+ENABLE_BUNDLE_LAUNCHES=true
+BUNDLE_LAUNCH_MODE=jito_exclusive
+
+# Bundle Launch Configuration
+BUNDLE_LAUNCH_TIP_SOL=0.01
+BUNDLE_LAUNCH_PRIORITY_FEE=10000000
+BUNDLE_LAUNCH_MAX_RETRIES=5
+BUNDLE_LAUNCH_PARALLEL_SUBMIT=true
+
+# Launch Detection & Auto-Buy
+DETECT_NEW_LAUNCHES=true
+LAUNCH_DETECTION_INTERVAL=1
+AUTO_BUY_NEW_LAUNCHES=false
+LAUNCH_AUTO_BUY_AMOUNT_SOL=0.3
+LAUNCH_MIN_INITIAL_LIQUIDITY_SOL=10
+
+# Bundle Launch Filters
+LAUNCH_REQUIRE_VERIFIED_TEAM=true
+LAUNCH_MIN_TWITTER_ENGAGEMENT=1000
+LAUNCH_CHECK_TEAM_HISTORY=true
+LAUNCH_BLACKLIST_KNOWN_SCAMMERS=true
+
+# ============================================================================
+# 💎 FLASH LOAN ARBITRAGE (MARGINFI + KAMINO)
+# ============================================================================
+
+ENABLE_FLASH_LOANS=true
+FLASH_LOAN_PROVIDER=marginfi
+
+# Marginfi Configuration (0.001% fees)
+MARGINFI_PROGRAM_ID=MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA
+MARGINFI_ACCOUNT=YOUR_MARGINFI_ACCOUNT
+MARGINFI_MAX_BORROW_SOL=100
+MARGINFI_FEE_BPS=1
+
+# Kamino Configuration (0.001% fees)
+KAMINO_PROGRAM_ID=KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD
+KAMINO_MARKET=7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF
+KAMINO_MAX_LEVERAGE=10
+KAMINO_AUTO_LEVERAGE=false
+
+# Flash Loan Arbitrage Strategy
+ARBITRAGE_ENABLED=true
+ARBITRAGE_MIN_PROFIT_BPS=50
+ARBITRAGE_TARGET_PAIRS=SOL/USDC,SOL/USDT
+ARBITRAGE_CHECK_INTERVAL=2
+ARBITRAGE_MAX_POSITION_SOL=50
+
+# Multi-DEX Monitoring
+MONITOR_RAYDIUM=true
+MONITOR_ORCA=true
+MONITOR_METEORA=true
+MONITOR_JUPITER=true
+ARBITRAGE_MIN_LIQUIDITY_USD=10000
+
+# Flash Loan Safety
+FLASH_LOAN_SIMULATION_REQUIRED=true
+FLASH_LOAN_MAX_SLIPPAGE_BPS=100
+FLASH_LOAN_TIMEOUT=10
+FLASH_LOAN_REVERT_ON_LOSS=true
+
+# ============================================================================
+# 🪐 JUPITER AGGREGATOR (BEST EXECUTION)
+# ============================================================================
+
+JUPITER_API_URL=https://quote-api.jup.ag/v6
+JUPITER_SLIPPAGE_BPS=50
+USE_VERSIONED_TRANSACTIONS=true
+JUPITER_ONLY_DIRECT_ROUTES=false
+JUPITER_AS_LEGACY_TRANSACTION=false
+JUPITER_MAX_ACCOUNTS=64
+
+# Jupiter Optimization
+JUPITER_REFRESH_RATE=1
+JUPITER_COMPUTE_UNIT_PRICE_AUTO=true
+JUPITER_DYNAMIC_SLIPPAGE=true
+JUPITER_EXCLUDE_DEXES=
+
+# ============================================================================
+# 🧠 WALLET INTELLIGENCE ENGINE (100-POINT SCORING)
+# ============================================================================
+
+TRACK_WALLETS_AUTO=true
+MIN_WALLET_SCORE=70
+MAX_TRACKED_WALLETS=200
+
+# Wallet Scoring Algorithm
+WALLET_SCORE_WIN_RATE_WEIGHT=30
+WALLET_SCORE_AVG_PROFIT_WEIGHT=25
+WALLET_SCORE_TRADE_COUNT_WEIGHT=15
+WALLET_SCORE_VOLUME_WEIGHT=15
+WALLET_SCORE_TIMING_WEIGHT=15
+
+# Elite Wallet Detection
+AUTO_DETECT_WHALE_WALLETS=true
+WHALE_MIN_BALANCE_SOL=1000
+WHALE_MIN_WIN_RATE=0.70
+WHALE_COPY_TRADE_ENABLED=false
+
+# Smart Money Tracking
+TRACK_SMART_MONEY=true
+SMART_MONEY_MIN_PNL_SOL=100
+SMART_MONEY_MIN_TRADES=50
+NANSEN_INTEGRATION=false
+
+# ============================================================================
+# 🔍 SOCIAL INTELLIGENCE (TWITTER, DISCORD, TELEGRAM)
+# ============================================================================
+
+ENABLE_SOCIAL_INTELLIGENCE=true
+SOCIAL_SIGNAL_WEIGHT=0.30
+
+# Twitter Monitoring (Twikit - Unlimited Free)
+TWITTER_MONITORING_ENABLED=true
+TWITTER_USERNAME=YOUR_BURNER_ACCOUNT
+TWITTER_EMAIL=burner@email.com
+TWITTER_PASSWORD=YOUR_PASSWORD
+TWITTER_COOKIES_PATH=./cookies/twitter.json
+TWITTER_ACCOUNTS_TO_MONITOR=solana_whale_1,crypto_influencer,sol_alpha_signals
+TWITTER_KEYWORDS=Solana gem,$SOL new token,contract:,moonshot
+TWITTER_CHECK_INTERVAL=180
+TWITTER_MIN_FOLLOWER_THRESHOLD=1000
+
+# Twitter Authenticity Protection
+TWITTER_CHECK_REUSED_HANDLES=true
+TWITTER_VERIFY_BLUE_CHECKMARK=false
+TWITTER_MIN_ACCOUNT_AGE_DAYS=60
+TWITTER_CHECK_SIMILAR_HANDLES=true
+TWITTER_KNOWN_SCAMMER_DATABASE=./data/twitter_scammers.json
+
+# Discord Monitoring (discord.py)
+DISCORD_MONITORING_ENABLED=true
+DISCORD_BOT_TOKEN=YOUR_DISCORD_BOT_TOKEN
+DISCORD_SERVER_IDS=123456789,987654321
+DISCORD_CHANNEL_IDS=111222333,444555666
+DISCORD_EXTRACT_CONTRACTS=true
+DISCORD_SENTIMENT_ANALYSIS=true
+
+# Telegram Monitoring (Telethon)
+TELEGRAM_MONITORING_ENABLED=true
+TELEGRAM_API_ID=YOUR_API_ID
+TELEGRAM_API_HASH=YOUR_API_HASH
+TELEGRAM_PHONE=+1234567890
+TELEGRAM_SESSION_PATH=./sessions/telegram.session
+TELEGRAM_CHANNELS_TO_MONITOR=alpha_calls,solana_gems,degen_plays
+TELEGRAM_PARSE_SIGNALS=true
+TELEGRAM_AUTO_TRACK_CALLERS=true
+
+# ============================================================================
+# 🤖 SENTIMENT ANALYSIS ENGINE (VADER + AI)
+# ============================================================================
+
+ENABLE_SENTIMENT_ANALYSIS=true
+SENTIMENT_PROVIDER=vader
+
+# VADER Configuration (Free, Fast)
+VADER_SENTIMENT_THRESHOLD=0.30
+VADER_COMPOUND_WEIGHT=1.0
+VADER_EMOJI_WEIGHT=0.5
+
+# Advanced Sentiment Features
+SENTIMENT_AGGREGATION=weighted_average
+SENTIMENT_DECAY_HOURS=6
+SENTIMENT_MIN_SOURCES=3
+SENTIMENT_CROSS_PLATFORM_VALIDATION=true
+
+# Sentiment-Based Trading
+SENTIMENT_AUTO_TRADE=false
+SENTIMENT_TRADE_THRESHOLD=0.70
+SENTIMENT_POSITION_SCALING=true
+
+# ============================================================================
+# 🎲 PREDICTIVE MARKET ENGINE (POLYMARKET ALTERNATIVE)
+# ============================================================================
+
+ENABLE_PREDICTIVE_MARKETS=true
+PREDICTION_MODE=confidence_scoring
+
+# Prediction Signal Sources (Weighted)
+PREDICTION_SENTIMENT_WEIGHT=0.25
+PREDICTION_WHALE_ACTIVITY_WEIGHT=0.30
+PREDICTION_ONCHAIN_METRICS_WEIGHT=0.25
+PREDICTION_TECHNICAL_ANALYSIS_WEIGHT=0.20
+
+# Prediction Confidence Scoring
+PREDICTION_MIN_CONFIDENCE=0.65
+PREDICTION_HIGH_CONFIDENCE=0.80
+PREDICTION_ULTRA_CONFIDENCE=0.90
+
+# Automated Prediction Trading
+PREDICTION_AUTO_TRADE=false
+PREDICTION_ULTRA_ONLY=true
+PREDICTION_MAX_POSITIONS=5
+PREDICTION_POSITION_SIZE_SOL=1.0
+
+# Prediction Market Outcomes
+TRACK_PREDICTION_ACCURACY=true
+PREDICTION_PERFORMANCE_THRESHOLD=0.60
+ADJUST_WEIGHTS_DYNAMICALLY=true
+
+# Market Prediction Features
+PREDICT_PRICE_DIRECTION=true
+PREDICT_VOLATILITY=true
+PREDICT_BREAKOUT_PROBABILITY=true
+PREDICT_RUGPULL_PROBABILITY=true
+
+# ============================================================================
+# 📡 ESSENTIAL FREE APIs (WEEK 1 - GET THESE NOW!)
+# ============================================================================
+
+# 1. Helius API ⭐⭐⭐ (ALREADY CONFIGURED ABOVE)
+HELIUS_API_KEY=4177e73c-0edb-4e4a-9d22-4c99b9a3f8c1
+
+# 2. CoinGecko API ⭐⭐⭐ (14,000+ tokens, 50 calls/min)
+COINGECKO_API_KEY=YOUR_COINGECKO_KEY
+COINGECKO_API_URL=https://api.coingecko.com/api/v3
+COINGECKO_PRO=false
+COINGECKO_RATE_LIMIT=50
+
+# 3. RugCheck API ⭐⭐⭐ (No key needed!)
+RUGCHECK_ENABLED=true
+RUGCHECK_API_URL=https://api.rugcheck.xyz/v1
+RUGCHECK_TIMEOUT=10
+
+# 4. Solscan API ⭐⭐⭐ (10 req/sec free)
+SOLSCAN_API_KEY=YOUR_SOLSCAN_KEY
+SOLSCAN_API_URL=https://pro-api.solscan.io
+
+# ============================================================================
+# 📊 ENHANCED APIs (WEEK 2 - ADD THESE NEXT)
+# ============================================================================
+
+# 5. Birdeye API ⭐⭐ (100 req/day free, $49/mo pro)
+BIRDEYE_API_KEY=YOUR_BIRDEYE_KEY
+BIRDEYE_API_URL=https://public-api.birdeye.so
+BIRDEYE_PLAN=free
+BIRDEYE_RATE_LIMIT=100
+
+# 6. GoPlus Security API ⭐⭐ (2 req/sec free)
+GOPLUS_API_KEY=YOUR_GOPLUS_KEY
+GOPLUS_API_URL=https://api.gopluslabs.io/api/v1
+GOPLUS_ENABLED=true
+
+# 7. LunarCrush API ⭐⭐ (100 points/day free)
+LUNARCRUSH_API_KEY=YOUR_LUNARCRUSH_KEY
+LUNARCRUSH_API_URL=https://api.lunarcrush.com/v2
+LUNARCRUSH_RATE_LIMIT=100
+
+# ============================================================================
+# 📈 MARKET DATA APIs (WEEK 3 - OPTIONAL)
+# ============================================================================
+
+# 8. DexScreener API ⭐⭐ (Unlimited, no key!)
+DEXSCREENER_API_KEY=
+DEXSCREENER_API_URL=https://api.dexscreener.com/latest
+DEXSCREENER_ENABLED=true
+
+# 9. Shyft API ⭐ (100k credits/month)
+SHYFT_API_KEY=YOUR_SHYFT_KEY
+SHYFT_API_URL=https://api.shyft.to
+SHYFT_WEBHOOKS_ENABLED=false
+
+# 10. CryptoPanic API ⭐ (1000 calls/month)
+CRYPTOPANIC_API_KEY=YOUR_CRYPTOPANIC_KEY
+CRYPTOPANIC_API_URL=https://cryptopanic.com/api/v1
+CRYPTOPANIC_CURRENCIES=SOL,BTC,ETH
+
+# ============================================================================
+# 🌟 ADVANCED FREE APIs (SOCIAL INTELLIGENCE)
+# ============================================================================
+
+# Santiment API (1,000 calls/month)
+SANTIMENT_API_KEY=YOUR_SANTIMENT_KEY
+SANTIMENT_API_URL=https://api.santiment.net
+SANTIMENT_METRICS=social_volume_total,sentiment_balance_total
+
+# SentiCrypt API (Unlimited, no key!)
+SENTICRYPT_ENABLED=true
+SENTICRYPT_API_URL=https://api.senticrypt.com/v2
+
+# CoinPaprika API (20,000 calls/month, no auth!)
+COINPAPRIKA_ENABLED=true
+COINPAPRIKA_API_URL=https://api.coinpaprika.com/v1
+
+# Token Metrics API (500 calls/month)
+TOKEN_METRICS_API_KEY=YOUR_TOKEN_METRICS_KEY
+TOKEN_METRICS_API_URL=https://api.tokenmetrics.com
+
+# ============================================================================
+# 🔬 ADVANCED ARBITRAGE DETECTION
+# ============================================================================
+
+# Cross-DEX Price Monitoring
+ARBITRAGE_DETECTION_ENABLED=true
+ARBITRAGE_SCAN_INTERVAL=1
+ARBITRAGE_MIN_PROFIT_USD=5
+ARBITRAGE_MAX_SLIPPAGE_PERCENT=1.0
+
+# DEX-Specific Configurations
+RAYDIUM_API_URL=https://api-v3.raydium.io
+ORCA_API_URL=https://api.orca.so
+METEORA_API_URL=https://api.meteora.ag
+
+# Arbitrage Execution
+ARBITRAGE_AUTO_EXECUTE=false
+ARBITRAGE_USE_FLASH_LOANS=true
+ARBITRAGE_MAX_HOPS=3
+ARBITRAGE_GAS_BUFFER_PERCENT=20
+
+# ============================================================================
+# 🎯 GEYSER GRPC (SUB-SLOT LATENCY)
+# ============================================================================
+
+ENABLE_GEYSER_GRPC=false
+GEYSER_GRPC_URL=grpc.triton.one:443
+GEYSER_GRPC_TOKEN=YOUR_TRITON_TOKEN
+GEYSER_SUBSCRIBE_ACCOUNTS=true
+GEYSER_SUBSCRIBE_TRANSACTIONS=true
+GEYSER_BUFFER_SIZE=1000
+
+# ============================================================================
+# 🐦 TWITTER APIs (LEGACY - USE TWIKIT INSTEAD)
+# ============================================================================
+
+TWITTER_API_KEY=SrEqKHwaXpj3R28d7RcnZjJIE
+TWITTER_API_SECRET=Lli2wtX1ifkDXwsB9v23DtJaKvFEk2rhqReItSzfoMuB8U7Dse
+TWITTER_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAAHY%2F1wEAAAAAnj8bmnYBp5pvGrUamSySm4Uzfdw%3DUopwOJrEuPFtvj6GRzjTj2dEAX0dtYbLTNsE5qaYMBesseEP7B
+TWITTER_CLIENT_ID=Z3NITmlwMkZxQ3hpdFVlQ3Q3NS06MTpjaQ
+TWITTER_CLIENT_SECRET=BrT7t3BgwOqEfAVoBonDdydonE1JfSWKzt3qleYFIVkyL-VZHd
+
+# ============================================================================
+# 🔴 REDDIT (LEGACY)
+# ============================================================================
+
+REDDIT_CLIENT_ID=U-h5zvhaIifMRiZ3hKGyfw
+REDDIT_CLIENT_SECRET=_dlqVgssQQwhGCFw4XYadfI64odO4g
+REDDIT_USER_AGENT=EliteTradingBot/1.0
+
+# ============================================================================
+# 💬 DISCORD (LEGACY - USE BOT TOKEN ABOVE)
+# ============================================================================
+
+DISCORD_TOKEN=MTQzMDU0MjQyNDA4MTU2MzcxOA.GyFc4o.ZOHyRR_s9TXQTKXWLzqYRQ7IIqOOyk-3zyEwG4
+
+# ============================================================================
+# ⚡ PERFORMANCE OPTIMIZATION (SUB-100MS EXECUTION)
+# ============================================================================
+
+PRIORITY_FEE_MICROLAMPORTS=5000000
+PRIORITY_FEE_LAMPORTS=5000
+ENABLE_PRIORITY_FEES=true
+COMPUTE_UNIT_LIMIT=400000
+CONFIRMATION_STRATEGY=confirmed
+MAX_TX_RETRIES=5
+TX_CONFIRMATION_TIMEOUT=60
+RPC_TIMEOUT=30
+ENABLE_PARALLEL_SUBMISSION=true
+ENABLE_FAST_SIMULATION=true
+PARALLEL_RPC_COUNT=5
+WS_PING_INTERVAL=30
+MAX_CONCURRENT_TRADES=5
+MAX_CONCURRENT_POSITIONS=10
+CACHE_DURATION=300
+
+# Advanced Performance
+ENABLE_TRANSACTION_BATCHING=true
+BATCH_SIZE=5
+ENABLE_COMPUTE_BUDGET_OPTIMIZATION=true
+DYNAMIC_COMPUTE_UNITS=true
+PRIORITY_FEE_MULTIPLIER=1.5
+
+# ============================================================================
+# 💾 DATABASE & PERSISTENCE
+# ============================================================================
+
+DATABASE_URL=sqlite+aiosqlite:///trading_bot.db
+DATABASE_BACKUP_ENABLED=true
+DATABASE_BACKUP_INTERVAL_HOURS=6
+DATABASE_MAX_CONNECTIONS=10
+DATABASE_POOL_SIZE=5
+
+# Redis for High-Speed Caching
+REDIS_ENABLED=true
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_PASSWORD=
+REDIS_CACHE_TTL=300
+
+# ============================================================================
+# 📊 MONITORING & ANALYTICS
+# ============================================================================
+
+MONITORING_ENABLED=true
+PROMETHEUS_ENABLED=true
+PROMETHEUS_PORT=9090
+GRAFANA_ENABLED=false
+GRAFANA_PORT=3000
+DETAILED_TRANSACTION_LOGS=true
+
+# Performance Metrics
+TRACK_EXECUTION_LATENCY=true
+TRACK_RPC_PERFORMANCE=true
+TRACK_API_PERFORMANCE=true
+ALERT_SLOW_TRANSACTIONS=true
+SLOW_TRANSACTION_THRESHOLD_MS=1000
+
+# ============================================================================
+# 🎮 GAMIFICATION & COMMUNITY
+# ============================================================================
+
+ENABLE_GAMIFICATION=true
+REWARDS_ENABLED=true
+POINTS_PER_TRADE=10
+POINTS_PER_WALLET_TRACK=5
+POINTS_PER_RATING=5
+POINTS_PER_COPY=5
+ENABLE_REFERRAL_PROGRAM=true
+REFERRAL_BONUS_PERCENTAGE=20.0
+LEADERBOARD_ENABLED=true
+
+# ============================================================================
+# 💰 PLATFORM ECONOMICS
+# ============================================================================
+
+TEAM_WALLET_ADDRESS=4164wKUM9HJyqXc9yrj24LKvy8BwxjzDazg4FSMycfR5
+FEE_COLLECTION_WALLET=4164wKUM9HJyqXc9yrj24LKvy8BwxjzDazg4FSMycfR5
+TRANSACTION_FEE_PERCENTAGE=0.5
+PLATFORM_FEE_PERCENTAGE=0.005
+MIN_FEE_SOL=0.001
+MAX_FEE_SOL=0.1
+FEE_MODEL=per_trade
+
+# Revenue Optimization
+DYNAMIC_FEE_STRUCTURE=false
+VOLUME_BASED_DISCOUNTS=false
+VIP_FEE_REDUCTION=0.25
+
+# ============================================================================
+# 🎯 FEATURE FLAGS (GRANULAR CONTROL)
+# ============================================================================
+
+ENABLE_AI_FEATURES=true
+ENABLE_COPY_TRADING=true
+ENABLE_STRATEGY_MARKETPLACE=true
+ENABLE_SENTIMENT_ANALYSIS=true
+ENABLE_COMMUNITY_FEATURES=true
+ENABLE_ADMIN_ALERTS=true
+AUTO_TRADE_ENABLED=true
+ENABLE_FLASH_LOANS=true
+ENABLE_BUNDLE_LAUNCHES=true
+ENABLE_ARBITRAGE=true
+ENABLE_PREDICTIVE_MARKETS=true
+
+# ============================================================================
+# 🚦 RATE LIMITING & SAFETY
+# ============================================================================
+
+RATE_LIMIT_PER_MINUTE=60
+MAX_TRADES_PER_HOUR=30
+TRADE_COOLDOWN_SECONDS=3
+API_RATE_LIMIT_BUFFER=0.80
+
+# Per-API Rate Limits (Automated Tracking)
+TRACK_API_RATE_LIMITS=true
+AUTO_THROTTLE_APIS=true
+RATE_LIMIT_WARNING_THRESHOLD=0.90
+
+# ============================================================================
+# 📱 NOTIFICATIONS & ALERTS
+# ============================================================================
+
+SEND_TRADE_CONFIRMATIONS=true
+SEND_DAILY_SUMMARIES=true
+ALERT_LARGE_TRADE_THRESHOLD=5.0
+ALERT_PREDICTION_SIGNALS=true
+ALERT_ARBITRAGE_OPPORTUNITIES=true
+ALERT_WHALE_MOVEMENTS=true
+ALERT_NEW_LAUNCHES=true
+
+# Multi-Channel Alerts
+TELEGRAM_ALERTS=true
+DISCORD_ALERTS=false
+EMAIL_ALERTS=false
+WEBHOOK_ALERTS=false
+WEBHOOK_URL=
+
+# ============================================================================
+# 🧪 TESTING & DEVELOPMENT
+# ============================================================================
+
+TEST_MODE=false
+DRY_RUN=false
+DEBUG_MODE=false
+DEVNET_RPC_URL=https://api.devnet.solana.com
+VERBOSE_LOGGING=false
+
+# Simulation & Backtesting
+ENABLE_PAPER_TRADING=false
+BACKTEST_MODE=false
+BACKTEST_START_DATE=2024-01-01
+BACKTEST_END_DATE=2024-12-31
+
+# ============================================================================
+# 🔧 ADVANCED TUNING (FOR EXPERTS)
+# ============================================================================
+
+# Transaction Assembly
+USE_LEGACY_TRANSACTIONS=false
+PRIORITIZE_TRANSACTION_SIZE=true
+OPTIMIZE_ACCOUNT_LOOKUPS=true
+
+# Smart Routing
+MULTI_HOP_ROUTING=true
+MAX_ROUTING_HOPS=3
+ROUTING_OPTIMIZATION=best_price
+
+# Memory Management
+MAX_MEMORY_CACHE_MB=512
+ENABLE_AGGRESSIVE_CACHING=true
+CACHE_CLEANUP_INTERVAL=3600
+
+# Machine Learning (Future)
+ENABLE_ML_PREDICTIONS=false
+ML_MODEL_PATH=./models/prediction_model.pkl
+ML_RETRAIN_INTERVAL_DAYS=7
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🚀 CONFIGURATION COMPLETE - READY FOR MARKET DOMINATION
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 
+# NEXT STEPS:
+# 1. Get free API keys: Helius, CoinGecko, RugCheck, Solscan (15 mins)
+# 2. Set up social monitoring: Twitter/Twikit, Discord bot, Telegram (30 mins)
+# 3. Configure flash loan accounts: Marginfi or Kamino (20 mins)
+# 4. Test on devnet first (CRITICAL!)
+# 5. Start with small positions (0.1-0.5 SOL)
+# 6. Scale gradually based on performance
+#
+# ESTIMATED MONTHLY COST: $0-49 (free tier APIs sufficient for 10-50 trades/day)
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

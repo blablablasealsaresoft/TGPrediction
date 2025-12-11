@@ -3,12 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APOLLO CyberSentinel | Prediction Market & Strategy Hub</title>
+    <title>APOLLO | Trading Tournaments & Challenges</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Universal Enhanced Style -->
-    <link rel="stylesheet" href="/static/css/apollo-enhanced-style.css">
-    <script src="/static/js/apollo-enhanced-effects.js"></script>
     
     <style>
         * {
@@ -23,196 +19,207 @@
             --neon-green: #00ff88;
             --neon-gold: #ffd700;
             --neon-pink: #ff006e;
-            --neon-blue: #4d4dff;
+            --neon-red: #ff0055;
             --bg-deep: #0a0014;
             --bg-dark: #150028;
-            --bg-darker: #1a0033;
-            --text-bright: #ffffff;
-            --text-dim: #a0a0a0;
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(0, 245, 255, 0.2);
         }
 
         body {
             font-family: 'Inter', 'Segoe UI', sans-serif;
             background: radial-gradient(ellipse at top, var(--bg-dark), var(--bg-deep));
-            color: var(--text-bright);
+            color: white;
             overflow-x: hidden;
             min-height: 100vh;
         }
 
-        /* Main Container */
-        .main-container {
-            position: relative;
-            z-index: 10;
-            padding: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
+        /* Header */
+        .header {
+            background: rgba(10, 0, 20, 0.95);
+            border-bottom: 2px solid var(--neon-cyan);
+            padding: 1rem 2rem;
+            backdrop-filter: blur(20px);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 245, 255, 0.3);
         }
 
-        /* Header with Wallet */
-        .market-header {
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 3rem;
             flex-wrap: wrap;
             gap: 1rem;
         }
 
-        .header-title {
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.8rem;
         }
 
-        .header-icon {
-            font-size: 3rem;
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: iconFloat 3s ease-in-out infinite;
-        }
-
-        .header-text h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-gold));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
-        }
-
-        .header-text p {
-            color: var(--text-dim);
-            font-size: 1.1rem;
-        }
-
-        /* Wallet Connection */
-        .wallet-section {
+        .nav-buttons {
             display: flex;
             gap: 1rem;
             align-items: center;
         }
 
-        .wallet-btn {
-            padding: 1rem 2rem;
-            background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
-            border: none;
-            border-radius: 30px;
+        .nav-btn {
+            padding: 0.6rem 1.2rem;
+            background: rgba(0, 245, 255, 0.1);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            border-radius: 8px;
             color: white;
-            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 5px 20px rgba(189, 0, 255, 0.4);
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .wallet-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 40px rgba(189, 0, 255, 0.6);
+        .nav-btn:hover {
+            background: rgba(0, 245, 255, 0.2);
+            border-color: var(--neon-cyan);
+            transform: translateY(-2px);
         }
 
-        .wallet-connected {
-            background: rgba(0, 255, 136, 0.2);
-            border: 2px solid var(--neon-green);
-            border-radius: 30px;
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            animation: breathe 4s ease-in-out infinite;
+        /* Wallet Connect Button */
+        .wallet-btn {
+            background: linear-gradient(45deg, var(--neon-cyan), var(--neon-purple)) !important;
+            color: #000 !important;
+            border: none !important;
+            padding: 0.6rem 1.5rem !important;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 245, 255, 0.3);
+            cursor: pointer;
+        }
+
+        .wallet-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(0, 245, 255, 0.5);
+        }
+
+        .wallet-btn.connected {
+            background: linear-gradient(45deg, var(--neon-green), var(--neon-cyan)) !important;
         }
 
         .wallet-address {
             font-family: 'Courier New', monospace;
-            color: var(--neon-green);
-            font-weight: 600;
+            font-size: 0.9rem;
         }
 
-        .wallet-balance {
-            color: var(--neon-gold);
-            font-weight: 700;
+        /* Add padding to body for fixed header */
+        body {
+            padding-top: 80px;
         }
 
-        /* Stats Overview */
-        .stats-overview {
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-gold), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            font-weight: 900;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.8);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
-            margin-bottom: 3rem;
+            margin-bottom: 4rem;
         }
 
         .stat-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 2px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            border-radius: 15px;
+            padding: 2rem;
             text-align: center;
-            transition: all 0.3s;
-            cursor: pointer;
+            transition: all 0.3s ease;
         }
 
         .stat-card:hover {
-            transform: translateY(-10px) scale(1.05);
+            transform: translateY(-5px);
             border-color: var(--neon-cyan);
-            box-shadow: 0 20px 60px rgba(0, 245, 255, 0.4);
-        }
-
-        .stat-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            animation: iconFloat 3s ease-in-out infinite;
+            box-shadow: 0 10px 40px rgba(0, 245, 255, 0.3);
         }
 
         .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 0.5rem;
         }
 
         .stat-label {
+            color: rgba(255, 255, 255, 0.7);
             font-size: 0.9rem;
-            color: var(--text-dim);
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
-        /* Tab Navigation */
-        .tab-nav {
+        /* Section Tabs */
+        .section-tabs {
             display: flex;
             gap: 1rem;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
             flex-wrap: wrap;
         }
 
         .tab-btn {
             padding: 1rem 2rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(0, 245, 255, 0.2);
-            border-radius: 25px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            border-radius: 10px;
             color: white;
-            font-size: 1rem;
-            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 1rem;
         }
 
-        .tab-btn:hover, .tab-btn.active {
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
-            color: var(--bg-deep);
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            border-color: transparent;
+            box-shadow: 0 5px 25px rgba(0, 245, 255, 0.4);
+        }
+
+        .tab-btn:hover:not(.active) {
             border-color: var(--neon-cyan);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0, 245, 255, 0.4);
+            transform: translateY(-2px);
         }
 
         /* Tab Content */
@@ -222,1149 +229,1097 @@
 
         .tab-content.active {
             display: block;
-            animation: fadeIn 0.5s;
+            animation: fadeIn 0.5s ease;
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Strategy Marketplace */
-        .strategy-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
-        }
-
-        .strategy-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 2px solid rgba(189, 0, 255, 0.2);
-            border-radius: 25px;
-            padding: 2rem;
-            transition: all 0.4s;
+        /* Active Tournament */
+        .active-tournament {
+            background: rgba(10, 0, 20, 0.6);
+            border: 2px solid var(--neon-gold);
+            border-radius: 20px;
+            padding: 3rem;
+            margin-bottom: 3rem;
             position: relative;
             overflow: hidden;
         }
 
-        .strategy-card::before {
-            content: '';
+        .active-tournament::before {
+            content: 'LIVE NOW';
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(189, 0, 255, 0.1), transparent);
-            transition: left 0.6s;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: var(--neon-red);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 900;
+            font-size: 0.8rem;
+            animation: pulse 2s ease-in-out infinite;
         }
 
-        .strategy-card:hover::before {
-            left: 100%;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
         }
 
-        .strategy-card:hover {
-            transform: translateY(-15px) scale(1.02);
-            border-color: var(--neon-purple);
-            box-shadow: 0 25px 70px rgba(189, 0, 255, 0.4);
-        }
-
-        .strategy-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
+        .tournament-header h2 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--neon-gold), var(--neon-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             margin-bottom: 1rem;
         }
 
-        .strategy-title {
-            font-size: 1.4rem;
-            color: var(--neon-cyan);
-            font-weight: 700;
-        }
-
-        .strategy-badge {
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            border: 2px solid;
-        }
-
-        .badge-premium {
-            background: rgba(255, 215, 0, 0.2);
-            color: var(--neon-gold);
-            border-color: var(--neon-gold);
-        }
-
-        .badge-trending {
-            background: rgba(255, 0, 110, 0.2);
-            color: var(--neon-pink);
-            border-color: var(--neon-pink);
-        }
-
-        .strategy-stats {
+        .tournament-info {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin: 1.5rem 0;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
         }
 
-        .strategy-stat {
+        .info-item {
             text-align: center;
         }
 
-        .strategy-stat-value {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: var(--neon-green);
+        .info-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
         }
 
-        .strategy-stat-label {
-            font-size: 0.8rem;
-            color: var(--text-dim);
-        }
-
-        .strategy-price {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .price-tag {
+        .info-value {
             font-size: 1.5rem;
             font-weight: 700;
-            color: var(--neon-gold);
+            color: var(--neon-cyan);
         }
 
-        .buy-btn {
-            padding: 0.8rem 1.5rem;
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
-            border: none;
-            border-radius: 20px;
-            color: var(--bg-deep);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
+        /* Bracket Visualization */
+        .bracket-preview {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 245, 255, 0.2);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
         }
 
-        .buy-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 30px rgba(0, 245, 255, 0.5);
+        .bracket-round {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 2rem;
         }
 
-        /* Community Intelligence */
-        .token-feed {
+        .bracket-match {
+            background: rgba(10, 0, 20, 0.8);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            min-width: 200px;
+        }
+
+        .bracket-player {
+            padding: 0.8rem;
+            margin: 0.3rem 0;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            border-left: 3px solid var(--neon-cyan);
+        }
+
+        .bracket-player.winner {
+            border-left-color: var(--neon-gold);
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        /* Challenges Grid */
+        .challenges-grid {
             display: grid;
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
         }
 
-        .token-review {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 2px solid rgba(0, 245, 255, 0.2);
+        .challenge-card {
+            background: rgba(10, 0, 20, 0.6);
+            border: 1px solid rgba(0, 245, 255, 0.3);
             border-radius: 20px;
-            padding: 1.5rem;
-            transition: all 0.3s;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
-        .token-review:hover {
-            transform: translateX(10px);
+        .challenge-card:hover {
+            transform: translateY(-10px);
             border-color: var(--neon-cyan);
-            box-shadow: 0 10px 40px rgba(0, 245, 255, 0.3);
+            box-shadow: 0 15px 50px rgba(0, 245, 255, 0.3);
         }
 
-        .review-header {
+        .challenge-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--neon-purple);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .challenge-badge.daily {
+            background: var(--neon-gold);
+        }
+
+        .challenge-badge.weekly {
+            background: var(--neon-purple);
+        }
+
+        .challenge-badge.special {
+            background: var(--neon-pink);
+        }
+
+        .challenge-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--neon-cyan);
+        }
+
+        .challenge-desc {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .challenge-prizes {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .prize-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .token-name {
+        .prize-item:last-child {
+            border-bottom: none;
+        }
+
+        .prize-place {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .prize-amount {
+            color: var(--neon-gold);
+            font-weight: 700;
+        }
+
+        .challenge-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .challenge-stat {
+            text-align: center;
+        }
+
+        .challenge-stat-value {
             font-size: 1.3rem;
             font-weight: 700;
             color: var(--neon-cyan);
         }
 
-        .star-rating {
-            display: flex;
-            gap: 0.3rem;
+        .challenge-stat-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
         }
 
-        .star {
-            color: var(--neon-gold);
-            font-size: 1.2rem;
-        }
-
-        .star.empty {
-            opacity: 0.3;
-        }
-
-        .review-content {
-            color: var(--text-dim);
-            line-height: 1.6;
-            margin: 1rem 0;
-        }
-
-        .review-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 1rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .reviewer-info {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--text-dim);
-            font-size: 0.9rem;
-        }
-
-        .helpful-btn {
-            padding: 0.5rem 1rem;
-            background: rgba(0, 255, 136, 0.1);
-            border: 1px solid var(--neon-green);
-            border-radius: 15px;
-            color: var(--neon-green);
+        .join-btn {
+            width: 100%;
+            padding: 1.2rem;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 700;
+            font-size: 1rem;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .helpful-btn:hover {
-            background: rgba(0, 255, 136, 0.2);
-            transform: scale(1.05);
+        .join-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 40px rgba(0, 245, 255, 0.5);
+        }
+
+        .join-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         /* Leaderboard */
         .leaderboard {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 2px solid var(--glass-border);
-            border-radius: 25px;
+            background: rgba(10, 0, 20, 0.6);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            border-radius: 20px;
             padding: 2rem;
-            margin-top: 2rem;
+            margin-bottom: 3rem;
         }
 
-        .leaderboard-title {
-            font-size: 1.8rem;
+        .leaderboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .leaderboard-header h2 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--neon-gold), var(--neon-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+        }
+
+        .leaderboard-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 150px 150px 150px;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin-bottom: 0.8rem;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .leaderboard-row:hover {
+            background: rgba(0, 245, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .leaderboard-row.header {
+            background: rgba(0, 245, 255, 0.1);
+            font-weight: 700;
             color: var(--neon-cyan);
-            margin-bottom: 1.5rem;
+        }
+
+        .rank {
+            font-size: 1.5rem;
+            font-weight: 900;
+            text-align: center;
+        }
+
+        .rank-1 { color: var(--neon-gold); }
+        .rank-2 { color: #c0c0c0; }
+        .rank-3 { color: #cd7f32; }
+
+        .trader-info {
             display: flex;
             align-items: center;
             gap: 1rem;
         }
 
-        .leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .leaderboard-table th {
-            text-align: left;
-            padding: 1rem;
-            background: rgba(0, 245, 255, 0.1);
-            color: var(--neon-cyan);
-            font-weight: 600;
-            border-bottom: 2px solid var(--neon-cyan);
-        }
-
-        .leaderboard-table td {
-            padding: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-dim);
-        }
-
-        .leaderboard-table tr:hover {
-            background: rgba(0, 245, 255, 0.05);
-            transform: translateX(5px);
-            transition: all 0.3s;
-        }
-
-        .rank-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+        .trader-avatar {
             width: 40px;
             height: 40px;
-            border-radius: 50%;
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-
-        .rank-1 {
-            background: linear-gradient(135deg, var(--neon-gold), #ff6b00);
-            color: white;
-            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.5);
-        }
-
-        .rank-2 {
-            background: linear-gradient(135deg, #c0c0c0, #808080);
-            color: white;
-            box-shadow: 0 5px 20px rgba(192, 192, 192, 0.5);
-        }
-
-        .rank-3 {
-            background: linear-gradient(135deg, #cd7f32, #8b4513);
-            color: white;
-            box-shadow: 0 5px 20px rgba(205, 127, 50, 0.5);
-        }
-
-        .rank-default {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-dim);
-        }
-
-        /* User Profile Card */
-        .profile-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 2px solid var(--glass-border);
-            border-radius: 25px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .profile-header {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .profile-avatar {
-            width: 100px;
-            height: 100px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 3rem;
-            color: white;
-            box-shadow: 0 10px 40px rgba(0, 245, 255, 0.5);
-        }
-
-        .profile-info h2 {
-            font-size: 2rem;
-            color: var(--neon-cyan);
-            margin-bottom: 0.5rem;
-        }
-
-        .tier-badge {
-            display: inline-block;
-            padding: 0.5rem 1.5rem;
-            background: linear-gradient(135deg, var(--neon-gold), #ff6b00);
-            border-radius: 20px;
-            color: white;
-            font-weight: 600;
-            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
-        }
-
-        .progress-section {
-            margin-top: 2rem;
-        }
-
-        .progress-bar-container {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            height: 30px;
-            overflow: hidden;
-            margin-top: 1rem;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-green));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            transition: width 0.5s;
-            animation: progressShimmer 2s linear infinite;
-        }
-
-        /* Achievements */
-        .achievements-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .achievement-badge {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 2px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 1.5rem;
-            text-align: center;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-
-        .achievement-badge:hover {
-            transform: translateY(-10px) scale(1.05);
-            border-color: var(--neon-gold);
-            box-shadow: 0 20px 50px rgba(255, 215, 0, 0.4);
-        }
-
-        .achievement-badge.locked {
-            opacity: 0.4;
-            filter: grayscale(100%);
-        }
-
-        .achievement-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .achievement-name {
-            font-weight: 600;
-            color: var(--neon-cyan);
-            font-size: 0.9rem;
-        }
-
-        /* Publish Strategy Form */
-        .publish-form {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 2px solid var(--glass-border);
-            border-radius: 25px;
-            padding: 2rem;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            color: var(--neon-cyan);
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(0, 245, 255, 0.2);
-            border-radius: 15px;
-            color: white;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--neon-cyan);
-            box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
-        }
-
-        .form-group textarea {
-            min-height: 150px;
-            resize: vertical;
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 1.2rem;
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
-            border: none;
-            border-radius: 25px;
-            color: var(--bg-deep);
-            font-size: 1.2rem;
             font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
-        .submit-btn:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 50px rgba(0, 245, 255, 0.6);
+        .trader-name {
+            font-weight: 600;
+        }
+
+        .win-token-amount {
+            color: var(--neon-gold);
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        /* Bracket View */
+        .bracket-container {
+            background: rgba(10, 0, 20, 0.6);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            border-radius: 20px;
+            padding: 2rem;
+            overflow-x: auto;
+        }
+
+        .bracket-grid {
+            display: flex;
+            gap: 3rem;
+            min-width: 100%;
+            padding: 2rem;
+        }
+
+        .bracket-column {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .bracket-column-title {
+            text-align: center;
+            color: var(--neon-cyan);
+            font-weight: 700;
+            margin-bottom: 2rem;
+            font-size: 1.2rem;
+        }
+
+        .bracket-matchup {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .bracket-participant {
+            padding: 1rem;
+            margin: 0.5rem 0;
+            background: rgba(10, 0, 20, 0.8);
+            border-radius: 5px;
+            border-left: 3px solid rgba(0, 245, 255, 0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bracket-participant.winner {
+            border-left-color: var(--neon-gold);
+            background: rgba(255, 215, 0, 0.05);
+        }
+
+        .participant-name {
+            font-weight: 600;
+        }
+
+        .participant-score {
+            font-weight: 700;
+            color: var(--neon-cyan);
+        }
+
+        /* WIN Token Display */
+        .win-token {
+            color: var(--neon-gold);
+            font-weight: 700;
+        }
+
+        .win-token::before {
+            content: '$WIN ';
+            font-size: 0.9em;
+        }
+
+        /* Prize Pool Display */
+        .prize-pool {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(0, 245, 255, 0.1));
+            border: 2px solid var(--neon-gold);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .prize-pool-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .prize-pool-amount {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--neon-gold);
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
         }
 
         /* Responsive */
         @media (max-width: 768px) {
-            .main-container {
-                padding: 1rem;
+            .leaderboard-row {
+                grid-template-columns: 60px 1fr;
+                gap: 1rem;
             }
 
-            .header-title {
+            .leaderboard-row > *:nth-child(n+3) {
+                grid-column: 2;
+            }
+
+            .bracket-grid {
                 flex-direction: column;
-                text-align: center;
-            }
-
-            .market-header {
-                flex-direction: column;
-            }
-
-            .strategy-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .tab-nav {
-                flex-direction: column;
-            }
-
-            .profile-header {
-                flex-direction: column;
-                text-align: center;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Main Container -->
-    <div class="main-container">
-        <!-- Header -->
-        <div class="market-header">
-            <div class="header-title">
-                <i class="fas fa-chart-line header-icon"></i>
-                <div class="header-text">
-                    <h1>Prediction Market</h1>
-                    <p>Strategy Hub & Community Intelligence</p>
-                </div>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-rocket"></i>
+                APOLLO
             </div>
-            
-            <!-- Wallet Section -->
-            <div class="wallet-section">
-                <button class="wallet-btn" id="connectWalletBtn" onclick="connectWallet()">
+            <div class="nav-buttons">
+                <a href="/dashboard" class="nav-btn">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </a>
+                <a href="/prediction-market" class="nav-btn">
+                    <i class="fas fa-trophy"></i> Markets
+                </a>
+                <button id="walletBtn" class="nav-btn wallet-btn" onclick="connectWallet()">
                     <i class="fas fa-wallet"></i>
-                    Connect Wallet
+                    <span id="walletText">Connect Wallet</span>
                 </button>
-                <div class="wallet-connected" id="walletConnected" style="display: none;">
-                    <div>
-                        <div class="wallet-address" id="walletAddress">0x1234...5678</div>
-                        <div class="wallet-balance" id="walletBalance">1,250 $WIN</div>
-                    </div>
-                    <button class="wallet-btn" onclick="disconnectWallet()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
-                </div>
+                <a href="/profile?user_id=123456789" class="nav-btn" style="background: linear-gradient(45deg, var(--neon-cyan), var(--neon-purple)); color: #000; border: none; box-shadow: 0 4px 15px rgba(0, 245, 255, 0.5); animation: profilePulse 2s ease-in-out infinite;">
+                    <i class="fas fa-user-circle"></i> My Profile
+                </a>
+                <style>
+                    @keyframes profilePulse {
+                        0%, 100% { box-shadow: 0 4px 15px rgba(0, 245, 255, 0.5); }
+                        50% { box-shadow: 0 4px 25px rgba(0, 245, 255, 0.8), 0 0 30px rgba(189, 0, 255, 0.5); }
+                    }
+                </style>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Hero -->
+        <div class="hero">
+            <h1>Trading Tournaments & Challenges</h1>
+            <p>Compete in daily tournaments, climb the leaderboards, and earn $WIN tokens</p>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-value">247</div>
+                <div class="stat-label">Active Competitors</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">15.4K</div>
+                <div class="stat-label">$WIN Distributed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">8</div>
+                <div class="stat-label">Live Tournaments</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">2.5 SOL</div>
+                <div class="stat-label">Total Prize Pool</div>
             </div>
         </div>
 
-        <!-- Stats Overview -->
-        <div class="stats-overview">
-            <div class="stat-card">
-                <div class="stat-icon">📊</div>
-                <div class="stat-value">2,847</div>
-                <div class="stat-label">Active Strategies</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">👥</div>
-                <div class="stat-value">15.2K</div>
-                <div class="stat-label">Community Members</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">💰</div>
-                <div class="stat-value">$2.8M</div>
-                <div class="stat-label">Total Volume</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">⭐</div>
-                <div class="stat-value">8,921</div>
-                <div class="stat-label">Token Reviews</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">🏆</div>
-                <div class="stat-value">1,234</div>
-                <div class="stat-label">Top Traders</div>
-            </div>
-        </div>
-
-        <!-- Tab Navigation -->
-        <div class="tab-nav">
-            <button class="tab-btn active" onclick="switchTab('marketplace')">
-                <i class="fas fa-store"></i>
-                Strategy Marketplace
+        <!-- Section Tabs -->
+        <div class="section-tabs">
+            <button class="tab-btn active" onclick="showTab('live')">
+                <i class="fas fa-fire"></i> Live Tournaments
             </button>
-            <button class="tab-btn" onclick="switchTab('community')">
-                <i class="fas fa-users"></i>
-                Community Intelligence
+            <button class="tab-btn" onclick="showTab('brackets')">
+                <i class="fas fa-sitemap"></i> Brackets
             </button>
-            <button class="tab-btn" onclick="switchTab('leaderboard')">
-                <i class="fas fa-trophy"></i>
-                Leaderboards
+            <button class="tab-btn" onclick="showTab('challenges')">
+                <i class="fas fa-flag-checkered"></i> Daily Challenges
             </button>
-            <button class="tab-btn" onclick="switchTab('profile')">
-                <i class="fas fa-user"></i>
-                My Profile
-            </button>
-            <button class="tab-btn" onclick="switchTab('publish')">
-                <i class="fas fa-plus-circle"></i>
-                Publish Strategy
-            </button>
-            <button class="tab-btn" onclick="window.location.href='/dashboard'">
-                <i class="fas fa-tachometer-alt"></i>
-                Dashboard
-            </button>
-            <button class="tab-btn" onclick="window.location.href='/'">
-                <i class="fas fa-home"></i>
-                Home
+            <button class="tab-btn" onclick="showTab('leaderboard')">
+                <i class="fas fa-trophy"></i> Leaderboard
             </button>
         </div>
 
-        <!-- Strategy Marketplace Tab -->
-        <div id="marketplace" class="tab-content active">
-            <div class="strategy-grid">
-                <!-- Strategy Card 1 -->
-                <div class="strategy-card">
-                    <div class="strategy-header">
-                        <h3 class="strategy-title">Flash Arbitrage Pro</h3>
-                        <span class="strategy-badge badge-premium">PREMIUM</span>
-                    </div>
-                    <p style="color: var(--text-dim); margin-bottom: 1rem;">
-                        Advanced arbitrage detection across 15+ DEXs with 92% success rate
+        <!-- Live Tournaments Tab -->
+        <div id="live-tab" class="tab-content active">
+            <!-- Active Tournament -->
+            <div class="active-tournament">
+                <div class="tournament-header">
+                    <h2>🏆 Daily Trading Tournament #47</h2>
+                    <p style="color: rgba(255, 255, 255, 0.8); font-size: 1.1rem;">
+                        16 traders compete bracket-style. Best returns advance. Winner takes 90% of prize pool!
                     </p>
-                    <div class="strategy-stats">
-                        <div class="strategy-stat">
-                            <div class="strategy-stat-value">92%</div>
-                            <div class="strategy-stat-label">Success</div>
-                        </div>
-                        <div class="strategy-stat">
-                            <div class="strategy-stat-value">847</div>
-                            <div class="strategy-stat-label">Users</div>
-                        </div>
-                        <div class="strategy-stat">
-                            <div class="strategy-stat-value">4.8★</div>
-                            <div class="strategy-stat-label">Rating</div>
-                        </div>
+                </div>
+
+                <div class="tournament-info">
+                    <div class="info-item">
+                        <div class="info-label">Buy-In</div>
+                        <div class="info-value">0.1 SOL</div>
                     </div>
-                    <div class="strategy-price">
-                        <div class="price-tag">250 $WIN</div>
-                        <button class="buy-btn">Purchase</button>
+                    <div class="info-item">
+                        <div class="info-label">Prize Pool</div>
+                        <div class="info-value">1.44 SOL</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Participants</div>
+                        <div class="info-value">14/16</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Time Left</div>
+                        <div class="info-value" id="countdown">2h 34m</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">$WIN Reward</div>
+                        <div class="info-value">500 $WIN</div>
                     </div>
                 </div>
 
-                <!-- Strategy Card 2 -->
-                <div class="strategy-card">
-                    <div class="strategy-header">
-                        <h3 class="strategy-title">Sentiment Analyzer</h3>
-                        <span class="strategy-badge badge-trending">TRENDING</span>
-                    </div>
-                    <p style="color: var(--text-dim); margin-bottom: 1rem;">
-                        AI-powered social sentiment analysis for early token detection
+                <div class="prize-pool">
+                    <div class="prize-pool-label">Current Prize Pool</div>
+                    <div class="prize-pool-amount">1.44 SOL</div>
+                    <p style="margin-top: 1rem; color: rgba(255, 255, 255, 0.6);">
+                        Winner gets 90% • Platform fee 10% • All players earn $WIN tokens
                     </p>
-                    <div class="strategy-stats">
-                        <div class="strategy-stat">
-                            <div class="strategy-stat-value">85%</div>
-                            <div class="strategy-stat-label">Accuracy</div>
-                        </div>
-                        <div class="strategy-stat">
-                            <div class="strategy-stat-value">1.2K</div>
-                            <div class="strategy-stat-label">Users</div>
-                        </div>
-                        <div class="strategy-stat">
-                            <div class="strategy-stat-value">4.6★</div>
-                            <div class="strategy-stat-label">Rating</div>
-                        </div>
-                    </div>
-                    <div class="strategy-price">
-                        <div class="price-tag">180 $WIN</div>
-                        <button class="buy-btn">Purchase</button>
-                    </div>
                 </div>
 
-                <!-- Strategy Card 3 -->
-                <div class="strategy-card">
-                    <div class="strategy-header">
-                        <h3 class="strategy-title">Whale Tracker Elite</h3>
-                        <span class="strategy-badge badge-premium">PREMIUM</span>
-                    </div>
-                    <p style="color: var(--text-dim); margin-bottom: 1rem;">
-                        Track top 441 elite wallets and copy their strategies in real-time
-                    </p>
-                    <div class="strategy-stats">
-                        <div class="strategy-stat">
-                            <div class="strategy-stat-value">78%</div>
-                            <div class="strategy-stat-label">Win Rate</div>
-                        </div>
-                        <div class="strategy-stat">
-                            <div class="strategy-stat-value">623</div>
-                            <div class="strategy-stat-label">Users</div>
-                        </div>
-                        <div class="strategy-stat">
-                            <div class="strategy-stat-value">4.9★</div>
-                            <div class="strategy-stat-label">Rating</div>
-                        </div>
-                    </div>
-                    <div class="strategy-price">
-                        <div class="price-tag">320 $WIN</div>
-                        <button class="buy-btn">Purchase</button>
-                    </div>
-                </div>
+                <button class="join-btn">
+                    <i class="fas fa-bolt"></i> Join Tournament (0.1 SOL)
+                </button>
             </div>
         </div>
 
-        <!-- Community Intelligence Tab -->
-        <div id="community" class="tab-content">
-            <div class="token-feed">
-                <!-- Review 1 -->
-                <div class="token-review">
-                    <div class="review-header">
-                        <div class="token-name">$APOLLO</div>
-                        <div class="star-rating">
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star"></i>
-                        </div>
-                    </div>
-                    <div class="review-content">
-                        "Incredible platform! The AI predictions are spot-on 78% of the time. Made 15% gains in the first week. The flash arbitrage feature is a game-changer. Highly recommend!"
-                    </div>
-                    <div class="review-footer">
-                        <div class="reviewer-info">
-                            <i class="fas fa-user-circle"></i>
-                            <span>CryptoWhale47</span>
-                            <span>•</span>
-                            <span>2 hours ago</span>
-                        </div>
-                        <button class="helpful-btn">
-                            <i class="fas fa-thumbs-up"></i>
-                            Helpful (127)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Review 2 -->
-                <div class="token-review">
-                    <div class="review-header">
-                        <div class="token-name">$PEPE</div>
-                        <div class="star-rating">
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star empty"></i>
-                        </div>
-                    </div>
-                    <div class="review-content">
-                        "Caught the pump 6 hours early thanks to the launch predictor. 4.2x gains! The community intelligence is incredibly accurate. Only wish I had found this platform sooner."
-                    </div>
-                    <div class="review-footer">
-                        <div class="reviewer-info">
-                            <i class="fas fa-user-circle"></i>
-                            <span>MemeTrader2024</span>
-                            <span>•</span>
-                            <span>5 hours ago</span>
-                        </div>
-                        <button class="helpful-btn">
-                            <i class="fas fa-thumbs-up"></i>
-                            Helpful (89)
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Review 3 -->
-                <div class="token-review">
-                    <div class="review-header">
-                        <div class="token-name">$SHIB</div>
-                        <div class="star-rating">
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star"></i>
-                            <i class="fas fa-star star empty"></i>
-                            <i class="fas fa-star star empty"></i>
-                        </div>
-                    </div>
-                    <div class="review-content">
-                        "Good platform but the whale tracker didn't catch this pump in time. Still made some profit but expected better. The strategy marketplace is solid though - 3 stars."
-                    </div>
-                    <div class="review-footer">
-                        <div class="reviewer-info">
-                            <i class="fas fa-user-circle"></i>
-                            <span>DeFiExplorer</span>
-                            <span>•</span>
-                            <span>1 day ago</span>
-                        </div>
-                        <button class="helpful-btn">
-                            <i class="fas fa-thumbs-up"></i>
-                            Helpful (43)
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Leaderboards Tab -->
-        <div id="leaderboard" class="tab-content">
-            <div class="leaderboard">
-                <h2 class="leaderboard-title">
-                    <i class="fas fa-trophy"></i>
-                    Top Traders This Month
+        <!-- Brackets Tab -->
+        <div id="brackets-tab" class="tab-content">
+            <div class="bracket-container">
+                <h2 style="text-align: center; font-size: 2rem; margin-bottom: 2rem; background: linear-gradient(135deg, var(--neon-gold), var(--neon-cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    Tournament #47 Bracket
                 </h2>
-                <table class="leaderboard-table">
-                    <thead>
-                        <tr>
-                            <th>Rank</th>
-                            <th>Trader</th>
-                            <th>Total Profit</th>
-                            <th>Win Rate</th>
-                            <th>Trades</th>
-                            <th>Points</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><span class="rank-badge rank-1">1</span></td>
-                            <td>CryptoKing777</td>
-                            <td style="color: var(--neon-green); font-weight: 700;">+$127,450</td>
-                            <td>94.2%</td>
-                            <td>847</td>
-                            <td style="color: var(--neon-gold); font-weight: 700;">15,892</td>
-                        </tr>
-                        <tr>
-                            <td><span class="rank-badge rank-2">2</span></td>
-                            <td>WhaleWatcher</td>
-                            <td style="color: var(--neon-green); font-weight: 700;">+$98,320</td>
-                            <td>91.7%</td>
-                            <td>623</td>
-                            <td style="color: var(--neon-gold); font-weight: 700;">12,764</td>
-                        </tr>
-                        <tr>
-                            <td><span class="rank-badge rank-3">3</span></td>
-                            <td>DeFiMaster</td>
-                            <td style="color: var(--neon-green); font-weight: 700;">+$85,190</td>
-                            <td>88.5%</td>
-                            <td>541</td>
-                            <td style="color: var(--neon-gold); font-weight: 700;">10,938</td>
-                        </tr>
-                        <tr>
-                            <td><span class="rank-badge rank-default">4</span></td>
-                            <td>FlashTrader99</td>
-                            <td style="color: var(--neon-green); font-weight: 700;">+$72,840</td>
-                            <td>86.3%</td>
-                            <td>489</td>
-                            <td style="color: var(--neon-gold); font-weight: 700;">9,521</td>
-                        </tr>
-                        <tr>
-                            <td><span class="rank-badge rank-default">5</span></td>
-                            <td>ApeInvestor</td>
-                            <td style="color: var(--neon-green); font-weight: 700;">+$68,230</td>
-                            <td>83.9%</td>
-                            <td>412</td>
-                            <td style="color: var(--neon-gold); font-weight: 700;">8,847</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
 
-            <div class="leaderboard" style="margin-top: 2rem;">
-                <h2 class="leaderboard-title">
-                    <i class="fas fa-star"></i>
-                    Top Strategy Publishers
-                </h2>
-                <table class="leaderboard-table">
-                    <thead>
-                        <tr>
-                            <th>Rank</th>
-                            <th>Publisher</th>
-                            <th>Strategies</th>
-                            <th>Sales</th>
-                            <th>Earnings</th>
-                            <th>Rating</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><span class="rank-badge rank-1">1</span></td>
-                            <td>StrategyGuru</td>
-                            <td>12</td>
-                            <td>2,847</td>
-                            <td style="color: var(--neon-gold); font-weight: 700;">$284,700</td>
-                            <td>4.9★</td>
-                        </tr>
-                        <tr>
-                            <td><span class="rank-badge rank-2">2</span></td>
-                            <td>AlgoTrader</td>
-                            <td>8</td>
-                            <td>1,923</td>
-                            <td style="color: var(--neon-gold); font-weight: 700;">$192,300</td>
-                            <td>4.8★</td>
-                        </tr>
-                        <tr>
-                            <td><span class="rank-badge rank-3">3</span></td>
-                            <td>CodeMaster</td>
-                            <td>15</td>
-                            <td>1,654</td>
-                            <td style="color: var(--neon-gold); font-weight: 700;">$165,400</td>
-                            <td>4.7★</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Profile Tab -->
-        <div id="profile" class="tab-content">
-            <div class="profile-card">
-                <div class="profile-header">
-                    <div class="profile-avatar">
-                        <i class="fas fa-user"></i>
+                <div class="bracket-grid">
+                    <!-- Round 1 -->
+                    <div class="bracket-column">
+                        <div class="bracket-column-title">Round 1 (Quarterfinals)</div>
+                        <div class="bracket-matchup">
+                            <div class="bracket-participant winner">
+                                <span class="participant-name">@crypto_king</span>
+                                <span class="participant-score">+18%</span>
+                            </div>
+                            <div class="bracket-participant">
+                                <span class="participant-name">@moon_trader</span>
+                                <span class="participant-score">+12%</span>
+                            </div>
+                        </div>
+                        <div class="bracket-matchup">
+                            <div class="bracket-participant winner">
+                                <span class="participant-name">@sol_sniper</span>
+                                <span class="participant-score">+22%</span>
+                            </div>
+                            <div class="bracket-participant">
+                                <span class="participant-name">@degen_ape</span>
+                                <span class="participant-score">+15%</span>
+                            </div>
+                        </div>
+                        <div class="bracket-matchup">
+                            <div class="bracket-participant winner">
+                                <span class="participant-name">@whale_hunter</span>
+                                <span class="participant-score">+25%</span>
+                            </div>
+                            <div class="bracket-participant">
+                                <span class="participant-name">@pump_master</span>
+                                <span class="participant-score">+10%</span>
+                            </div>
+                        </div>
+                        <div class="bracket-matchup">
+                            <div class="bracket-participant">
+                                <span class="participant-name">@alpha_finder</span>
+                                <span class="participant-score">...</span>
+                            </div>
+                            <div class="bracket-participant">
+                                <span class="participant-name">@flash_arb</span>
+                                <span class="participant-score">...</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="profile-info">
-                        <h2>CryptoTrader2024</h2>
-                        <span class="tier-badge">🏆 ELITE Tier</span>
-                        <p style="color: var(--text-dim); margin-top: 1rem;">
-                            Member since: January 2024 • Rank: #847 • Total Points: 8,521
+
+                    <!-- Round 2 -->
+                    <div class="bracket-column">
+                        <div class="bracket-column-title">Round 2 (Semifinals)</div>
+                        <div class="bracket-matchup">
+                            <div class="bracket-participant">
+                                <span class="participant-name">@crypto_king</span>
+                                <span class="participant-score">TBD</span>
+                            </div>
+                            <div class="bracket-participant">
+                                <span class="participant-name">@sol_sniper</span>
+                                <span class="participant-score">TBD</span>
+                            </div>
+                        </div>
+                        <div class="bracket-matchup">
+                            <div class="bracket-participant">
+                                <span class="participant-name">@whale_hunter</span>
+                                <span class="participant-score">TBD</span>
+                            </div>
+                            <div class="bracket-participant">
+                                <span class="participant-name">???</span>
+                                <span class="participant-score">TBD</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Finals -->
+                    <div class="bracket-column">
+                        <div class="bracket-column-title">Finals</div>
+                        <div class="bracket-matchup">
+                            <div class="bracket-participant">
+                                <span class="participant-name">???</span>
+                                <span class="participant-score">TBD</span>
+                            </div>
+                            <div class="bracket-participant">
+                                <span class="participant-name">???</span>
+                                <span class="participant-score">TBD</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Champion -->
+                    <div class="bracket-column">
+                        <div class="bracket-column-title">🏆 Champion</div>
+                        <div class="bracket-matchup" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(0, 245, 255, 0.1)); border: 2px solid var(--neon-gold);">
+                            <div class="bracket-participant">
+                                <span class="participant-name">TBD</span>
+                                <span class="participant-score" style="color: var(--neon-gold);">1.30 SOL</span>
+                            </div>
+                        </div>
+                        <p style="text-align: center; color: rgba(255, 255, 255, 0.6); margin-top: 1rem;">
+                            + 500 $WIN tokens
                         </p>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="stats-overview">
-                    <div class="stat-card">
-                        <div class="stat-icon">💰</div>
-                        <div class="stat-value">$42.8K</div>
-                        <div class="stat-label">Total Profit</div>
+        <!-- Daily Challenges Tab -->
+        <div id="challenges-tab" class="tab-content">
+            <div class="challenges-grid">
+                <!-- Challenge 1 -->
+                <div class="challenge-card">
+                    <div class="challenge-badge daily">DAILY</div>
+                    <div class="challenge-title">🎯 Sniper Challenge</div>
+                    <div class="challenge-desc">
+                        Buy a token within 1 hour of launch and achieve the highest return by end of day.
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📈</div>
-                        <div class="stat-value">87.3%</div>
-                        <div class="stat-label">Win Rate</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🎯</div>
-                        <div class="stat-value">342</div>
-                        <div class="stat-label">Successful Trades</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">⭐</div>
-                        <div class="stat-value">47</div>
-                        <div class="stat-label">Reviews Posted</div>
-                    </div>
-                </div>
-
-                <div class="progress-section">
-                    <h3 style="color: var(--neon-cyan); margin-bottom: 1rem;">Progress to Legend Tier</h3>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar-fill" style="width: 65%;">
-                            8,521 / 15,000 Points
+                    <div class="challenge-prizes">
+                        <div class="prize-item">
+                            <span class="prize-place">🥇 1st Place</span>
+                            <span class="prize-amount">200 $WIN</span>
+                        </div>
+                        <div class="prize-item">
+                            <span class="prize-place">🥈 2nd Place</span>
+                            <span class="prize-amount">100 $WIN</span>
+                        </div>
+                        <div class="prize-item">
+                            <span class="prize-place">🥉 3rd Place</span>
+                            <span class="prize-amount">50 $WIN</span>
                         </div>
                     </div>
+                    <div class="challenge-stats">
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">34</div>
+                            <div class="challenge-stat-label">Entries</div>
+                        </div>
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">8h</div>
+                            <div class="challenge-stat-label">Remaining</div>
+                        </div>
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">FREE</div>
+                            <div class="challenge-stat-label">Entry</div>
+                        </div>
+                    </div>
+                    <button class="join-btn">
+                        <i class="fas fa-crosshairs"></i> Join Challenge
+                    </button>
                 </div>
-            </div>
 
-            <!-- Achievements -->
-            <h2 style="color: var(--neon-cyan); margin: 2rem 0 1rem; font-size: 1.8rem;">
-                <i class="fas fa-medal"></i> Achievements
-            </h2>
-            <div class="achievements-grid">
-                <div class="achievement-badge">
-                    <div class="achievement-icon">🎯</div>
-                    <div class="achievement-name">First Trade</div>
+                <!-- Challenge 2 -->
+                <div class="challenge-card">
+                    <div class="challenge-badge daily">DAILY</div>
+                    <div class="challenge-title">⚡ Flash Arbitrage Challenge</div>
+                    <div class="challenge-desc">
+                        Execute profitable arbitrage trades. Most profit in 24 hours wins.
+                    </div>
+                    <div class="challenge-prizes">
+                        <div class="prize-item">
+                            <span class="prize-place">🥇 1st Place</span>
+                            <span class="prize-amount">300 $WIN</span>
+                        </div>
+                        <div class="prize-item">
+                            <span class="prize-place">🥈 2nd-5th</span>
+                            <span class="prize-amount">100 $WIN</span>
+                        </div>
+                        <div class="prize-item">
+                            <span class="prize-place">🎁 All Participants</span>
+                            <span class="prize-amount">10 $WIN</span>
+                        </div>
+                    </div>
+                    <div class="challenge-stats">
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">56</div>
+                            <div class="challenge-stat-label">Entries</div>
+                        </div>
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">14h</div>
+                            <div class="challenge-stat-label">Remaining</div>
+                        </div>
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">FREE</div>
+                            <div class="challenge-stat-label">Entry</div>
+                        </div>
+                    </div>
+                    <button class="join-btn">
+                        <i class="fas fa-bolt"></i> Join Challenge
+                    </button>
                 </div>
-                <div class="achievement-badge">
-                    <div class="achievement-icon">💯</div>
-                    <div class="achievement-name">100 Trades</div>
+
+                <!-- Challenge 3 -->
+                <div class="challenge-card">
+                    <div class="challenge-badge weekly">WEEKLY</div>
+                    <div class="challenge-title">🧠 AI Prediction Master</div>
+                    <div class="challenge-desc">
+                        Use AI analysis to pick winning tokens. Highest accuracy wins.
+                    </div>
+                    <div class="challenge-prizes">
+                        <div class="prize-item">
+                            <span class="prize-place">🥇 1st Place</span>
+                            <span class="prize-amount">1000 $WIN</span>
+                        </div>
+                        <div class="prize-item">
+                            <span class="prize-place">🥈 2nd-10th</span>
+                            <span class="prize-amount">200 $WIN</span>
+                        </div>
+                        <div class="prize-item">
+                            <span class="prize-place">🎁 Top 50</span>
+                            <span class="prize-amount">50 $WIN</span>
+                        </div>
+                    </div>
+                    <div class="challenge-stats">
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">127</div>
+                            <div class="challenge-stat-label">Entries</div>
+                        </div>
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">4d</div>
+                            <div class="challenge-stat-label">Remaining</div>
+                        </div>
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">FREE</div>
+                            <div class="challenge-stat-label">Entry</div>
+                        </div>
+                    </div>
+                    <button class="join-btn">
+                        <i class="fas fa-brain"></i> Join Challenge
+                    </button>
                 </div>
-                <div class="achievement-badge">
-                    <div class="achievement-icon">⭐</div>
-                    <div class="achievement-name">First Review</div>
-                </div>
-                <div class="achievement-badge">
-                    <div class="achievement-icon">🏆</div>
-                    <div class="achievement-name">Elite Status</div>
-                </div>
-                <div class="achievement-badge">
-                    <div class="achievement-icon">💎</div>
-                    <div class="achievement-name">Diamond Hands</div>
-                </div>
-                <div class="achievement-badge locked">
-                    <div class="achievement-icon">👑</div>
-                    <div class="achievement-name">Legend (Locked)</div>
-                </div>
-                <div class="achievement-badge locked">
-                    <div class="achievement-icon">🚀</div>
-                    <div class="achievement-name">Moonshot (Locked)</div>
-                </div>
-                <div class="achievement-badge locked">
-                    <div class="achievement-icon">🌟</div>
-                    <div class="achievement-name">Superstar (Locked)</div>
+
+                <!-- Challenge 4 - PAID Tournament -->
+                <div class="challenge-card">
+                    <div class="challenge-badge special">PREMIUM</div>
+                    <div class="challenge-title">💎 Elite 16 Tournament</div>
+                    <div class="challenge-desc">
+                        16-player bracket tournament. Trade head-to-head. Best returns advance. March Madness style!
+                    </div>
+                    <div class="challenge-prizes">
+                        <div class="prize-item">
+                            <span class="prize-place">🏆 Winner</span>
+                            <span class="prize-amount">1.44 SOL + 500 $WIN</span>
+                        </div>
+                        <div class="prize-item">
+                            <span class="prize-place">🥈 Runner-up</span>
+                            <span class="prize-amount">100 $WIN</span>
+                        </div>
+                        <div class="prize-item">
+                            <span class="prize-place">🎁 All Players</span>
+                            <span class="prize-amount">50 $WIN</span>
+                        </div>
+                    </div>
+                    <div class="challenge-stats">
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">14/16</div>
+                            <div class="challenge-stat-label">Filled</div>
+                        </div>
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">2h</div>
+                            <div class="challenge-stat-label">To Start</div>
+                        </div>
+                        <div class="challenge-stat">
+                            <div class="challenge-stat-value">0.1 SOL</div>
+                            <div class="challenge-stat-label">Buy-In</div>
+                        </div>
+                    </div>
+                    <button class="join-btn">
+                        <i class="fas fa-trophy"></i> Join Tournament (0.1 SOL)
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Publish Strategy Tab -->
-        <div id="publish" class="tab-content">
-            <div class="publish-form">
-                <h2 style="color: var(--neon-cyan); margin-bottom: 2rem; text-align: center; font-size: 2rem;">
-                    <i class="fas fa-plus-circle"></i> Publish Your Strategy
-                </h2>
-                <p style="color: var(--text-dim); text-align: center; margin-bottom: 2rem;">
-                    Share your trading strategy and earn 10% commission on every sale
-                </p>
-
-                <form id="publishForm">
-                    <div class="form-group">
-                        <label>Strategy Name *</label>
-                        <input type="text" placeholder="e.g., Flash Arbitrage Pro" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Description *</label>
-                        <textarea placeholder="Describe your strategy, its features, and expected performance..." required></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Category *</label>
-                        <select required>
-                            <option value="">Select a category</option>
-                            <option value="arbitrage">Arbitrage</option>
-                            <option value="sentiment">Sentiment Analysis</option>
-                            <option value="technical">Technical Analysis</option>
-                            <option value="whale">Whale Tracking</option>
-                            <option value="ai">AI/ML Powered</option>
-                            <option value="other">Other</option>
+        <!-- Leaderboard Tab -->
+        <div id="leaderboard-tab" class="tab-content">
+            <div class="leaderboard">
+                <div class="leaderboard-header">
+                    <h2>🏆 All-Time Leaderboard</h2>
+                    <div>
+                        <select style="padding: 0.8rem; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(0, 245, 255, 0.3); border-radius: 8px; color: white; cursor: pointer;">
+                            <option>All Time</option>
+                            <option>This Month</option>
+                            <option>This Week</option>
+                            <option>Today</option>
                         </select>
                     </div>
+                </div>
 
-                    <div class="form-group">
-                        <label>Price ($WIN) *</label>
-                        <input type="number" placeholder="e.g., 250" min="1" required>
+                <div class="leaderboard-table">
+                    <div class="leaderboard-row header">
+                        <div>Rank</div>
+                        <div>Trader</div>
+                        <div>$WIN Earned</div>
+                        <div>Tournaments Won</div>
+                        <div>Win Rate</div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Expected Win Rate (%)</label>
-                        <input type="number" placeholder="e.g., 85" min="0" max="100">
+                    <div class="leaderboard-row">
+                        <div class="rank rank-1">🥇</div>
+                        <div class="trader-info">
+                            <div class="trader-avatar">CK</div>
+                            <div>
+                                <div class="trader-name">@crypto_king</div>
+                                <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5);">Elite Trader</div>
+                            </div>
+                        </div>
+                        <div class="win-token-amount">8,450</div>
+                        <div style="text-align: center;">23</div>
+                        <div style="text-align: center; color: var(--neon-green);">78%</div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Strategy Code/Files *</label>
-                        <input type="file" accept=".py,.js,.txt,.zip" style="padding: 0.5rem;">
+                    <div class="leaderboard-row">
+                        <div class="rank rank-2">🥈</div>
+                        <div class="trader-info">
+                            <div class="trader-avatar">SS</div>
+                            <div>
+                                <div class="trader-name">@sol_sniper</div>
+                                <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5);">Pro Trader</div>
+                            </div>
+                        </div>
+                        <div class="win-token-amount">7,230</div>
+                        <div style="text-align: center;">18</div>
+                        <div style="text-align: center; color: var(--neon-green);">72%</div>
                     </div>
 
-                    <button type="submit" class="submit-btn">
-                        <i class="fas fa-rocket"></i> Publish Strategy
-                    </button>
-                </form>
+                    <div class="leaderboard-row">
+                        <div class="rank rank-3">🥉</div>
+                        <div class="trader-info">
+                            <div class="trader-avatar">WH</div>
+                            <div>
+                                <div class="trader-name">@whale_hunter</div>
+                                <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5);">Advanced</div>
+                            </div>
+                        </div>
+                        <div class="win-token-amount">6,890</div>
+                        <div style="text-align: center;">15</div>
+                        <div style="text-align: center; color: var(--neon-green);">69%</div>
+                    </div>
+
+                    <div class="leaderboard-row">
+                        <div class="rank">4</div>
+                        <div class="trader-info">
+                            <div class="trader-avatar">AF</div>
+                            <div>
+                                <div class="trader-name">@alpha_finder</div>
+                                <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5);">Rising Star</div>
+                            </div>
+                        </div>
+                        <div class="win-token-amount">5,420</div>
+                        <div style="text-align: center;">12</div>
+                        <div style="text-align: center; color: var(--neon-green);">65%</div>
+                    </div>
+
+                    <div class="leaderboard-row">
+                        <div class="rank">5</div>
+                        <div class="trader-info">
+                            <div class="trader-avatar">PM</div>
+                            <div>
+                                <div class="trader-name">@pump_master</div>
+                                <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.5);">Competitor</div>
+                            </div>
+                        </div>
+                        <div class="win-token-amount">4,890</div>
+                        <div style="text-align: center;">10</div>
+                        <div style="text-align: center; color: var(--neon-green);">62%</div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 2rem; padding: 2rem; background: rgba(255, 215, 0, 0.05); border: 1px solid rgba(255, 215, 0, 0.2); border-radius: 15px;">
+                    <h3 style="color: var(--neon-gold); margin-bottom: 1rem;">💰 $WIN Token Info</h3>
+                    <p style="color: rgba(255, 255, 255, 0.8); line-height: 1.6;">
+                        Earn $WIN tokens by participating in tournaments, completing challenges, and using the Telegram bot. 
+                        $WIN tokens can be used for premium features, tournament entries, and future governance.
+                    </p>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Tab Switching
-        function switchTab(tabName) {
+        // Tab switching
+        function showTab(tabName) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
-
-            // Remove active class from all buttons
+            
+            // Remove active from all buttons
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-
+            
             // Show selected tab
-            document.getElementById(tabName).classList.add('active');
-
-            // Add active class to clicked button
-            event.target.closest('.tab-btn').classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Highlight active button
+            event.target.classList.add('active');
         }
 
-        // Wallet Connection
+        // Countdown timer
+        function updateCountdown() {
+            // Simulate countdown (in production, calculate from actual end time)
+            const countdownEl = document.getElementById('countdown');
+            if (countdownEl) {
+                let hours = 2;
+                let minutes = 34;
+                
+                setInterval(() => {
+                    minutes--;
+                    if (minutes < 0) {
+                        minutes = 59;
+                        hours--;
+                    }
+                    if (hours < 0) {
+                        countdownEl.textContent = 'ENDED';
+                        return;
+                    }
+                    countdownEl.textContent = `${hours}h ${minutes}m`;
+                }, 60000); // Update every minute
+            }
+        }
+
+        // Initialize
+        updateCountdown();
+
+        // Join button handlers
+        document.querySelectorAll('.join-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const twitter = localStorage.getItem('apollo_twitter');
+                
+                if (!twitter) {
+                    alert('Please connect your Twitter account first!');
+                    window.location.href = '/';
+                    return;
+                }
+
+                // Check if it's a paid tournament
+                if (this.textContent.includes('SOL')) {
+                    const confirmed = confirm('Join tournament for 0.1 SOL?\n\nPrize Pool: 90% to winner\nPlatform Fee: 10%\n$WIN Rewards: All participants');
+                    if (confirmed) {
+                        alert('Tournament registration coming soon!\n\nYou will be able to:\n• Pay buy-in with connected wallet\n• Compete in bracket-style matches\n• Win 90% of prize pool\n• Earn $WIN tokens');
+                    }
+                } else {
+                    alert('Challenge joined!\n\nYou are now registered for this challenge.\n\n✅ Track your progress in the Telegram bot\n✅ Earn $WIN tokens for participation\n✅ Compete for top spots on the leaderboard');
+                }
+            });
+        });
+
+        // Check authentication
+        window.addEventListener('load', () => {
+            const twitter = localStorage.getItem('apollo_twitter');
+            if (twitter) {
+                console.log('Authenticated as:', twitter);
+            }
+            
+            // Check if wallet is connected
+            checkWalletConnection();
+        });
+
+        // Wallet Connect Functionality
         let walletConnected = false;
+        let walletAddress = null;
 
         async function connectWallet() {
             try {
-                // Simulate wallet connection (replace with actual Web3 integration)
-                if (typeof window.ethereum !== 'undefined') {
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    const address = accounts[0];
-                    showConnectedWallet(address);
+                // Check if Phantom wallet is installed
+                const { solana } = window;
+                
+                if (solana && solana.isPhantom) {
+                    const response = await solana.connect();
+                    walletAddress = response.publicKey.toString();
+                    walletConnected = true;
+                    
+                    // Save to localStorage
+                    localStorage.setItem('apollo_wallet', walletAddress);
+                    
+                    // Update UI
+                    updateWalletUI();
+                    
+                    // Show success
+                    alert('✅ Wallet Connected!\n\nAddress: ' + walletAddress.substring(0, 8) + '...' + walletAddress.slice(-8));
                 } else {
-                    // Simulation for demo
-                    setTimeout(() => {
-                        const mockAddress = '0x' + Math.random().toString(16).substr(2, 40);
-                        showConnectedWallet(mockAddress);
-                    }, 1000);
+                    // Phantom not installed, show options
+                    const install = confirm('Phantom wallet not detected!\n\nWould you like to:\n\n• Install Phantom wallet extension\n• Use Solflare instead\n• Connect later\n\nClick OK to open Phantom installation page.');
+                    if (install) {
+                        window.open('https://phantom.app/', '_blank');
+                    }
                 }
             } catch (error) {
-                console.error('Wallet connection failed:', error);
-                alert('Failed to connect wallet. Please try again.');
+                console.error('Wallet connection error:', error);
+                alert('❌ Connection failed. Please try again.');
             }
         }
 
-        function showConnectedWallet(address) {
-            walletConnected = true;
-            const shortAddress = address.substring(0, 6) + '...' + address.substring(address.length - 4);
+        function updateWalletUI() {
+            const walletBtn = document.getElementById('walletBtn');
+            const walletText = document.getElementById('walletText');
             
-            document.getElementById('walletAddress').textContent = shortAddress;
-            document.getElementById('walletBalance').textContent = (Math.random() * 10000 + 1000).toFixed(0) + ' $WIN';
-            document.getElementById('connectWalletBtn').style.display = 'none';
-            document.getElementById('walletConnected').style.display = 'flex';
+            if (walletConnected && walletAddress) {
+                walletBtn.classList.add('connected');
+                walletText.innerHTML = '<span class="wallet-address">' + 
+                    walletAddress.substring(0, 4) + '...' + walletAddress.slice(-4) + 
+                    '</span>';
+            } else {
+                walletBtn.classList.remove('connected');
+                walletText.textContent = 'Connect Wallet';
+            }
         }
 
+        function checkWalletConnection() {
+            const savedWallet = localStorage.getItem('apollo_wallet');
+            if (savedWallet) {
+                walletAddress = savedWallet;
+                walletConnected = true;
+                updateWalletUI();
+            }
+        }
+
+        // Disconnect wallet
         function disconnectWallet() {
             walletConnected = false;
-            document.getElementById('connectWalletBtn').style.display = 'flex';
-            document.getElementById('walletConnected').style.display = 'none';
+            walletAddress = null;
+            localStorage.removeItem('apollo_wallet');
+            updateWalletUI();
         }
-
-        // Form Submission
-        document.getElementById('publishForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('Strategy submitted for review! You will be notified within 24 hours.');
-            this.reset();
-        });
-
-        // Helpful Button
-        document.querySelectorAll('.helpful-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const count = parseInt(this.textContent.match(/\d+/)[0]);
-                this.innerHTML = `<i class="fas fa-thumbs-up"></i> Helpful (${count + 1})`;
-                this.style.background = 'rgba(0, 255, 136, 0.3)';
-            });
-        });
-
-        // Purchase Button
-        document.querySelectorAll('.buy-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                if (!walletConnected) {
-                    alert('Please connect your wallet first!');
-                    return;
-                }
-                const card = this.closest('.strategy-card');
-                const title = card.querySelector('.strategy-title').textContent;
-                const price = card.querySelector('.price-tag').textContent;
-                
-                if (confirm(`Purchase "${title}" for ${price}?`)) {
-                    alert('Purchase successful! Strategy added to your account.');
-                }
-            });
-        });
-
-        // Auto-connect if wallet was previously connected (using localStorage)
-        window.addEventListener('load', () => {
-            const wasConnected = localStorage.getItem('walletConnected');
-            if (wasConnected === 'true') {
-                connectWallet();
-            }
-        });
     </script>
 </body>
 </html>

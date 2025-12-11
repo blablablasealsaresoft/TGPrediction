@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APOLLO CyberSentinel | Trading Command Center</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --neon-cyan: #00f5ff;
+            --neon-purple: #bd00ff;
+            --neon-green: #00ff88;
+            --neon-gold: #ffd700;
+            --neon-pink: #ff006e;
+            --bg-deep: #0a0014;
+            --bg-dark: #150028;
+            --text-bright: #ffffff;
+            --text-dim: #a0a0a0;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(0, 245, 255, 0.2);
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: radial-gradient(ellipse at top, var(--bg-dark), var(--bg-deep));
+            color: var(--text-bright);
+            overflow-x: hidden;
+        }
+
+        /* Neural Network Background */
+        #neural-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
+        }
+
+        /* Floating Orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.25;
+            animation: orbFloat 20s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb-1 { width: 300px; height: 300px; background: var(--neon-cyan); top: 10%; left: 10%; }
+        .orb-2 { width: 400px; height: 400px; background: var(--neon-purple); top: 60%; right: 10%; animation-delay: 5s; }
+        .orb-3 { width: 250px; height: 250px; background: var(--neon-green); bottom: 20%; left: 30%; animation-delay: 10s; }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(50px, -50px) scale(1.1); }
+            50% { transform: translate(-30px, 30px) scale(0.9); }
+            75% { transform: translate(30px, 50px) scale(1.05); }
+        }
+
+        /* Grid Overlay */
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 245, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 245, 255, 0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+            opacity: 0.3;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* Scan Line */
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+            animation: scanLine 4s linear infinite;
+            z-index: 100;
+            opacity: 0.5;
+            box-shadow: 0 0 20px var(--neon-cyan);
+        }
+
+        @keyframes scanLine {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100vh); }
+        }
+
+        /* Header */
+        .header {
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 2px solid var(--neon-cyan);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 99;
+            box-shadow: 0 4px 30px rgba(0, 212, 255, 0.3);
+            animation: headerGlow 4s ease-in-out infinite;
+        }
+
+        @keyframes headerGlow {
+            0%, 100% { box-shadow: 0 4px 30px rgba(0, 212, 255, 0.3); }
+            50% { box-shadow: 0 4px 40px rgba(0, 212, 255, 0.5); }
+        }
+
+        .header-content {
+            max-width: 1800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo i {
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: logoFloat 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px var(--neon-cyan));
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-5px) rotate(5deg); }
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes textGlow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 245, 255, 0.5)); }
+            50% { filter: drop-shadow(0 0 20px rgba(0, 245, 255, 0.8)); }
+        }
+
+        .system-status {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 245, 255, 0.05);
+            border-radius: 20px;
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            transition: all 0.3s;
+        }
+
+        .status-indicator:hover {
+            background: rgba(0, 245, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--neon-green);
+            box-shadow: 0 0 20px var(--neon-green);
+            animation: statusPulse 2s infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.8; }
+        }
+
+        /* Navigation */
+        .nav {
+            background: rgba(10, 14, 39, 0.8);
+            backdrop-filter: blur(15px);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(0, 245, 255, 0.2);
+            position: relative;
+            z-index: 90;
+        }
+
+        .nav-content {
+            max-width: 1800px;
+            margin: 0 auto;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 0.75rem 1.5rem;
+            background: rgba(0, 245, 255, 0.05);
+            border: 2px solid rgba(0, 245, 255, 0.2);
+            border-radius: 12px;
+            color: var(--neon-cyan);
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .nav-btn:hover::before {
+            left: 100%;
+        }
+
+        .nav-btn:hover {
+            background: rgba(0, 245, 255, 0.15);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0, 245, 255, 0.4);
+        }
+
+        .nav-btn.active {
+            background: var(--neon-cyan);
+            color: var(--bg-deep);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 5px 25px rgba(0, 245, 255, 0.5);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1800px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+            overflow: hidden;
+            animation: cardBreathing 6s ease-in-out infinite;
+        }
+
+        @keyframes cardBreathing {
+            0%, 100% {
+                box-shadow: 0 5px 30px rgba(0, 245, 255, 0.2);
+                border-color: rgba(0, 245, 255, 0.2);
+            }
+            50% {
+                box-shadow: 0 10px 50px rgba(0, 245, 255, 0.3);
+                border-color: rgba(0, 245, 255, 0.4);
+            }
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 245, 255, 0.05), transparent);
+            transform: rotate(45deg);
+            transition: all 0.8s;
+        }
+
+        .card:hover::before {
+            transform: rotate(45deg) translate(50%, 50%);
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 15px 60px rgba(0, 245, 255, 0.4);
+            border-color: var(--neon-cyan);
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: alertPulse 3s ease-in-out infinite;
+        }
+
+        .alert-success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid var(--neon-green);
+            box-shadow: 0 5px 30px rgba(0, 255, 136, 0.2);
+        }
+
+        @keyframes alertPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.01); }
+        }
+
+        /* Stat Large */
+        .stat-large {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .stat-large-value {
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            animation: statPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes statPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .stat-large-label {
+            color: var(--text-dim);
+            font-size: 1rem;
+        }
+
+        /* Progress */
+        .progress {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-green));
+            transition: width 0.3s;
+            box-shadow: 0 0 10px var(--neon-cyan);
+            animation: progressGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes progressGlow {
+            0%, 100% { box-shadow: 0 0 10px var(--neon-cyan); }
+            50% { box-shadow: 0 0 20px var(--neon-cyan); }
+        }
+
+        /* Metric */
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .metric:last-child { border-bottom: none; }
+
+        .metric-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        .metric-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--neon-cyan);
+        }
+
+        .metric-value.success {
+            color: var(--neon-green);
+            animation: valueGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes valueGlow {
+            0%, 100% { text-shadow: 0 0 10px var(--neon-green); }
+            50% { text-shadow: 0 0 20px var(--neon-green); }
+        }
+
+        /* Badge */
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        /* Section Header */
+        .section-header {
+            margin: 3rem 0 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--neon-cyan);
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: rgba(0, 245, 255, 0.1);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid var(--neon-cyan);
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-table tr:hover {
+            background: rgba(0, 245, 255, 0.05);
+        }
+
+        /* Live Feed */
+        .live-feed {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .feed-item {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background: rgba(0, 245, 255, 0.03);
+            border-left: 3px solid var(--neon-cyan);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .feed-item:hover {
+            background: rgba(0, 245, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        /* Card Header */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 245, 255, 0.2);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-icon {
+            color: var(--neon-cyan);
+            font-size: 1.5rem;
+            animation: iconPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Neural Canvas -->
+    <canvas id="neural-canvas"></canvas>
+
+    <!-- Grid Overlay -->
+    <div class="grid-overlay"></div>
+
+    <!-- Floating Orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- Scan Line -->
+    <div class="scan-line"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-atom"></i>
+                <div>
+                    <h1>APOLLO CyberSentinel</h1>
+                    <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 0.25rem;">Trading Command Center</p>
+                </div>
+            </div>
+            <div class="system-status">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>Trading Bot: <strong>ONLINE</strong></span>
+                </div>
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>AI Engine: <strong>ACTIVE</strong></span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <button class="nav-btn active" onclick="showSection('overview')">
+                <i class="fas fa-tachometer-alt"></i> Overview
+            </button>
+            <button class="nav-btn" onclick="showSection('trading')">
+                <i class="fas fa-chart-line"></i> Trading
+            </button>
+            <button class="nav-btn" onclick="showSection('intelligence')">
+                <i class="fas fa-brain"></i> AI Intelligence
+            </button>
+            <button class="nav-btn" onclick="showSection('security')">
+                <i class="fas fa-shield-alt"></i> Security
+            </button>
+            <button class="nav-btn" onclick="showSection('monitoring')">
+                <i class="fas fa-eye"></i> Monitoring
+            </button>
+            <button class="nav-btn" onclick="window.location.href='landing-enhanced.html'">
+                <i class="fas fa-home"></i> Home
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Overview Section -->
+        <div id="overview-section" class="section-content">
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle" style="font-size: 1.5rem; color: var(--neon-green);"></i>
+                <div>
+                    <strong>System Status: FULLY OPERATIONAL</strong>
+                    <p style="font-size: 0.9rem; margin-top: 0.25rem;">All systems initialized. No errors detected. Ready for trading.</p>
+                </div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="stat-large">
+                        <div class="stat-large-value">208</div>
+                        <div class="stat-large-label">Trading Pairs Monitored</div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="stat-large">
+                        <div class="stat-large-value">441</div>
+                        <div class="stat-large-label">Elite Wallets Tracked</div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="stat-large">
+                        <div class="stat-large-value">26+</div>
+                        <div class="stat-large-label">API Integrations</div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="stat-large">
+                        <div class="stat-large-value success">99.9%</div>
+                        <div class="stat-large-label">System Uptime</div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: 99.9%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Health -->
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-heartbeat"></i> System Health</h2>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-server card-icon"></i>
+                            Core Services
+                        </div>
+                        <span class="badge badge-success">ALL ONLINE</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Telegram Bot</span>
+                        <span class="metric-value success">✓ Connected</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Token Sniper</span>
+                        <span class="metric-value success">✓ Active</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">AI Engine</span>
+                        <span class="metric-value success">✓ Learning</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Security System</span>
+                        <span class="metric-value success">✓ 8 Layers</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-network-wired card-icon"></i>
+                            Social Intelligence
+                        </div>
+                        <span class="badge badge-success">ACTIVE</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Twitter Monitoring</span>
+                        <span class="metric-value success">✓ Enabled</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Reddit Scanner</span>
+                        <span class="metric-value success">✓ Enabled</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Sentiment Score</span>
+                        <span class="metric-value success">94%</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-database card-icon"></i>
+                            API Status
+                        </div>
+                        <span class="badge badge-success">26/26</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">DexScreener</span>
+                        <span class="metric-value success">✓ Online</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Birdeye</span>
+                        <span class="metric-value success">✓ Online</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Jupiter</span>
+                        <span class="metric-value success">✓ Online</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-chart-line card-icon"></i>
+                            Performance
+                        </div>
+                        <span class="badge badge-success">EXCELLENT</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Response Time</span>
+                        <span class="metric-value success">87ms</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">AI Accuracy</span>
+                        <span class="metric-value success">78.5%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Requests/Min</span>
+                        <span class="metric-value success">847</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Activity -->
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-rss"></i> Live Activity Feed</h2>
+            </div>
+
+            <div class="card">
+                <div class="live-feed">
+                    <div class="feed-item">
+                        <i class="fas fa-check-circle" style="color: var(--neon-green); font-size: 1.5rem;"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600;">System Initialized</div>
+                            <div style="font-size: 0.85rem; color: var(--text-dim);">All systems operational</div>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-dim);">08:17 UTC</div>
+                    </div>
+                    <div class="feed-item">
+                        <i class="fas fa-brain" style="color: var(--neon-cyan); font-size: 1.5rem;"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600;">AI Model Updated</div>
+                            <div style="font-size: 0.85rem; color: var(--text-dim);">Neural network v2.3.1 active</div>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-dim);">08:15 UTC</div>
+                    </div>
+                    <div class="feed-item">
+                        <i class="fas fa-shield-alt" style="color: var(--neon-purple); font-size: 1.5rem;"></i>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600;">Security Scan Complete</div>
+                            <div style="font-size: 0.85rem; color: var(--text-dim);">1,247 tokens verified</div>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-dim);">08:10 UTC</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Other sections would go here with similar styling -->
+        <div id="trading-section" class="section-content" style="display: none;">
+            <h2>Trading section coming soon...</h2>
+        </div>
+        <div id="intelligence-section" class="section-content" style="display: none;">
+            <h2>Intelligence section coming soon...</h2>
+        </div>
+        <div id="security-section" class="section-content" style="display: none;">
+            <h2>Security section coming soon...</h2>
+        </div>
+        <div id="monitoring-section" class="section-content" style="display: none;">
+            <h2>Monitoring section coming soon...</h2>
+        </div>
+    </div>
+
+    <script>
+        // Neural Network Background
+        const canvas = document.getElementById('neural-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        class NeuralNode {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.z = Math.random() * 1000;
+                this.vx = (Math.random() - 0.5) * 0.6;
+                this.vy = (Math.random() - 0.5) * 0.6;
+                this.vz = (Math.random() - 0.5) * 0.6;
+                this.size = Math.random() * 2 + 1;
+                this.hue = Math.random() * 60 + 180;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.z += this.vz;
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+                if (this.z < 0 || this.z > 1000) this.vz *= -1;
+            }
+
+            draw() {
+                const scale = 1000 / (1000 + this.z);
+                const x = this.x * scale + (canvas.width * (1 - scale)) / 2;
+                const y = this.y * scale + (canvas.height * (1 - scale)) / 2;
+                const size = this.size * scale;
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${0.3 * scale})`;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        const nodes = [];
+        for (let i = 0; i < 80; i++) {
+            nodes.push(new NeuralNode());
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(10, 0, 20, 0.08)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            nodes.forEach(node => {
+                node.update();
+                node.draw();
+            });
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < 150) {
+                        ctx.strokeStyle = `rgba(0, 245, 255, ${0.1 * (1 - distance / 150)})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Navigation
+        function showSection(section) {
+            document.querySelectorAll('.section-content').forEach(el => {
+                el.style.display = 'none';
+            });
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(section + '-section').style.display = 'block';
+            event.target.closest('.nav-btn').classList.add('active');
+        }
+    </script>
+</body>
+</html>

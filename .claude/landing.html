@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APOLLO CyberSentinel | Quantum Trading Intelligence</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --quantum-primary: #00f5ff;
+            --quantum-secondary: #bd00ff;
+            --quantum-accent: #00ff88;
+            --quantum-gold: #ffd700;
+            --quantum-pink: #ff006e;
+            --bg-deep: #0a0014;
+            --bg-dark: #150028;
+            --bg-darker: #1a0033;
+            --text-bright: #ffffff;
+            --text-dim: #a0a0a0;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(0, 245, 255, 0.2);
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: radial-gradient(ellipse at top, var(--bg-dark), var(--bg-deep));
+            color: var(--text-bright);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* E8 Lattice Quantum Background */
+        #quantum-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
+        }
+
+        /* Particle System */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--quantum-primary);
+            border-radius: 50%;
+            opacity: 0;
+            animation: particleFloat linear infinite;
+        }
+
+        @keyframes particleFloat {
+            0% {
+                opacity: 0;
+                transform: translateY(100vh) scale(0);
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px) scale(1);
+            }
+        }
+
+        /* Landing Page Container */
+        .landing-container {
+            position: relative;
+            z-index: 2;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        /* Glassmorphism Card */
+        .quantum-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 4rem 3rem;
+            max-width: 900px;
+            position: relative;
+            box-shadow: 
+                0 0 60px rgba(0, 245, 255, 0.2),
+                0 0 120px rgba(189, 0, 255, 0.1),
+                inset 0 0 80px rgba(0, 245, 255, 0.03);
+            animation: cardGlow 4s ease-in-out infinite;
+        }
+
+        @keyframes cardGlow {
+            0%, 100% {
+                box-shadow: 
+                    0 0 60px rgba(0, 245, 255, 0.2),
+                    0 0 120px rgba(189, 0, 255, 0.1),
+                    inset 0 0 80px rgba(0, 245, 255, 0.03);
+            }
+            50% {
+                box-shadow: 
+                    0 0 80px rgba(0, 245, 255, 0.3),
+                    0 0 140px rgba(189, 0, 255, 0.15),
+                    inset 0 0 100px rgba(0, 245, 255, 0.05);
+            }
+        }
+
+        /* Logo */
+        .quantum-logo {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .logo-icon {
+            font-size: 5rem;
+            background: linear-gradient(135deg, var(--quantum-primary), var(--quantum-secondary), var(--quantum-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: logoFloat 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 30px rgba(0, 245, 255, 0.5));
+        }
+
+        @keyframes logoFloat {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-20px) rotate(5deg);
+            }
+        }
+
+        .logo-text {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--quantum-primary), var(--quantum-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 1rem 0 0.5rem;
+            letter-spacing: 2px;
+            text-shadow: 0 0 40px rgba(0, 245, 255, 0.3);
+        }
+
+        .logo-subtitle {
+            font-size: 1.2rem;
+            color: var(--quantum-accent);
+            font-weight: 300;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        /* Quantum Stats */
+        .quantum-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 3rem 0;
+        }
+
+        .stat-box {
+            background: rgba(0, 245, 255, 0.05);
+            border: 1px solid rgba(0, 245, 255, 0.2);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .stat-box:hover::before {
+            left: 100%;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-5px);
+            border-color: var(--quantum-primary);
+            box-shadow: 0 10px 40px rgba(0, 245, 255, 0.3);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--quantum-primary), var(--quantum-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 3rem 0;
+        }
+
+        .feature-card {
+            background: rgba(189, 0, 255, 0.05);
+            border: 1px solid rgba(189, 0, 255, 0.2);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: var(--quantum-secondary);
+            box-shadow: 0 20px 60px rgba(189, 0, 255, 0.3);
+            background: rgba(189, 0, 255, 0.08);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+            background: linear-gradient(135deg, var(--quantum-secondary), var(--quantum-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--quantum-primary);
+        }
+
+        .feature-desc {
+            font-size: 0.95rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        /* CTA Button */
+        .quantum-cta {
+            text-align: center;
+            margin: 3rem 0 1rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1.5rem 4rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+            text-decoration: none;
+            color: var(--bg-deep);
+            background: linear-gradient(135deg, var(--quantum-primary), var(--quantum-accent));
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0, 245, 255, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+
+        .cta-button:hover::before {
+            width: 400px;
+            height: 400px;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 20px 60px rgba(0, 245, 255, 0.6);
+        }
+
+        .cta-button span {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Quantum Metrics */
+        .quantum-metrics {
+            display: flex;
+            justify-content: space-around;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .metric-item {
+            text-align: center;
+        }
+
+        .metric-icon {
+            font-size: 1.5rem;
+            color: var(--quantum-accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-text {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        /* Pulse Animation */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* Scan Line Effect */
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--quantum-primary), transparent);
+            animation: scanLine 3s linear infinite;
+            z-index: 3;
+            opacity: 0.5;
+        }
+
+        @keyframes scanLine {
+            0% {
+                transform: translateY(0);
+            }
+            100% {
+                transform: translateY(100vh);
+            }
+        }
+
+        /* Status Indicator */
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--quantum-accent);
+            border-radius: 50%;
+            box-shadow: 0 0 20px var(--quantum-accent);
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5);
+                opacity: 0.7;
+            }
+        }
+
+        .status-text {
+            font-size: 1rem;
+            color: var(--quantum-accent);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .quantum-card {
+                padding: 2rem 1.5rem;
+            }
+
+            .logo-text {
+                font-size: 2rem;
+            }
+
+            .logo-subtitle {
+                font-size: 0.9rem;
+            }
+
+            .quantum-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-button {
+                padding: 1.2rem 3rem;
+                font-size: 1.1rem;
+            }
+        }
+
+        /* Hexagon Pattern Overlay */
+        .hex-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 100px, rgba(0, 245, 255, 0.03) 100px, rgba(0, 245, 255, 0.03) 101px),
+                repeating-linear-gradient(60deg, transparent, transparent 100px, rgba(0, 245, 255, 0.03) 100px, rgba(0, 245, 255, 0.03) 101px),
+                repeating-linear-gradient(120deg, transparent, transparent 100px, rgba(0, 245, 255, 0.03) 100px, rgba(0, 245, 255, 0.03) 101px);
+            z-index: 0;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Quantum Canvas for E8 Lattice -->
+    <canvas id="quantum-canvas"></canvas>
+
+    <!-- Hexagon Overlay -->
+    <div class="hex-overlay"></div>
+
+    <!-- Particle System -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Scan Line Effect -->
+    <div class="scan-line"></div>
+
+    <!-- Landing Page Container -->
+    <div class="landing-container">
+        <div class="quantum-card">
+            <!-- Logo Section -->
+            <div class="quantum-logo">
+                <div class="logo-icon pulse">
+                    <i class="fas fa-atom"></i>
+                </div>
+                <h1 class="logo-text">APOLLO</h1>
+                <p class="logo-subtitle">CyberSentinel</p>
+            </div>
+
+            <!-- Status Indicator -->
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span class="status-text">Quantum Systems Online</span>
+            </div>
+
+            <!-- Quantum Stats -->
+            <div class="quantum-stats">
+                <div class="stat-box">
+                    <div class="stat-value">208</div>
+                    <div class="stat-label">Trading Pairs</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">441</div>
+                    <div class="stat-label">Elite Wallets</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">26+</div>
+                    <div class="stat-label">API Integrations</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">99.9%</div>
+                    <div class="stat-label">Uptime</div>
+                </div>
+            </div>
+
+            <!-- Features Grid -->
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <div class="feature-title">Quantum AI</div>
+                    <div class="feature-desc">Neural networks with 70-85% prediction accuracy, continuously learning from every trade</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div class="feature-title">Flash Arbitrage</div>
+                    <div class="feature-desc">100x leverage through atomic flash loans with zero risk exposure</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="feature-title">8-Layer Security</div>
+                    <div class="feature-desc">Multi-source validation across 26+ APIs protecting every transaction</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <div class="feature-title">Launch Predictor</div>
+                    <div class="feature-desc">Detect token launches 2-6 hours before public announcement</div>
+                </div>
+            </div>
+
+            <!-- Quantum Metrics -->
+            <div class="quantum-metrics">
+                <div class="metric-item">
+                    <div class="metric-icon"><i class="fas fa-clock"></i></div>
+                    <div class="metric-text">&lt;100ms Response</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="metric-text">78.5% AI Accuracy</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-icon"><i class="fas fa-users"></i></div>
+                    <div class="metric-text">10K+ Active Users</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-icon"><i class="fas fa-infinity"></i></div>
+                    <div class="metric-text">Quantum Trading</div>
+                </div>
+            </div>
+
+            <!-- CTA Button -->
+            <div class="quantum-cta">
+                <a href="dashboard.html" class="cta-button">
+                    <span>ENTER QUANTUM DASHBOARD</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // E8 Lattice Quantum Visualization
+        const canvas = document.getElementById('quantum-canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // E8 Lattice Points
+        class LatticePoint {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.z = Math.random() * 1000;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.vz = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2 + 1;
+                this.hue = Math.random() * 60 + 180; // Cyan to purple range
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.z += this.vz;
+
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+                if (this.z < 0 || this.z > 1000) this.vz *= -1;
+            }
+
+            draw() {
+                const scale = 1000 / (1000 + this.z);
+                const x = this.x * scale + (canvas.width * (1 - scale)) / 2;
+                const y = this.y * scale + (canvas.height * (1 - scale)) / 2;
+                const size = this.size * scale;
+
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 60%, ${0.3 * scale})`;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Create lattice points
+        const points = [];
+        for (let i = 0; i < 100; i++) {
+            points.push(new LatticePoint());
+        }
+
+        // Animation loop
+        function animate() {
+            ctx.fillStyle = 'rgba(10, 0, 20, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Update and draw points
+            points.forEach(point => {
+                point.update();
+                point.draw();
+            });
+
+            // Draw connections
+            for (let i = 0; i < points.length; i++) {
+                for (let j = i + 1; j < points.length; j++) {
+                    const dx = points[i].x - points[j].x;
+                    const dy = points[i].y - points[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 150) {
+                        ctx.strokeStyle = `rgba(0, 245, 255, ${0.1 * (1 - distance / 150)})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(points[i].x, points[i].y);
+                        ctx.lineTo(points[j].x, points[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Particle System
+        const particleContainer = document.getElementById('particles');
+        for (let i = 0; i < 50; i++) {
+            setTimeout(() => {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDuration = (Math.random() * 10 + 5) + 's';
+                particle.style.animationDelay = Math.random() * 5 + 's';
+                particleContainer.appendChild(particle);
+            }, i * 100);
+        }
+
+        // Feature Card Interactions
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-10px) scale(1.02) rotateY(5deg)';
+            });
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1) rotateY(0deg)';
+            });
+        });
+
+        // CTA Button Ripple Effect
+        const ctaButton = document.querySelector('.cta-button');
+        ctaButton.addEventListener('click', function(e) {
+            const ripple = document.createElement('div');
+            ripple.style.position = 'absolute';
+            ripple.style.width = '20px';
+            ripple.style.height = '20px';
+            ripple.style.background = 'rgba(255, 255, 255, 0.5)';
+            ripple.style.borderRadius = '50%';
+            ripple.style.transform = 'translate(-50%, -50%)';
+            ripple.style.animation = 'ripple 1s ease-out';
+            ripple.style.left = e.offsetX + 'px';
+            ripple.style.top = e.offsetY + 'px';
+            this.appendChild(ripple);
+
+            setTimeout(() => ripple.remove(), 1000);
+        });
+    </script>
+</body>
+</html>

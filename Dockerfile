@@ -19,9 +19,11 @@ RUN apt-get update && apt-get install -y \
 
 # Copy and install Python dependencies
 COPY requirements/dev.lock requirements/dev.lock
+COPY requirements.txt requirements.txt
 RUN pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements/dev.lock && \
-    pip install asyncpg  # PostgreSQL async driver
+    pip install asyncpg && \
+    pip install aiohttp-cors python-jose passlib bcrypt  # Web API dependencies
 
 # Copy application code
 COPY . .

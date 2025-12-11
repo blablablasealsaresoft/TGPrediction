@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APOLLO CyberSentinel - Enterprise Trading Dashboard</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/recharts@2.5.0/dist/Recharts.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0e27;
+            color: #e0e7ff;
+        }
+        
+        .glow-card {
+            background: linear-gradient(145deg, #1a1f3a 0%, #0f1629 100%);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            box-shadow: 0 4px 24px rgba(99, 102, 241, 0.1);
+        }
+        
+        .glow-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
+        }
+        
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .pulse-green {
+            animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .alert-critical {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+        }
+        
+        .alert-warning {
+            background: rgba(251, 191, 36, 0.1);
+            border-left: 4px solid #fbbf24;
+        }
+        
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 4px solid #22c55e;
+        }
+        
+        .nav-active {
+            background: rgba(99, 102, 241, 0.2);
+            border-left: 3px solid #6366f1;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<link rel="stylesheet" href="apollo-enhanced-style.css">
+    <script src="apollo-enhanced-effects.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        const { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+        // Mock API endpoint (replace with your actual API)
+        const API_BASE = 'http://localhost:8080';
+
+        // ============================================
+        // MAIN DASHBOARD COMPONENT
+        // ============================================
+        const ApolloDashboard = () => {
+            const [activeView, setActiveView] = useState('overview');
+            const [systemStatus, setSystemStatus] = useState({
+                health: 'operational',
+                uptime: '99.97%',
+                lastUpdate: new Date().toISOString()
+            });
+            
+            const [metrics, setMetrics] = useState({
+                totalTrades: 1247,
+                winRate: 78.5,
+                totalPnL: 342.7,
+                activeUsers: 156,
+                tokensMonitored: 208,
+                eliteWallets: 441,
+                securityAlerts: 3,
+                avgResponseTime: 0.87
+            });
+
+            // Simulate real-time updates
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setMetrics(prev => ({
+                        ...prev,
+                        totalTrades: prev.totalTrades + Math.floor(Math.random() * 3),
+                        totalPnL: prev.totalPnL + (Math.random() * 2 - 0.5),
+                        avgResponseTime: 0.5 + Math.random() * 0.5
+                    }));
+                }, 5000);
+                
+                return () => clearInterval(interval);
+            }, []);
+
+            const views = {
+                overview: <OverviewDashboard metrics={metrics} systemStatus={systemStatus} />,
+                security: <SecurityDashboard metrics={metrics} />,
+                trading: <TradingDashboard metrics={metrics} />,
+                analytics: <AnalyticsDashboard />,
+                admin: <AdminDashboard systemStatus={systemStatus} />
+            };
+
+            return (
+                <div className="flex h-screen bg-[#0a0e27]">
+                    {/* Sidebar */}
+                    <Sidebar activeView={activeView} setActiveView={setActiveView} systemStatus={systemStatus} />
+                    
+                    {/* Main Content */}
+                    <div className="flex-1 overflow-auto">
+                        <Header systemStatus={systemStatus} />
+                        <div className="p-6">
+                            {views[activeView]}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // SIDEBAR COMPONENT
+        // ============================================
+        const Sidebar = ({ activeView, setActiveView, systemStatus }) => {
+            const navItems = [
+                { id: 'overview', icon: 'fa-chart-line', label: 'Overview', badge: null },
+                { id: 'security', icon: 'fa-shield-halved', label: 'Security Center', badge: 3 },
+                { id: 'trading', icon: 'fa-coins', label: 'Trading Operations', badge: null },
+                { id: 'analytics', icon: 'fa-chart-bar', label: 'Analytics', badge: null },
+                { id: 'admin', icon: 'fa-cog', label: 'System Admin', badge: null }
+            ];
+
+            return (
+                <div className="w-64 bg-[#0f1629] border-r border-gray-800 flex flex-col">
+                    {/* Logo */}
+                    <div className="p-6 border-b border-gray-800">
+                        <h1 className="text-2xl font-bold gradient-text">APOLLO</h1>
+                        <p className="text-xs text-gray-400 mt-1">CyberSentinel Trading Platform</p>
+                        <div className="mt-3 flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${systemStatus.health === 'operational' ? 'bg-green-500 pulse-green' : 'bg-red-500'}`}></div>
+                            <span className="text-xs text-gray-400">All Systems Operational</span>
+                        </div>
+                    </div>
+
+                    {/* Navigation */}
+                    <nav className="flex-1 p-4 space-y-2">
+                        {navItems.map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveView(item.id)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                                    activeView === item.id ? 'nav-active text-indigo-400' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                                }`}
+                            >
+                                <i className={`fas ${item.icon} w-5`}></i>
+                                <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
+                                {item.badge && (
+                                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">{item.badge}</span>
+                                )}
+                            </button>
+                        ))}
+                    </nav>
+
+                    {/* Bottom Info */}
+                    <div className="p-4 border-t border-gray-800 space-y-2 text-xs text-gray-400">
+                        <div className="flex justify-between">
+                            <span>Version</span>
+                            <span className="text-gray-200">4.5.0</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>Uptime</span>
+                            <span className="text-green-400">{systemStatus.uptime}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span>Response Time</span>
+                            <span className="text-blue-400">0.87s</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // HEADER COMPONENT
+        // ============================================
+        const Header = ({ systemStatus }) => {
+            const [time, setTime] = useState(new Date());
+
+            useEffect(() => {
+                const timer = setInterval(() => setTime(new Date()), 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            return (
+                <div className="bg-[#0f1629] border-b border-gray-800 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold text-white">Mission Control</h2>
+                            <p className="text-sm text-gray-400">Real-time system monitoring and control</p>
+                        </div>
+                        <div className="flex items-center gap-6">
+                            <div className="text-right">
+                                <div className="text-lg font-semibold text-white">{time.toLocaleTimeString()}</div>
+                                <div className="text-xs text-gray-400">{time.toLocaleDateString()}</div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+                                    <i className="fas fa-bell text-gray-400"></i>
+                                </button>
+                                <button className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+                                    <i className="fas fa-user text-gray-400"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // OVERVIEW DASHBOARD
+        // ============================================
+        const OverviewDashboard = ({ metrics, systemStatus }) => {
+            const metricsCards = [
+                { 
+                    title: 'Total P&L', 
+                    value: `${metrics.totalPnL.toFixed(2)} SOL`, 
+                    change: '+12.5%', 
+                    positive: true, 
+                    icon: 'fa-wallet',
+                    color: 'text-green-400',
+                    bgColor: 'bg-green-500/10'
+                },
+                { 
+                    title: 'Win Rate', 
+                    value: `${metrics.winRate}%`, 
+                    change: '+3.2%', 
+                    positive: true, 
+                    icon: 'fa-chart-line',
+                    color: 'text-blue-400',
+                    bgColor: 'bg-blue-500/10'
+                },
+                { 
+                    title: 'Total Trades', 
+                    value: metrics.totalTrades.toLocaleString(), 
+                    change: '+47', 
+                    positive: true, 
+                    icon: 'fa-exchange-alt',
+                    color: 'text-purple-400',
+                    bgColor: 'bg-purple-500/10'
+                },
+                { 
+                    title: 'Active Users', 
+                    value: metrics.activeUsers, 
+                    change: '+8', 
+                    positive: true, 
+                    icon: 'fa-users',
+                    color: 'text-indigo-400',
+                    bgColor: 'bg-indigo-500/10'
+                },
+                { 
+                    title: 'Tokens Monitored', 
+                    value: metrics.tokensMonitored, 
+                    change: 'Solana', 
+                    positive: true, 
+                    icon: 'fa-eye',
+                    color: 'text-yellow-400',
+                    bgColor: 'bg-yellow-500/10'
+                },
+                { 
+                    title: 'Elite Wallets', 
+                    value: metrics.eliteWallets, 
+                    change: '100pt scoring', 
+                    positive: true, 
+                    icon: 'fa-crown',
+                    color: 'text-orange-400',
+                    bgColor: 'bg-orange-500/10'
+                },
+                { 
+                    title: 'Security Alerts', 
+                    value: metrics.securityAlerts, 
+                    change: '8-layer protection', 
+                    positive: false, 
+                    icon: 'fa-shield',
+                    color: 'text-red-400',
+                    bgColor: 'bg-red-500/10'
+                },
+                { 
+                    title: 'Avg Response', 
+                    value: `${metrics.avgResponseTime.toFixed(2)}s`, 
+                    change: '-0.13s', 
+                    positive: true, 
+                    icon: 'fa-bolt',
+                    color: 'text-cyan-400',
+                    bgColor: 'bg-cyan-500/10'
+                }
+            ];
+
+            return (
+                <div className="space-y-6">
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {metricsCards.map((metric, idx) => (
+                            <div key={idx} className="glow-card metric-card p-6 rounded-xl">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className={`${metric.bgColor} p-3 rounded-lg`}>
+                                        <i className={`fas ${metric.icon} ${metric.color} text-xl`}></i>
+                                    </div>
+                                    <span className={`text-xs ${metric.positive ? 'text-green-400' : 'text-red-400'}`}>
+                                        {metric.change}
+                                    </span>
+                                </div>
+                                <h3 className="text-gray-400 text-sm mb-2">{metric.title}</h3>
+                                <p className="text-2xl font-bold text-white">{metric.value}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Charts Row */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <PerformanceChart />
+                        <TradingActivityChart />
+                    </div>
+
+                    {/* Recent Activity & Alerts */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <RecentTrades />
+                        <SystemAlerts />
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // PERFORMANCE CHART
+        // ============================================
+        const PerformanceChart = () => {
+            const data = useMemo(() => {
+                return Array.from({ length: 24 }, (_, i) => ({
+                    hour: `${i}:00`,
+                    pnl: Math.random() * 20 - 5,
+                    trades: Math.floor(Math.random() * 50) + 10
+                }));
+            }, []);
+
+            return (
+                <div className="glow-card p-6 rounded-xl">
+                    <h3 className="text-lg font-semibold text-white mb-4">24h Performance</h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                        <AreaChart data={data}>
+                            <defs>
+                                <linearGradient id="pnlGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis dataKey="hour" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                            <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                            <Tooltip 
+                                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                                labelStyle={{ color: '#e5e7eb' }}
+                            />
+                            <Area type="monotone" dataKey="pnl" stroke="#10b981" fill="url(#pnlGradient)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            );
+        };
+
+        // ============================================
+        // TRADING ACTIVITY CHART
+        // ============================================
+        const TradingActivityChart = () => {
+            const data = useMemo(() => [
+                { phase: 'Predictions', value: 342, color: '#8b5cf6' },
+                { phase: 'Flash Loans', value: 156, color: '#3b82f6' },
+                { phase: 'Launch Sniper', value: 89, color: '#10b981' },
+                { phase: 'Pred Markets', value: 23, color: '#f59e0b' }
+            ], []);
+
+            return (
+                <div className="glow-card p-6 rounded-xl">
+                    <h3 className="text-lg font-semibold text-white mb-4">Trading by Phase</h3>
+                    <ResponsiveContainer width="100%" height={250}>
+                        <PieChart>
+                            <Pie
+                                data={data}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={90}
+                                paddingAngle={5}
+                                dataKey="value"
+                            >
+                                {data.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                            </Pie>
+                            <Tooltip 
+                                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                            />
+                            <Legend 
+                                verticalAlign="bottom" 
+                                height={36}
+                                formatter={(value, entry) => (
+                                    <span style={{ color: '#e5e7eb', fontSize: '12px' }}>{entry.payload.phase}: {entry.payload.value}</span>
+                                )}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+            );
+        };
+
+        // ============================================
+        // RECENT TRADES
+        // ============================================
+        const RecentTrades = () => {
+            const trades = [
+                { token: 'BONK', type: 'BUY', amount: '1.5 SOL', pnl: '+12.5%', time: '2m ago', success: true },
+                { token: 'JUP', type: 'SELL', amount: '2.3 SOL', pnl: '+8.2%', time: '5m ago', success: true },
+                { token: 'WIF', type: 'BUY', amount: '0.8 SOL', pnl: '-2.1%', time: '8m ago', success: false },
+                { token: 'JTO', type: 'BUY', amount: '1.2 SOL', pnl: '+15.7%', time: '12m ago', success: true },
+                { token: 'USDC', type: 'SELL', amount: '5.0 SOL', pnl: '+3.4%', time: '15m ago', success: true }
+            ];
+
+            return (
+                <div className="glow-card p-6 rounded-xl">
+                    <h3 className="text-lg font-semibold text-white mb-4">Recent Trades</h3>
+                    <div className="space-y-3">
+                        {trades.map((trade, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg hover:bg-gray-800/50 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${trade.type === 'BUY' ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                                        <i className={`fas fa-arrow-${trade.type === 'BUY' ? 'up' : 'down'} ${trade.type === 'BUY' ? 'text-green-400' : 'text-red-400'} text-xs`}></i>
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-white">{trade.token}</div>
+                                        <div className="text-xs text-gray-400">{trade.amount}</div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className={`font-semibold ${trade.success ? 'text-green-400' : 'text-red-400'}`}>{trade.pnl}</div>
+                                    <div className="text-xs text-gray-400">{trade.time}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // SYSTEM ALERTS
+        // ============================================
+        const SystemAlerts = () => {
+            const alerts = [
+                { type: 'critical', title: 'Honeypot Detected', message: 'Token XYZ123 flagged by 6/8 security layers', time: '5m ago' },
+                { type: 'warning', title: 'High Volatility', message: 'BONK showing 45% price swing in last 10 minutes', time: '12m ago' },
+                { type: 'success', title: 'Elite Wallet Activity', message: 'Wallet #127 bought 15 SOL of new token', time: '18m ago' }
+            ];
+
+            return (
+                <div className="glow-card p-6 rounded-xl">
+                    <h3 className="text-lg font-semibold text-white mb-4">System Alerts</h3>
+                    <div className="space-y-3">
+                        {alerts.map((alert, idx) => (
+                            <div key={idx} className={`alert-${alert.type} p-4 rounded-lg`}>
+                                <div className="flex items-start gap-3">
+                                    <i className={`fas fa-${alert.type === 'critical' ? 'exclamation-triangle' : alert.type === 'warning' ? 'exclamation-circle' : 'check-circle'} ${alert.type === 'critical' ? 'text-red-400' : alert.type === 'warning' ? 'text-yellow-400' : 'text-green-400'} mt-1`}></i>
+                                    <div className="flex-1">
+                                        <div className="font-semibold text-white mb-1">{alert.title}</div>
+                                        <div className="text-sm text-gray-300 mb-2">{alert.message}</div>
+                                        <div className="text-xs text-gray-400">{alert.time}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // SECURITY DASHBOARD
+        // ============================================
+        const SecurityDashboard = ({ metrics }) => {
+            const securityLayers = [
+                { name: 'RugCheck', status: 'active', scanned: 1247, blocked: 89, uptime: '99.9%' },
+                { name: 'GoPlus', status: 'active', scanned: 1247, blocked: 76, uptime: '99.8%' },
+                { name: 'TokenSniffer', status: 'active', scanned: 1247, blocked: 92, uptime: '99.7%' },
+                { name: 'RugDoc', status: 'active', scanned: 1247, blocked: 45, uptime: '99.9%' },
+                { name: 'Birdeye Security', status: 'active', scanned: 1247, blocked: 67, uptime: '100%' },
+                { name: 'Solana Beach', status: 'active', scanned: 1247, blocked: 23, uptime: '99.9%' },
+                { name: 'Internal Honeypot', status: 'active', scanned: 1247, blocked: 134, uptime: '100%' },
+                { name: 'Authority Checker', status: 'active', scanned: 1247, blocked: 156, uptime: '100%' }
+            ];
+
+            const threatTypes = [
+                { type: 'Honeypot', detected: 134, blocked: 134, severity: 'critical' },
+                { type: 'Authority Risk', detected: 156, blocked: 156, severity: 'critical' },
+                { type: 'Low Liquidity', detected: 234, blocked: 234, severity: 'high' },
+                { type: 'Suspicious Holders', detected: 89, blocked: 89, severity: 'medium' },
+                { type: 'Unverified Team', detected: 67, blocked: 0, severity: 'low' }
+            ];
+
+            return (
+                <div className="space-y-6">
+                    <div className="glow-card p-6 rounded-xl">
+                        <h3 className="text-xl font-bold text-white mb-6">8-Layer Security System Status</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {securityLayers.map((layer, idx) => (
+                                <div key={idx} className="bg-gray-800/30 p-4 rounded-lg">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h4 className="font-semibold text-white text-sm">{layer.name}</h4>
+                                        <div className="w-2 h-2 bg-green-500 rounded-full pulse-green"></div>
+                                    </div>
+                                    <div className="space-y-2 text-xs">
+                                        <div className="flex justify-between text-gray-400">
+                                            <span>Scanned:</span>
+                                            <span className="text-white">{layer.scanned}</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-400">
+                                            <span>Blocked:</span>
+                                            <span className="text-red-400">{layer.blocked}</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-400">
+                                            <span>Uptime:</span>
+                                            <span className="text-green-400">{layer.uptime}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="glow-card p-6 rounded-xl">
+                        <h3 className="text-xl font-bold text-white mb-6">Threat Detection Statistics</h3>
+                        <div className="space-y-4">
+                            {threatTypes.map((threat, idx) => (
+                                <div key={idx} className="bg-gray-800/30 p-4 rounded-lg">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-3">
+                                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                                threat.severity === 'critical' ? 'bg-red-500/20 text-red-400' :
+                                                threat.severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
+                                                threat.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                'bg-blue-500/20 text-blue-400'
+                                            }`}>
+                                                {threat.severity.toUpperCase()}
+                                            </span>
+                                            <span className="font-semibold text-white">{threat.type}</span>
+                                        </div>
+                                        <div className="text-sm text-gray-400">
+                                            <span className="text-white font-semibold">{threat.blocked}</span> / {threat.detected} blocked
+                                        </div>
+                                    </div>
+                                    <div className="w-full bg-gray-700 rounded-full h-2">
+                                        <div 
+                                            className={`h-2 rounded-full ${
+                                                threat.severity === 'critical' ? 'bg-red-500' :
+                                                threat.severity === 'high' ? 'bg-orange-500' :
+                                                threat.severity === 'medium' ? 'bg-yellow-500' :
+                                                'bg-blue-500'
+                                            }`}
+                                            style={{ width: `${(threat.blocked / threat.detected) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // TRADING DASHBOARD
+        // ============================================
+        const TradingDashboard = ({ metrics }) => {
+            return (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="glow-card p-6 rounded-xl">
+                            <h3 className="text-xl font-bold text-white mb-4">Active Positions</h3>
+                            <div className="text-center py-8">
+                                <i className="fas fa-coins text-5xl text-gray-600 mb-4"></i>
+                                <p className="text-gray-400">No active positions</p>
+                                <button className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
+                                    Start Trading
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="glow-card p-6 rounded-xl">
+                            <h3 className="text-xl font-bold text-white mb-4">Elite Wallets Activity</h3>
+                            <div className="space-y-3">
+                                {[1, 2, 3, 4].map(i => (
+                                    <div key={i} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                                                <span className="text-white font-bold">#{i}</span>
+                                            </div>
+                                            <div>
+                                                <div className="font-medium text-white">Elite Wallet #{1928855074 + i}</div>
+                                                <div className="text-xs text-gray-400">Score: {95 - i * 2}/100</div>
+                                            </div>
+                                        </div>
+                                        <button className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors">
+                                            Copy
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // ANALYTICS DASHBOARD
+        // ============================================
+        const AnalyticsDashboard = () => {
+            const performanceData = useMemo(() => {
+                return Array.from({ length: 30 }, (_, i) => ({
+                    day: `Day ${i + 1}`,
+                    winRate: 65 + Math.random() * 20,
+                    trades: Math.floor(Math.random() * 50) + 20,
+                    pnl: Math.random() * 30 - 5
+                }));
+            }, []);
+
+            return (
+                <div className="space-y-6">
+                    <div className="glow-card p-6 rounded-xl">
+                        <h3 className="text-xl font-bold text-white mb-6">30-Day Performance Trends</h3>
+                        <ResponsiveContainer width="100%" height={400}>
+                            <LineChart data={performanceData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                <XAxis dataKey="day" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                                    labelStyle={{ color: '#e5e7eb' }}
+                                />
+                                <Legend />
+                                <Line type="monotone" dataKey="winRate" stroke="#8b5cf6" name="Win Rate %" />
+                                <Line type="monotone" dataKey="pnl" stroke="#10b981" name="P&L (SOL)" />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // ADMIN DASHBOARD
+        // ============================================
+        const AdminDashboard = ({ systemStatus }) => {
+            const apiServices = [
+                { name: 'DexScreener', status: 'operational', latency: '145ms', uptime: '99.97%' },
+                { name: 'Birdeye API', status: 'operational', latency: '89ms', uptime: '99.95%' },
+                { name: 'Jupiter API', status: 'operational', latency: '67ms', uptime: '100%' },
+                { name: 'Twitter API', status: 'operational', latency: '234ms', uptime: '99.89%' },
+                { name: 'Reddit API', status: 'operational', latency: '178ms', uptime: '99.92%' },
+                { name: 'Helius RPC', status: 'operational', latency: '34ms', uptime: '100%' },
+                { name: 'PostgreSQL', status: 'operational', latency: '12ms', uptime: '100%' },
+                { name: 'Redis Cache', status: 'operational', latency: '3ms', uptime: '100%' }
+            ];
+
+            return (
+                <div className="space-y-6">
+                    <div className="glow-card p-6 rounded-xl">
+                        <h3 className="text-xl font-bold text-white mb-6">Infrastructure Status</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {apiServices.map((service, idx) => (
+                                <div key={idx} className="bg-gray-800/30 p-4 rounded-lg">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h4 className="font-semibold text-white text-sm">{service.name}</h4>
+                                        <div className={`w-2 h-2 rounded-full ${service.status === 'operational' ? 'bg-green-500 pulse-green' : 'bg-red-500'}`}></div>
+                                    </div>
+                                    <div className="space-y-2 text-xs">
+                                        <div className="flex justify-between text-gray-400">
+                                            <span>Latency:</span>
+                                            <span className="text-white">{service.latency}</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-400">
+                                            <span>Uptime:</span>
+                                            <span className="text-green-400">{service.uptime}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="glow-card p-6 rounded-xl">
+                            <h3 className="text-lg font-semibold text-white mb-4">System Resources</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <div className="flex justify-between text-sm mb-2">
+                                        <span className="text-gray-400">CPU Usage</span>
+                                        <span className="text-white">23%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-700 rounded-full h-2">
+                                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: '23%' }}></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="flex justify-between text-sm mb-2">
+                                        <span className="text-gray-400">Memory Usage</span>
+                                        <span className="text-white">2.1 GB / 8 GB</span>
+                                    </div>
+                                    <div className="w-full bg-gray-700 rounded-full h-2">
+                                        <div className="bg-green-500 h-2 rounded-full" style={{ width: '26%' }}></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="flex justify-between text-sm mb-2">
+                                        <span className="text-gray-400">Disk Usage</span>
+                                        <span className="text-white">15.3 GB / 50 GB</span>
+                                    </div>
+                                    <div className="w-full bg-gray-700 rounded-full h-2">
+                                        <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '31%' }}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="glow-card p-6 rounded-xl">
+                            <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+                            <div className="space-y-3">
+                                <button className="w-full p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i className="fas fa-sync-alt"></i>
+                                    <span>Restart Bot</span>
+                                </button>
+                                <button className="w-full p-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i className="fas fa-database"></i>
+                                    <span>Backup Database</span>
+                                </button>
+                                <button className="w-full p-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i className="fas fa-file-export"></i>
+                                    <span>Export Logs</span>
+                                </button>
+                                <button className="w-full p-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i className="fas fa-power-off"></i>
+                                    <span>Emergency Stop</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ============================================
+        // RENDER APP
+        // ============================================
+        ReactDOM.render(<ApolloDashboard />, document.getElementById('root'));
+    </script>
+</body>
+</html>

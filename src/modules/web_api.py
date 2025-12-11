@@ -56,6 +56,7 @@ class WebAPIServer:
         self.flash_loan_engine = None
         self.launch_predictor = None
         self.prediction_markets = None
+        self.trade_executor = None  # For executing trades from web dashboard
         
         self._setup_routes()
         self._setup_cors()
@@ -66,7 +67,8 @@ class WebAPIServer:
         ai_engine=None,
         flash_loan_engine=None,
         launch_predictor=None,
-        prediction_markets=None
+        prediction_markets=None,
+        trade_executor=None
     ):
         """Inject module instances for API to use"""
         self.monitoring = monitoring
@@ -74,6 +76,7 @@ class WebAPIServer:
         self.flash_loan_engine = flash_loan_engine
         self.launch_predictor = launch_predictor
         self.prediction_markets = prediction_markets
+        self.trade_executor = trade_executor
     
     def _setup_routes(self):
         """Setup all API routes"""
@@ -83,6 +86,7 @@ class WebAPIServer:
         self.app.router.add_get('/dashboard', self.serve_dashboard)
         self.app.router.add_get('/prediction-market', self.serve_prediction_market)
         self.app.router.add_get('/docs', self.serve_docs)
+        self.app.router.add_get('/profile', self.serve_profile)  # Epic user profile page
         
         # Static files - serve CSS and JS directly
         self.app.router.add_get('/static/css/apollo-enhanced-style.css', self.serve_css)
@@ -96,6 +100,16 @@ class WebAPIServer:
         # Waitlist endpoints
         self.app.router.add_post('/api/v1/waitlist', self.add_to_waitlist)
         self.app.router.add_get('/api/v1/waitlist/count', self.get_waitlist_count)
+        self.app.router.add_post('/api/v1/waitlist/register', self.register_waitlist)
+        
+        # Access check endpoint
+        self.app.router.add_get('/api/v1/access/check', self.check_access)
+        
+        # Wallet registration endpoint
+        self.app.router.add_post('/api/v1/wallet/register', self.register_wallet)
+        
+        # Twitter registration endpoint
+        self.app.router.add_post('/api/v1/twitter/register', self.register_twitter)
         
         # Dashboard endpoints
         self.app.router.add_get('/api/v1/metrics', self.get_metrics)
@@ -134,6 +148,22 @@ class WebAPIServer:
         # User & wallet endpoints
         self.app.router.add_get('/api/v1/users/stats', self.get_users_stats)
         self.app.router.add_get('/api/v1/wallets/elite', self.get_elite_wallets_stats)
+        
+        # User-specific endpoints for web dashboard
+        self.app.router.add_get('/api/v1/user/{user_id}/profile', self.get_user_profile)
+        self.app.router.add_get('/api/v1/user/{user_id}/trades', self.get_user_trades)
+        self.app.router.add_get('/api/v1/user/{user_id}/positions', self.get_user_positions)
+        self.app.router.add_get('/api/v1/user/{user_id}/stats', self.get_user_stats_detailed)
+        self.app.router.add_get('/api/v1/user/{user_id}/wallet', self.get_user_wallet_info)
+        self.app.router.add_post('/api/v1/user/{user_id}/buy', self.execute_user_buy)
+        self.app.router.add_post('/api/v1/user/{user_id}/sell', self.execute_user_sell)
+        self.app.router.add_get('/api/v1/user/{user_id}/settings', self.get_user_settings)
+        self.app.router.add_put('/api/v1/user/{user_id}/settings', self.update_user_settings_endpoint)
+        self.app.router.add_post('/api/v1/user/{user_id}/analyze', self.analyze_token_for_user)
+        
+        # Leaderboard and rankings
+        self.app.router.add_get('/api/v1/leaderboard', self.get_leaderboard)
+        self.app.router.add_get('/api/v1/rankings/traders', self.get_trader_rankings)
         
         # WebSocket
         self.app.router.add_get('/ws', self.websocket_handler)
@@ -238,6 +268,15 @@ class WebAPIServer:
             return web.Response(text=content, content_type='text/html')
         except FileNotFoundError:
             return web.Response(text='Documentation not found', status=404)
+    
+    async def serve_profile(self, request: web.Request) -> web.Response:
+        """Serve epic user profile page"""
+        try:
+            with open('./public/user-profile.html', 'r', encoding='utf-8') as f:
+                content = f.read()
+            return web.Response(text=content, content_type='text/html')
+        except FileNotFoundError:
+            return web.Response(text='Profile page not found', status=404)
     
     async def serve_css(self, request: web.Request) -> web.Response:
         """Serve enhanced CSS file"""
@@ -364,6 +403,258 @@ class WebAPIServer:
                 
         except Exception as e:
             logger.error(f"Error getting waitlist count: {e}")
+            return web.json_response({'error': 'Internal server error'}, status=500)
+    
+    async def register_waitlist(self, request: web.Request) -> web.Response:
+        """Register for waitlist with Twitter + Telegram + Wallet"""
+        try:
+            data = await request.json()
+            twitter_handle = data.get('twitter_handle', '').strip().lstrip('@').lower()
+            telegram_username = data.get('telegram_username', '').strip().lstrip('@').lower()
+            wallet_address = data.get('wallet_address', '').strip()
+            
+            if not twitter_handle:
+                return web.json_response({'error': 'Twitter handle is required'}, status=400)
+            
+            if not telegram_username:
+                return web.json_response({'error': 'Telegram username is required'}, status=400)
+            
+            if not wallet_address or len(wallet_address) < 32:
+                return web.json_response({'error': 'Valid Solana wallet address is required'}, status=400)
+            
+            # Validate Twitter handle
+            import re
+            if not re.match(r'^[A-Za-z0-9_]{1,15}$', twitter_handle):
+                return web.json_response({'error': 'Invalid Twitter handle'}, status=400)
+            
+            # Validate Telegram username
+            if not re.match(r'^[A-Za-z0-9_]{5,32}$', telegram_username):
+                return web.json_response({'error': 'Invalid Telegram username'}, status=400)
+            
+            ip_address = request.remote
+            user_agent = request.headers.get('User-Agent', '')
+            
+            from src.modules.database import WaitlistSignup
+            from sqlalchemy import select
+            
+            async with self.database.async_session() as session:
+                # Check if already on waitlist
+                result = await session.execute(
+                    select(WaitlistSignup).where(WaitlistSignup.twitter_handle == twitter_handle)
+                )
+                existing = result.scalar_one_or_none()
+                
+                if existing:
+                    # Update wallet and telegram if changed
+                    if existing.wallet_address != wallet_address:
+                        existing.wallet_address = wallet_address
+                    if existing.telegram_username != telegram_username:
+                        existing.telegram_username = telegram_username
+                    await session.commit()
+                    
+                    return web.json_response({
+                        'message': 'Already on waitlist',
+                        'twitter_handle': '@' + twitter_handle,
+                        'telegram_username': '@' + telegram_username,
+                        'approved': existing.is_approved
+                    })
+                
+                # Add to waitlist
+                new_signup = WaitlistSignup(
+                    twitter_handle=twitter_handle,
+                    telegram_username=telegram_username,
+                    wallet_address=wallet_address,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    is_approved=False
+                )
+                session.add(new_signup)
+                await session.commit()
+                
+                logger.info(f"New waitlist signup: @{twitter_handle} (TG: @{telegram_username}) - {wallet_address}")
+                
+                return web.json_response({
+                    'message': 'Successfully joined waitlist!',
+                    'twitter_handle': '@' + twitter_handle,
+                    'telegram_username': '@' + telegram_username,
+                    'approved': False
+                })
+                
+        except Exception as e:
+            logger.error(f"Error registering waitlist: {e}")
+            return web.json_response({'error': 'Internal server error'}, status=500)
+    
+    async def check_access(self, request: web.Request) -> web.Response:
+        """Check if user has been granted access"""
+        try:
+            twitter_handle = request.query.get('twitter', '').strip().lstrip('@').lower()
+            
+            if not twitter_handle:
+                return web.json_response({'approved': False, 'message': 'No Twitter handle provided'})
+            
+            from src.modules.database import WaitlistSignup
+            from sqlalchemy import select
+            
+            # Pre-approved users (can expand this list)
+            APPROVED_USERS = ['danksince93', 'ckfidel', 'yourusername']
+            
+            # Check if user is pre-approved
+            if twitter_handle in APPROVED_USERS:
+                return web.json_response({
+                    'approved': True,
+                    'twitter_handle': '@' + twitter_handle,
+                    'message': 'Access granted!'
+                })
+            
+            # Check database
+            async with self.database.async_session() as session:
+                result = await session.execute(
+                    select(WaitlistSignup).where(WaitlistSignup.twitter_handle == twitter_handle)
+                )
+                user = result.scalar_one_or_none()
+                
+                if user and user.is_approved:
+                    return web.json_response({
+                        'approved': True,
+                        'twitter_handle': '@' + twitter_handle,
+                        'approved_date': user.approved_date.isoformat() if user.approved_date else None
+                    })
+                else:
+                    return web.json_response({
+                        'approved': False,
+                        'message': 'Access not granted yet. Follow @ApolloTrading for announcements.'
+                    })
+                    
+        except Exception as e:
+            logger.error(f"Error checking access: {e}")
+            return web.json_response({'approved': False, 'error': str(e)}, status=500)
+    
+    async def register_wallet(self, request: web.Request) -> web.Response:
+        """Register Solana wallet for web3 authentication"""
+        try:
+            data = await request.json()
+            wallet_address = data.get('wallet_address', '').strip()
+            wallet_provider = data.get('wallet_provider', 'unknown').strip().lower()
+            
+            if not wallet_address:
+                return web.json_response({'error': 'Wallet address is required'}, status=400)
+            
+            # Basic Solana address validation (32-44 characters, base58)
+            if len(wallet_address) < 32 or len(wallet_address) > 44:
+                return web.json_response({'error': 'Invalid Solana wallet address'}, status=400)
+            
+            # Get IP and user agent
+            ip_address = request.remote
+            user_agent = request.headers.get('User-Agent', '')
+            
+            from src.modules.database import WalletRegistration
+            from sqlalchemy import select
+            
+            async with self.database.async_session() as session:
+                # Check if wallet already registered
+                result = await session.execute(
+                    select(WalletRegistration).where(WalletRegistration.wallet_address == wallet_address)
+                )
+                existing = result.scalar_one_or_none()
+                
+                if existing:
+                    # Update last seen
+                    existing.last_seen = datetime.utcnow()
+                    existing.visit_count += 1
+                    await session.commit()
+                    
+                    return web.json_response({
+                        'message': 'Wallet already registered',
+                        'wallet_address': wallet_address,
+                        'registered_date': existing.registered_date.isoformat(),
+                        'visit_count': existing.visit_count
+                    })
+                
+                # Register new wallet
+                new_registration = WalletRegistration(
+                    wallet_address=wallet_address,
+                    wallet_provider=wallet_provider,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    visit_count=1
+                )
+                session.add(new_registration)
+                await session.commit()
+                
+                logger.info(f"New wallet registered: {wallet_address} ({wallet_provider})")
+                
+                return web.json_response({
+                    'message': 'Wallet registered successfully!',
+                    'wallet_address': wallet_address,
+                    'registered_date': new_registration.registered_date.isoformat()
+                })
+                
+        except Exception as e:
+            logger.error(f"Error registering wallet: {e}")
+            return web.json_response({'error': 'Internal server error'}, status=500)
+    
+    async def register_twitter(self, request: web.Request) -> web.Response:
+        """Register Twitter account for authentication and profile"""
+        try:
+            data = await request.json()
+            twitter_handle = data.get('twitter_handle', '').strip().lstrip('@')
+            
+            if not twitter_handle:
+                return web.json_response({'error': 'Twitter handle is required'}, status=400)
+            
+            # Twitter handle validation (1-15 characters, alphanumeric + underscore)
+            import re
+            if not re.match(r'^[A-Za-z0-9_]{1,15}$', twitter_handle):
+                return web.json_response({'error': 'Invalid Twitter handle'}, status=400)
+            
+            # Get IP and user agent
+            ip_address = request.remote
+            user_agent = request.headers.get('User-Agent', '')
+            
+            from src.modules.database import TwitterRegistration
+            from sqlalchemy import select
+            
+            async with self.database.async_session() as session:
+                # Check if Twitter handle already registered
+                result = await session.execute(
+                    select(TwitterRegistration).where(TwitterRegistration.twitter_handle == twitter_handle.lower())
+                )
+                existing = result.scalar_one_or_none()
+                
+                if existing:
+                    # Update last seen
+                    existing.last_seen = datetime.utcnow()
+                    existing.visit_count += 1
+                    await session.commit()
+                    
+                    return web.json_response({
+                        'message': 'Twitter account already registered',
+                        'twitter_handle': '@' + twitter_handle,
+                        'registered_date': existing.registered_date.isoformat(),
+                        'visit_count': existing.visit_count
+                    })
+                
+                # Register new Twitter account
+                new_registration = TwitterRegistration(
+                    twitter_handle=twitter_handle.lower(),
+                    display_handle='@' + twitter_handle,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    visit_count=1
+                )
+                session.add(new_registration)
+                await session.commit()
+                
+                logger.info(f"New Twitter account registered: @{twitter_handle}")
+                
+                return web.json_response({
+                    'message': 'Twitter account registered successfully!',
+                    'twitter_handle': '@' + twitter_handle,
+                    'registered_date': new_registration.registered_date.isoformat()
+                })
+                
+        except Exception as e:
+            logger.error(f"Error registering Twitter account: {e}")
             return web.json_response({'error': 'Internal server error'}, status=500)
     
     # ==================== Dashboard Endpoints ====================
@@ -885,6 +1176,593 @@ class WebAPIServer:
             'totalVolume': 0,
             'participants': 0
         })
+    
+    # ==================== User-Specific Dashboard Endpoints ====================
+    
+    async def get_user_profile(self, request: web.Request) -> web.Response:
+        """Get COMPLETE user profile with ALL identity sources, PnL, rankings, and comprehensive stats"""
+        try:
+            user_id = int(request.match_info['user_id'])
+            
+            async with self.database.async_session() as session:
+                # Get user stats (30 days and lifetime)
+                stats_30 = await self.database.get_user_stats(user_id, days=30)
+                stats_7 = await self.database.get_user_stats(user_id, days=7)
+                stats_lifetime = await self.database.get_user_stats(user_id, days=999999)
+                
+                # Get bot-generated wallet
+                wallet_result = await session.execute(
+                    select(UserWallet).where(UserWallet.user_id == user_id)
+                )
+                wallet = wallet_result.scalar_one_or_none()
+                
+                # Get Twitter registration
+                from src.modules.database import TwitterRegistration, WaitlistSignup, WalletRegistration
+                twitter_result = await session.execute(
+                    select(TwitterRegistration).where(TwitterRegistration.twitter_handle.ilike(f'%{user_id}%'))
+                )
+                twitter = twitter_result.scalar_one_or_none()
+                
+                # Try to find by telegram username in waitlist
+                waitlist_result = None
+                if wallet and wallet.telegram_username:
+                    waitlist_result = await session.execute(
+                        select(WaitlistSignup).where(WaitlistSignup.telegram_username == wallet.telegram_username.lower())
+                    )
+                    waitlist = waitlist_result.scalar_one_or_none()
+                else:
+                    waitlist = None
+                
+                # Get trader profile if exists
+                trader_profile = await self.database.get_trader_profile(user_id)
+                
+                # Get user's rank
+                all_users_result = await session.execute(
+                    select(
+                        Trade.user_id,
+                        func.sum(Trade.pnl_sol).label('total_pnl')
+                    )
+                    .where(Trade.success == True)
+                    .group_by(Trade.user_id)
+                    .order_by(desc('total_pnl'))
+                )
+                all_users = list(all_users_result)
+                user_rank = next((i + 1 for i, (uid, _) in enumerate(all_users) if uid == user_id), None)
+                
+                # Calculate additional metrics
+                daily_pnl = await self.database.get_daily_pnl(user_id)
+                
+                # Get best and worst trades
+                best_trade_result = await session.execute(
+                    select(Trade.pnl_sol).where(
+                        and_(Trade.user_id == user_id, Trade.success == True)
+                    ).order_by(desc(Trade.pnl_sol)).limit(1)
+                )
+                best_trade = best_trade_result.scalar() or 0.0
+                
+                worst_trade_result = await session.execute(
+                    select(Trade.pnl_sol).where(
+                        and_(Trade.user_id == user_id, Trade.success == True)
+                    ).order_by(Trade.pnl_sol.asc()).limit(1)
+                )
+                worst_trade = worst_trade_result.scalar() or 0.0
+                
+                # Get average trade size
+                avg_trade_result = await session.execute(
+                    select(func.avg(Trade.amount_sol)).where(
+                        and_(Trade.user_id == user_id, Trade.success == True)
+                    )
+                )
+                avg_trade_size = avg_trade_result.scalar() or 0.0
+                
+                # Get trade count by context
+                trade_contexts_result = await session.execute(
+                    select(
+                        Trade.context,
+                        func.count(Trade.id).label('count')
+                    ).where(
+                        and_(Trade.user_id == user_id, Trade.success == True)
+                    ).group_by(Trade.context)
+                )
+                trade_contexts = {row[0]: row[1] for row in trade_contexts_result}
+                
+                # Get open positions count
+                open_positions = await self.database.get_open_positions(user_id)
+                
+                # Calculate streak (consecutive winning days)
+                # This is a simplified version
+                winning_streak = 0  # TODO: Implement proper streak calculation
+                
+                profile = {
+                    'user_id': user_id,
+                    
+                    # Identity Section - ALL sources
+                    'identity': {
+                        'telegram_username': wallet.telegram_username if wallet else None,
+                        'telegram_user_id': user_id,
+                        'twitter_handle': (waitlist.twitter_handle if waitlist and waitlist.twitter_handle 
+                                         else twitter.display_handle if twitter else None),
+                        'display_name': wallet.telegram_username if wallet else f'User{user_id}',
+                    },
+                    
+                    # Wallets Section - Bot wallet + External wallet
+                    'wallets': {
+                        'bot_wallet': {
+                            'address': wallet.public_key if wallet else None,
+                            'balance': float(wallet.sol_balance) if wallet else 0.0,
+                            'created_at': wallet.created_at.isoformat() if wallet else None,
+                            'last_used': wallet.last_used.isoformat() if wallet else None
+                        },
+                        'external_wallet': {
+                            'address': waitlist.wallet_address if waitlist and waitlist.wallet_address else None,
+                            'connected': bool(waitlist and waitlist.wallet_address)
+                        }
+                    },
+                    
+                    # Rankings
+                    'rankings': {
+                        'global_rank': user_rank,
+                        'total_users': len(all_users),
+                        'percentile': round((1 - (user_rank / len(all_users))) * 100, 2) if user_rank and all_users else 0
+                    },
+                    
+                    # Comprehensive Stats
+                    'stats': {
+                        'lifetime': {
+                            'total_trades': stats_lifetime.get('total_trades', 0),
+                            'profitable_trades': stats_lifetime.get('profitable_trades', 0),
+                            'win_rate': round(stats_lifetime.get('win_rate', 0), 2),
+                            'total_pnl': round(stats_lifetime.get('total_pnl', 0), 4),
+                            'best_trade': round(best_trade, 4),
+                            'worst_trade': round(worst_trade, 4),
+                            'avg_trade_size': round(avg_trade_size, 4)
+                        },
+                        'monthly': {
+                            'total_trades': stats_30.get('total_trades', 0),
+                            'profitable_trades': stats_30.get('profitable_trades', 0),
+                            'win_rate': round(stats_30.get('win_rate', 0), 2),
+                            'total_pnl': round(stats_30.get('total_pnl', 0), 4)
+                        },
+                        'weekly': {
+                            'total_trades': stats_7.get('total_trades', 0),
+                            'profitable_trades': stats_7.get('profitable_trades', 0),
+                            'win_rate': round(stats_7.get('win_rate', 0), 2),
+                            'total_pnl': round(stats_7.get('total_pnl', 0), 4)
+                        },
+                        'today': {
+                            'pnl': round(daily_pnl, 4)
+                        }
+                    },
+                    
+                    # Trading Activity
+                    'activity': {
+                        'open_positions': len(open_positions),
+                        'winning_streak': winning_streak,
+                        'trade_breakdown': trade_contexts,
+                        'last_trade': wallet.last_used.isoformat() if wallet else None
+                    },
+                    
+                    # Trader Profile (for social trading)
+                    'trader_profile': {
+                        'is_trader': bool(trader_profile),
+                        'tier': trader_profile.trader_tier if trader_profile else 'bronze',
+                        'followers': trader_profile.followers if trader_profile else 0,
+                        'reputation_score': round(trader_profile.reputation_score, 2) if trader_profile else 0,
+                        'strategies_shared': trader_profile.strategies_shared if trader_profile else 0,
+                        'is_verified': trader_profile.is_verified if trader_profile else False
+                    } if trader_profile else {
+                        'is_trader': False,
+                        'tier': 'bronze',
+                        'followers': 0,
+                        'reputation_score': 0,
+                        'strategies_shared': 0,
+                        'is_verified': False
+                    },
+                    
+                    # Account metadata
+                    'metadata': {
+                        'account_created': wallet.created_at.isoformat() if wallet else None,
+                        'is_approved': waitlist.is_approved if waitlist else False,
+                        'signup_date': waitlist.signup_date.isoformat() if waitlist else None
+                    }
+                }
+                
+                return web.json_response(profile)
+                
+        except Exception as e:
+            logger.error(f"Error fetching user profile: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def get_user_trades(self, request: web.Request) -> web.Response:
+        """Get user's trade history"""
+        try:
+            user_id = int(request.match_info['user_id'])
+            limit = int(request.query.get('limit', 50))
+            
+            trades = await self.database.get_user_trades(user_id, limit=limit)
+            
+            trades_data = []
+            for trade in trades:
+                trades_data.append({
+                    'id': trade.id,
+                    'signature': trade.signature,
+                    'timestamp': trade.timestamp.isoformat(),
+                    'type': trade.trade_type,
+                    'token_mint': trade.token_mint,
+                    'token_symbol': trade.token_symbol,
+                    'amount_sol': round(trade.amount_sol, 4),
+                    'amount_tokens': round(trade.amount_tokens, 4) if trade.amount_tokens else None,
+                    'price': round(trade.price, 8) if trade.price else None,
+                    'pnl_sol': round(trade.pnl_sol, 4) if trade.pnl_sol else None,
+                    'pnl_percentage': round(trade.pnl_percentage, 2) if trade.pnl_percentage else None,
+                    'context': trade.context,
+                    'success': trade.success
+                })
+            
+            return web.json_response(trades_data)
+            
+        except Exception as e:
+            logger.error(f"Error fetching user trades: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def get_user_positions(self, request: web.Request) -> web.Response:
+        """Get user's open positions"""
+        try:
+            user_id = int(request.match_info['user_id'])
+            
+            positions = await self.database.get_open_positions(user_id)
+            
+            positions_data = []
+            for pos in positions:
+                positions_data.append({
+                    'id': pos.id,
+                    'position_id': pos.position_id,
+                    'token_mint': pos.token_mint,
+                    'token_symbol': pos.token_symbol,
+                    'entry_price': round(pos.entry_price, 8),
+                    'entry_amount_sol': round(pos.entry_amount_sol, 4),
+                    'entry_amount_tokens': round(pos.entry_amount_tokens, 4),
+                    'entry_timestamp': pos.entry_timestamp.isoformat(),
+                    'remaining_amount_sol': round(pos.remaining_amount_sol, 4),
+                    'remaining_amount_tokens': round(pos.remaining_amount_tokens, 4),
+                    'realized_pnl_sol': round(pos.realized_pnl_sol, 4),
+                    'is_open': pos.is_open,
+                    'source': pos.source
+                })
+            
+            return web.json_response(positions_data)
+            
+        except Exception as e:
+            logger.error(f"Error fetching user positions: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def get_user_stats_detailed(self, request: web.Request) -> web.Response:
+        """Get detailed user statistics"""
+        try:
+            user_id = int(request.match_info['user_id'])
+            days = int(request.query.get('days', 30))
+            
+            stats = await self.database.get_user_stats(user_id, days=days)
+            daily_pnl = await self.database.get_daily_pnl(user_id)
+            
+            return web.json_response({
+                'user_id': user_id,
+                'total_trades': stats.get('total_trades', 0),
+                'profitable_trades': stats.get('profitable_trades', 0),
+                'win_rate': round(stats.get('win_rate', 0), 2),
+                'total_pnl': round(stats.get('total_pnl', 0), 4),
+                'daily_pnl': round(daily_pnl, 4),
+                'period_days': days
+            })
+            
+        except Exception as e:
+            logger.error(f"Error fetching user stats: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def get_user_wallet_info(self, request: web.Request) -> web.Response:
+        """Get user's wallet information"""
+        try:
+            user_id = int(request.match_info['user_id'])
+            
+            async with self.database.async_session() as session:
+                result = await session.execute(
+                    select(UserWallet).where(UserWallet.user_id == user_id)
+                )
+                wallet = result.scalar_one_or_none()
+                
+                if not wallet:
+                    return web.json_response({'error': 'Wallet not found'}, status=404)
+                
+                return web.json_response({
+                    'user_id': user_id,
+                    'public_key': wallet.public_key,
+                    'sol_balance': float(wallet.sol_balance),
+                    'last_balance_update': wallet.last_balance_update.isoformat() if wallet.last_balance_update else None,
+                    'created_at': wallet.created_at.isoformat(),
+                    'is_active': wallet.is_active
+                })
+                
+        except Exception as e:
+            logger.error(f"Error fetching wallet info: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def execute_user_buy(self, request: web.Request) -> web.Response:
+        """Execute buy command for user from web dashboard"""
+        try:
+            user_id = int(request.match_info['user_id'])
+            data = await request.json()
+            
+            token_mint = data.get('token_mint')
+            amount_sol = float(data.get('amount_sol', 0))
+            token_symbol = data.get('token_symbol')
+            
+            if not token_mint or amount_sol <= 0:
+                return web.json_response({
+                    'error': 'Invalid parameters. Required: token_mint, amount_sol'
+                }, status=400)
+            
+            # Check if trade_executor is available (injected from bot)
+            if not hasattr(self, 'trade_executor') or not self.trade_executor:
+                return web.json_response({
+                    'error': 'Trading functionality not available. Bot module not connected.'
+                }, status=503)
+            
+            # Execute trade through the trade executor
+            result = await self.trade_executor.execute_buy(
+                user_id=user_id,
+                token_mint=token_mint,
+                amount_sol=amount_sol,
+                token_symbol=token_symbol,
+                reason='web_dashboard',
+                context='web_dashboard'
+            )
+            
+            if result.get('success'):
+                return web.json_response({
+                    'success': True,
+                    'message': 'Buy order executed successfully',
+                    'signature': result.get('signature'),
+                    'amount_sol': amount_sol,
+                    'token_mint': token_mint
+                })
+            else:
+                return web.json_response({
+                    'success': False,
+                    'error': result.get('error', 'Trade execution failed')
+                }, status=400)
+                
+        except Exception as e:
+            logger.error(f"Error executing buy: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def execute_user_sell(self, request: web.Request) -> web.Response:
+        """Execute sell command for user from web dashboard"""
+        try:
+            user_id = int(request.match_info['user_id'])
+            data = await request.json()
+            
+            token_mint = data.get('token_mint')
+            amount_tokens = data.get('amount_tokens', 'all')
+            token_symbol = data.get('token_symbol')
+            
+            if not token_mint:
+                return web.json_response({
+                    'error': 'Invalid parameters. Required: token_mint'
+                }, status=400)
+            
+            # Check if trade_executor is available
+            if not hasattr(self, 'trade_executor') or not self.trade_executor:
+                return web.json_response({
+                    'error': 'Trading functionality not available. Bot module not connected.'
+                }, status=503)
+            
+            # Execute sell through the trade executor
+            result = await self.trade_executor.execute_sell(
+                user_id=user_id,
+                token_mint=token_mint,
+                amount_tokens=amount_tokens,
+                token_symbol=token_symbol,
+                reason='web_dashboard',
+                context='web_dashboard'
+            )
+            
+            if result.get('success'):
+                return web.json_response({
+                    'success': True,
+                    'message': 'Sell order executed successfully',
+                    'signature': result.get('signature'),
+                    'amount_sol_received': result.get('amount_sol_received'),
+                    'token_mint': token_mint
+                })
+            else:
+                return web.json_response({
+                    'success': False,
+                    'error': result.get('error', 'Trade execution failed')
+                }, status=400)
+                
+        except Exception as e:
+            logger.error(f"Error executing sell: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def get_user_settings(self, request: web.Request) -> web.Response:
+        """Get user's settings"""
+        try:
+            user_id = int(request.match_info['user_id'])
+            
+            settings = await self.database.get_user_settings(user_id)
+            
+            if not settings:
+                return web.json_response({
+                    'error': 'User settings not found'
+                }, status=404)
+            
+            return web.json_response({
+                'user_id': user_id,
+                'auto_trading_enabled': settings.auto_trading_enabled,
+                'max_trade_size_sol': float(settings.max_trade_size_sol),
+                'daily_loss_limit_sol': float(settings.daily_loss_limit_sol),
+                'slippage_percentage': float(settings.slippage_percentage),
+                'require_confirmation': settings.require_confirmation,
+                'use_stop_loss': settings.use_stop_loss,
+                'default_stop_loss_percentage': float(settings.default_stop_loss_percentage),
+                'use_take_profit': settings.use_take_profit,
+                'default_take_profit_percentage': float(settings.default_take_profit_percentage),
+                'check_honeypots': settings.check_honeypots,
+                'min_liquidity_usd': float(settings.min_liquidity_usd),
+                'snipe_enabled': settings.snipe_enabled,
+                'snipe_max_amount': float(settings.snipe_max_amount),
+                'snipe_min_liquidity': float(settings.snipe_min_liquidity),
+                'snipe_min_confidence': float(settings.snipe_min_confidence)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error fetching user settings: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def update_user_settings_endpoint(self, request: web.Request) -> web.Response:
+        """Update user's settings"""
+        try:
+            user_id = int(request.match_info['user_id'])
+            data = await request.json()
+            
+            # Update settings in database
+            await self.database.update_user_settings(user_id, data)
+            
+            return web.json_response({
+                'success': True,
+                'message': 'Settings updated successfully',
+                'user_id': user_id
+            })
+            
+        except Exception as e:
+            logger.error(f"Error updating user settings: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def analyze_token_for_user(self, request: web.Request) -> web.Response:
+        """Run AI analysis on a token for user"""
+        try:
+            user_id = int(request.match_info['user_id'])
+            data = await request.json()
+            
+            token_mint = data.get('token_mint')
+            
+            if not token_mint:
+                return web.json_response({
+                    'error': 'token_mint is required'
+                }, status=400)
+            
+            # Check if AI engine is available
+            if not self.ai_engine:
+                return web.json_response({
+                    'error': 'AI analysis not available'
+                }, status=503)
+            
+            # Run AI analysis
+            analysis = await self.ai_engine.analyze_token(token_mint)
+            
+            return web.json_response({
+                'success': True,
+                'token_mint': token_mint,
+                'analysis': analysis
+            })
+            
+        except Exception as e:
+            logger.error(f"Error analyzing token: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def get_leaderboard(self, request: web.Request) -> web.Response:
+        """Get trading leaderboard"""
+        try:
+            limit = int(request.query.get('limit', 50))
+            days = int(request.query.get('days', 30))
+            
+            start_date = datetime.utcnow() - timedelta(days=days)
+            
+            async with self.database.async_session() as session:
+                # Get top traders by PnL
+                result = await session.execute(
+                    select(
+                        Trade.user_id,
+                        func.sum(Trade.pnl_sol).label('total_pnl'),
+                        func.count(Trade.id).label('total_trades'),
+                        func.sum(func.case((Trade.pnl_sol > 0, 1), else_=0)).label('profitable_trades')
+                    )
+                    .where(and_(
+                        Trade.success == True,
+                        Trade.timestamp >= start_date
+                    ))
+                    .group_by(Trade.user_id)
+                    .order_by(desc('total_pnl'))
+                    .limit(limit)
+                )
+                
+                leaderboard = []
+                for rank, (user_id, total_pnl, total_trades, profitable_trades) in enumerate(result, 1):
+                    win_rate = (profitable_trades / total_trades * 100) if total_trades > 0 else 0
+                    
+                    # Get wallet info
+                    wallet_result = await session.execute(
+                        select(UserWallet).where(UserWallet.user_id == user_id)
+                    )
+                    wallet = wallet_result.scalar_one_or_none()
+                    
+                    # Get trader profile
+                    trader_profile = await self.database.get_trader_profile(user_id)
+                    
+                    leaderboard.append({
+                        'rank': rank,
+                        'user_id': user_id,
+                        'username': wallet.telegram_username if wallet else f'User{user_id}',
+                        'total_pnl': round(total_pnl, 4),
+                        'total_trades': total_trades,
+                        'win_rate': round(win_rate, 2),
+                        'tier': trader_profile.trader_tier if trader_profile else 'bronze',
+                        'followers': trader_profile.followers if trader_profile else 0
+                    })
+                
+                return web.json_response({
+                    'leaderboard': leaderboard,
+                    'period_days': days
+                })
+                
+        except Exception as e:
+            logger.error(f"Error fetching leaderboard: {e}")
+            return web.json_response({'error': str(e)}, status=500)
+    
+    async def get_trader_rankings(self, request: web.Request) -> web.Response:
+        """Get trader profile rankings"""
+        try:
+            limit = int(request.query.get('limit', 50))
+            
+            trader_profiles = await self.database.get_trader_profiles()
+            
+            # Sort by reputation score
+            sorted_traders = sorted(
+                trader_profiles,
+                key=lambda x: x.reputation_score,
+                reverse=True
+            )[:limit]
+            
+            rankings = []
+            for rank, trader in enumerate(sorted_traders, 1):
+                rankings.append({
+                    'rank': rank,
+                    'user_id': trader.user_id,
+                    'username': trader.label,
+                    'tier': trader.trader_tier,
+                    'reputation_score': round(trader.reputation_score, 2),
+                    'followers': trader.followers,
+                    'total_trades': trader.total_trades,
+                    'win_rate': round(trader.win_rate, 2),
+                    'total_pnl': round(trader.total_pnl, 4) if trader.total_pnl else 0,
+                    'is_verified': trader.is_verified
+                })
+            
+            return web.json_response(rankings)
+            
+        except Exception as e:
+            logger.error(f"Error fetching trader rankings: {e}")
+            return web.json_response({'error': str(e)}, status=500)
     
     # ==================== User & Wallet Endpoints ====================
     

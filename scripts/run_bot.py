@@ -138,18 +138,37 @@ class BotRunner:
             logger.info("Preparing Solana client")
             self.solana_client = AsyncClient(self.config.solana_rpc_url)
 
-            prometheus_enabled = os.getenv("PROMETHEUS_ENABLED", "false").lower() in {"1", "true", "yes", "on"}
-            self.probe_server = await start_probe_server(
-                lambda: perform_health_checks(self.config.solana_network),
-                prometheus_enabled=prometheus_enabled,
-            )
-
             logger.info("Starting Revolutionary Trading Bot")
             self.bot = RevolutionaryTradingBot(
                 self.config,
                 self.db_manager,
                 solana_client=self.solana_client,
             )
+
+            # Inject modules into Web API (if enabled)
+            if hasattr(self.bot, 'web_api_server') and self.bot.web_api_server:
+                self.bot.web_api_server.set_modules(
+                    monitoring=self.bot.monitor,
+                    ai_engine=self.bot.ai_manager,
+                    flash_loan_engine=self.bot.flash_loan_engine,
+                    launch_predictor=self.bot.launch_predictor,
+                    prediction_markets=self.bot.prediction_markets,
+                    trade_executor=self.bot.trade_executor  # Enable web dashboard trading
+                )
+                logger.info("🌐 Web API modules injected (including trade executor)")
+
+            # Start probe server with Web API integration
+            prometheus_enabled = os.getenv("PROMETHEUS_ENABLED", "false").lower() in {"1", "true", "yes", "on"}
+            web_api_server = self.bot.web_api_server if hasattr(self.bot, 'web_api_server') else None
+            
+            self.probe_server = await start_probe_server(
+                lambda: perform_health_checks(self.config.solana_network),
+                prometheus_enabled=prometheus_enabled,
+                web_api_server=web_api_server
+            )
+            
+            if web_api_server:
+                logger.info("🌐 Web API integrated with health check server on port 8080")
 
             await self.bot.start(self.shutdown_event)
         except KeyboardInterrupt:

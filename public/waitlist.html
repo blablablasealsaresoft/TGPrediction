@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APOLLO CyberSentinel | Beta Access - Limited Spots</title>
+    <title>APOLLO | The Future Awaits</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -19,20 +19,209 @@
             --neon-gold: #ffd700;
             --neon-pink: #ff006e;
             --neon-red: #ff0055;
+            --neon-blue: #0066ff;
             --bg-deep: #0a0014;
             --bg-dark: #150028;
         }
 
         body {
             font-family: 'Inter', 'Segoe UI', sans-serif;
-            background: radial-gradient(ellipse at top, var(--bg-dark), var(--bg-deep));
+            background: #000;
             color: white;
             min-height: 100vh;
             overflow-x: hidden;
             position: relative;
+            cursor: default;
         }
 
-        /* Neural Network Canvas */
+        /* ===== QUANTUM NOISE OVERLAY ===== */
+        .quantum-noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none !important;
+            opacity: 0.03;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/></filter><rect width="200" height="200" filter="url(%23noise)" opacity="1"/></svg>');
+            animation: quantumShift 0.5s infinite;
+        }
+
+        @keyframes quantumShift {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-2px, 2px); }
+            20% { transform: translate(2px, -2px); }
+            30% { transform: translate(-2px, -2px); }
+            40% { transform: translate(2px, 2px); }
+            50% { transform: translate(0, -2px); }
+            60% { transform: translate(-2px, 0); }
+            70% { transform: translate(2px, 0); }
+            80% { transform: translate(0, 2px); }
+            90% { transform: translate(-2px, -2px); }
+        }
+
+        /* ===== ENHANCED CUSTOM CURSOR ===== */
+        .custom-cursor {
+            position: fixed;
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--neon-cyan);
+            border-radius: 50%;
+            pointer-events: none !important;
+            z-index: 9999;
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 1;
+            mix-blend-mode: screen;
+            box-shadow: 
+                0 0 20px var(--neon-cyan), 
+                inset 0 0 20px var(--neon-cyan),
+                0 0 40px rgba(0, 245, 255, 0.5);
+        }
+
+        .custom-cursor::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4px;
+            height: 4px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+
+        .custom-cursor.hover {
+            transform: scale(1.8);
+            border-color: var(--neon-purple);
+            box-shadow: 
+                0 0 30px var(--neon-purple), 
+                inset 0 0 30px var(--neon-purple),
+                0 0 60px rgba(189, 0, 255, 0.7);
+        }
+
+        .cursor-trail {
+            position: fixed;
+            width: 6px;
+            height: 6px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            opacity: 0;
+            box-shadow: 0 0 15px var(--neon-cyan);
+            animation: trailFade 0.6s ease-out forwards;
+        }
+
+        @keyframes trailFade {
+            0% {
+                opacity: 0.8;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+        }
+
+        /* ===== BLACK HOLE INTRO - ENHANCED ===== */
+        .blackhole-intro {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1.5s ease;
+        }
+
+        .blackhole-intro.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #blackhole-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .intro-text {
+            position: absolute;
+            z-index: 10001;
+            text-align: center;
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            opacity: 0;
+            animation: introTextReveal 3s ease forwards;
+            animation-delay: 2s;
+            text-shadow: 
+                0 0 20px var(--neon-cyan),
+                0 0 40px var(--neon-cyan),
+                0 0 60px var(--neon-purple),
+                0 0 80px var(--neon-purple);
+        }
+
+        @keyframes introTextReveal {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotateX(90deg);
+                filter: blur(20px);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.1) rotateX(0deg);
+                filter: blur(0px);
+            }
+            70% {
+                transform: scale(0.95);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(1.2);
+                filter: blur(10px);
+            }
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            opacity: 0;
+            transform: scale(0.9) translateY(30px);
+            transition: opacity 2s ease, transform 2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .main-content.visible {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        /* ===== ENHANCED BACKGROUND ===== */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(0, 245, 255, 0.08), transparent 50%),
+                radial-gradient(ellipse at 80% 70%, rgba(189, 0, 255, 0.08), transparent 50%),
+                radial-gradient(ellipse at center, var(--bg-dark), var(--bg-deep));
+            z-index: -1;
+        }
+
+
+
+        /* ===== NEURAL NETWORK CANVAS ===== */
         #neural-canvas {
             position: fixed;
             top: 0;
@@ -40,75 +229,109 @@
             width: 100%;
             height: 100%;
             z-index: 1;
-            opacity: 0.3;
+            opacity: 0.5;
         }
 
-        /* Animated Grid */
-        .grid-overlay {
+        /* ===== 3D PERSPECTIVE GRID - ENHANCED ===== */
+        .perspective-grid {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: 
-                linear-gradient(90deg, rgba(0, 245, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(rgba(0, 245, 255, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: gridMove 20s linear infinite;
+            perspective: 1200px;
             z-index: 1;
+            overflow: hidden;
         }
 
-        @keyframes gridMove {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
+        .grid-3d {
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            left: -50%;
+            top: 30%;
+            transform: rotateX(75deg) translateZ(-200px);
+            background: 
+                linear-gradient(90deg, transparent 49%, rgba(0, 245, 255, 0.15) 50%, transparent 51%),
+                linear-gradient(transparent 49%, rgba(0, 245, 255, 0.15) 50%, transparent 51%);
+            background-size: 80px 80px;
+            animation: gridPerspective 20s linear infinite;
+            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
         }
 
-        /* Floating Particles */
-        .particle {
+        @keyframes gridPerspective {
+            0% { transform: rotateX(75deg) translateZ(-200px) translateY(0); }
+            100% { transform: rotateX(75deg) translateZ(-200px) translateY(80px); }
+        }
+
+        /* ===== HOLOGRAPHIC SCANLINES ===== */
+        .scanlines {
             position: fixed;
-            width: 4px;
-            height: 4px;
-            background: var(--neon-cyan);
-            border-radius: 50%;
-            pointer-events: none;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                transparent 50%,
+                rgba(0, 245, 255, 0.03) 51%
+            );
+            background-size: 100% 4px;
             z-index: 2;
-            animation: floatUp 15s linear infinite;
-            opacity: 0;
+            pointer-events: none;
+            animation: scanlineMove 8s linear infinite;
         }
 
-        @keyframes floatUp {
-            0% {
-                transform: translateY(100vh) scale(0);
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(-100vh) scale(1);
-                opacity: 0;
-            }
+        @keyframes scanlineMove {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(4px); }
         }
 
-        /* Glowing Orbs */
+        /* ===== LASER SCANNER - ENHANCED ===== */
+        .laser-scanner {
+            position: fixed;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                transparent,
+                rgba(0, 245, 255, 0.3) 20%,
+                var(--neon-cyan) 50%,
+                rgba(0, 245, 255, 0.3) 80%,
+                transparent
+            );
+            box-shadow: 
+                0 0 30px var(--neon-cyan),
+                0 0 60px var(--neon-cyan),
+                0 0 90px var(--neon-cyan);
+            z-index: 3;
+            animation: laserScan 8s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes laserScan {
+            0%, 100% { top: -4px; opacity: 0; }
+            5% { opacity: 1; }
+            50% { top: 100%; }
+            95% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        /* ===== GLOWING ORBS - ENHANCED ===== */
         .orb {
             position: fixed;
             border-radius: 50%;
-            filter: blur(60px);
+            filter: blur(100px);
             pointer-events: none;
             z-index: 1;
-            animation: orbFloat 20s ease-in-out infinite;
+            animation: orbFloat 25s ease-in-out infinite;
+            mix-blend-mode: screen;
         }
 
         .orb1 {
-            width: 400px;
-            height: 400px;
+            width: 600px;
+            height: 600px;
             background: radial-gradient(circle, var(--neon-cyan) 0%, transparent 70%);
-            top: 20%;
-            left: 10%;
+            top: -10%;
+            left: -10%;
             animation-delay: 0s;
         }
 
@@ -116,119 +339,235 @@
             width: 500px;
             height: 500px;
             background: radial-gradient(circle, var(--neon-purple) 0%, transparent 70%);
-            top: 60%;
-            right: 10%;
-            animation-delay: 5s;
+            bottom: -15%;
+            right: -10%;
+            animation-delay: -8s;
         }
 
         .orb3 {
-            width: 350px;
-            height: 350px;
+            width: 400px;
+            height: 400px;
             background: radial-gradient(circle, var(--neon-green) 0%, transparent 70%);
-            bottom: 20%;
-            left: 50%;
-            animation-delay: 10s;
+            top: 50%;
+            right: -5%;
+            animation-delay: -16s;
         }
 
         @keyframes orbFloat {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(30px, -30px) scale(1.1); }
-            50% { transform: translate(-20px, 20px) scale(0.9); }
-            75% { transform: translate(20px, 30px) scale(1.05); }
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+                opacity: 0.4;
+            }
+            33% {
+                transform: translate(60px, -80px) scale(1.1);
+                opacity: 0.6;
+            }
+            66% {
+                transform: translate(-40px, 60px) scale(0.9);
+                opacity: 0.5;
+            }
         }
 
-        /* Main Container */
+        /* ===== PARTICLES - ENHANCED ===== */
+        .particle {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 0 10px currentColor;
+            animation: particleFloat 20s ease-in-out infinite;
+            opacity: 0.6;
+        }
+
+        @keyframes particleFloat {
+            0%, 100% {
+                transform: translateY(100vh) translateX(0) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.6;
+                transform: translateY(90vh) translateX(20px) scale(1);
+            }
+            90% {
+                opacity: 0.6;
+                transform: translateY(10vh) translateX(-20px) scale(1);
+            }
+            100% {
+                transform: translateY(0) translateX(0) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* ===== HEXAGONS - ENHANCED ===== */
+        #hexagons {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .hexagon {
+            position: absolute;
+            width: 60px;
+            height: 35px;
+            background: transparent;
+            border-left: 2px solid rgba(0, 245, 255, 0.2);
+            border-right: 2px solid rgba(0, 245, 255, 0.2);
+            opacity: 0;
+            animation: hexFloat 15s ease-in-out infinite;
+            transition: all 0.3s ease;
+        }
+
+        .hexagon::before,
+        .hexagon::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            left: 0;
+        }
+
+        .hexagon::before {
+            bottom: 100%;
+            border-bottom: 17px solid rgba(0, 245, 255, 0.2);
+        }
+
+        .hexagon::after {
+            top: 100%;
+            border-top: 17px solid rgba(0, 245, 255, 0.2);
+        }
+
+        .hexagon:hover {
+            border-color: rgba(189, 0, 255, 0.6);
+        }
+
+        .hexagon:hover::before {
+            border-bottom-color: rgba(189, 0, 255, 0.6);
+        }
+
+        .hexagon:hover::after {
+            border-top-color: rgba(189, 0, 255, 0.6);
+        }
+
+        @keyframes hexFloat {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg) scale(0.8);
+                opacity: 0;
+            }
+            50% {
+                transform: translateY(-100px) rotate(180deg) scale(1);
+                opacity: 0.5;
+            }
+        }
+
+        /* ===== MATRIX RAIN ===== */
+        #matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.15;
+        }
+
+        /* ===== CONTAINER ===== */
         .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
             position: relative;
             z-index: 10;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
         }
 
-        /* Glitch Logo */
+        /* ===== HEADER - ENHANCED ===== */
+        header {
+            padding: 2rem 0;
+            position: relative;
+            z-index: 100;
+        }
+
         .logo {
-            font-size: 72px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 2rem;
             font-weight: 900;
-            text-align: center;
-            margin-bottom: 20px;
+            letter-spacing: 3px;
             background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple), var(--neon-green));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            animation: logoGlow 3s ease-in-out infinite, glitch 5s infinite;
-            position: relative;
-            text-shadow: 
-                0 0 30px rgba(0, 245, 255, 0.5),
-                0 0 60px rgba(189, 0, 255, 0.3);
+            text-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+            animation: logoGlow 3s ease-in-out infinite;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05) translateY(-2px);
         }
 
         @keyframes logoGlow {
-            0%, 100% { filter: brightness(1) saturate(1); }
-            50% { filter: brightness(1.3) saturate(1.5); }
-        }
-
-        @keyframes glitch {
-            0%, 90%, 100% { transform: translate(0); }
-            91% { transform: translate(-2px, 2px); }
-            92% { transform: translate(2px, -2px); }
-            93% { transform: translate(-2px, -2px); }
-            94% { transform: translate(2px, 2px); }
-            95% { transform: translate(0); }
-        }
-
-        /* Badge */
-        .badge {
-            display: inline-block;
-            padding: 12px 30px;
-            background: rgba(255, 0, 85, 0.2);
-            border: 2px solid var(--neon-red);
-            border-radius: 50px;
-            color: var(--neon-red);
-            font-weight: 700;
-            font-size: 14px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 30px;
-            animation: badgePulse 2s ease-in-out infinite;
-            box-shadow: 
-                0 0 20px rgba(255, 0, 85, 0.4),
-                inset 0 0 20px rgba(255, 0, 85, 0.1);
-        }
-
-        @keyframes badgePulse {
             0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 0 20px rgba(255, 0, 85, 0.4);
+                filter: drop-shadow(0 0 20px rgba(0, 245, 255, 0.5));
             }
             50% {
-                transform: scale(1.05);
-                box-shadow: 0 0 40px rgba(255, 0, 85, 0.6);
+                filter: drop-shadow(0 0 40px rgba(189, 0, 255, 0.7));
             }
         }
 
-        /* Main Headline */
-        .headline {
-            font-size: 56px;
-            font-weight: 900;
-            text-align: center;
-            margin-bottom: 20px;
-            line-height: 1.2;
-            text-shadow: 0 0 30px rgba(0, 245, 255, 0.5);
+        .logo i {
+            font-size: 2.5rem;
+            filter: drop-shadow(0 0 20px var(--neon-cyan));
+            animation: logoSpin 4s linear infinite;
         }
 
-        .gradient-text {
-            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-green), var(--neon-gold));
-            background-size: 300% 100%;
+        @keyframes logoSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== HERO SECTION - ENHANCED ===== */
+        .hero {
+            min-height: 90vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            padding: 3rem 0;
+        }
+
+        .hero-content {
+            max-width: 900px;
+        }
+
+
+
+        h1 {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -2px;
+            background: linear-gradient(135deg, 
+                var(--neon-cyan) 0%,
+                var(--neon-purple) 50%,
+                var(--neon-cyan) 100%
+            );
+            background-size: 200% 200%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            animation: gradientShift 5s ease infinite;
+            animation: gradientShift 4s ease infinite;
+            text-shadow: 0 0 80px rgba(0, 245, 255, 0.5);
+            position: relative;
         }
 
         @keyframes gradientShift {
@@ -236,214 +575,205 @@
             50% { background-position: 100% 50%; }
         }
 
-        /* Subheadline */
-        .subheadline {
-            font-size: 24px;
-            text-align: center;
-            margin-bottom: 40px;
-            color: rgba(255, 255, 255, 0.8);
-            max-width: 700px;
+        .glitch {
+            position: relative;
+            display: inline-block;
         }
 
-        /* Countdown Timer */
-        .countdown-container {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(20px);
-            border: 2px solid rgba(0, 245, 255, 0.3);
-            border-radius: 20px;
-            padding: 30px 50px;
-            margin-bottom: 40px;
-            box-shadow: 
-                0 0 40px rgba(0, 245, 255, 0.2),
-                inset 0 0 40px rgba(0, 245, 255, 0.05);
-        }
-
-        .countdown-label {
-            text-align: center;
-            font-size: 14px;
-            color: var(--neon-cyan);
-            margin-bottom: 15px;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            font-weight: 700;
-        }
-
-        .countdown {
-            display: flex;
-            gap: 30px;
-            justify-content: center;
-        }
-
-        .countdown-item {
-            text-align: center;
-        }
-
-        .countdown-number {
-            font-size: 48px;
-            font-weight: 900;
-            color: var(--neon-cyan);
-            text-shadow: 0 0 20px rgba(0, 245, 255, 0.6);
-            display: block;
-            min-width: 60px;
-        }
-
-        .countdown-text {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 5px;
-        }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            max-width: 900px;
-            margin-bottom: 50px;
+            height: 100%;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            opacity: 0.8;
         }
 
-        .stat-card {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(20px);
+        .glitch::before {
+            animation: glitch1 2.5s infinite;
+            clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+            transform: translate(-2px, -2px);
+        }
+
+        .glitch::after {
+            animation: glitch2 2.5s infinite;
+            clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+            transform: translate(2px, 2px);
+        }
+
+        @keyframes glitch1 {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-3px, 3px); }
+            40% { transform: translate(-3px, -3px); }
+            60% { transform: translate(3px, 3px); }
+            80% { transform: translate(3px, -3px); }
+        }
+
+        @keyframes glitch2 {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(3px, -3px); }
+            40% { transform: translate(3px, 3px); }
+            60% { transform: translate(-3px, -3px); }
+            80% { transform: translate(-3px, 3px); }
+        }
+
+
+
+
+
+        /* ===== WAITLIST FORM - ENHANCED ===== */
+        .waitlist-section {
+            margin-top: 4rem;
+        }
+
+        .form-container {
+            background: rgba(10, 0, 20, 0.6);
             border: 1px solid rgba(0, 245, 255, 0.2);
-            border-radius: 15px;
-            padding: 25px;
-            text-align: center;
-            transition: all 0.3s ease;
-            animation: cardFloat 3s ease-in-out infinite;
-        }
-
-        .stat-card:nth-child(1) { animation-delay: 0s; }
-        .stat-card:nth-child(2) { animation-delay: 0.5s; }
-        .stat-card:nth-child(3) { animation-delay: 1s; }
-        .stat-card:nth-child(4) { animation-delay: 1.5s; }
-
-        @keyframes cardFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .stat-card:hover {
-            border-color: var(--neon-cyan);
-            box-shadow: 0 0 30px rgba(0, 245, 255, 0.3);
-            transform: translateY(-5px);
-        }
-
-        .stat-number {
-            font-size: 36px;
-            font-weight: 900;
-            color: var(--neon-green);
-            margin-bottom: 5px;
-            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
-        }
-
-        .stat-label {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.7);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Waitlist Form */
-        .waitlist-form {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(30px);
-            border: 2px solid rgba(0, 245, 255, 0.3);
-            border-radius: 25px;
-            padding: 50px;
-            max-width: 600px;
-            width: 100%;
-            margin-bottom: 40px;
+            border-radius: 20px;
+            padding: 3rem;
+            backdrop-filter: blur(20px);
             box-shadow: 
                 0 0 60px rgba(0, 245, 255, 0.2),
-                inset 0 0 60px rgba(0, 245, 255, 0.05);
-            animation: formGlow 3s ease-in-out infinite;
+                inset 0 0 60px rgba(0, 245, 255, 0.05),
+                0 20px 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        @keyframes formGlow {
-            0%, 100% {
-                box-shadow: 
-                    0 0 60px rgba(0, 245, 255, 0.2),
-                    inset 0 0 60px rgba(0, 245, 255, 0.05);
-            }
-            50% {
-                box-shadow: 
-                    0 0 80px rgba(0, 245, 255, 0.4),
-                    inset 0 0 80px rgba(0, 245, 255, 0.08);
-            }
+        .form-container:hover {
+            transform: translateY(-10px);
+            border-color: rgba(0, 245, 255, 0.4);
+            box-shadow: 
+                0 0 80px rgba(0, 245, 255, 0.4),
+                inset 0 0 80px rgba(0, 245, 255, 0.1),
+                0 30px 80px rgba(0, 0, 0, 0.6);
+        }
+
+        .form-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, 
+                var(--neon-cyan), 
+                var(--neon-purple), 
+                var(--neon-green),
+                var(--neon-cyan)
+            );
+            border-radius: 20px;
+            opacity: 0;
+            z-index: -1;
+            animation: borderGlow 3s linear infinite;
+            transition: opacity 0.3s ease;
+        }
+
+        .form-container:hover::before {
+            opacity: 0.3;
+        }
+
+        @keyframes borderGlow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
         }
 
         .form-title {
-            font-size: 28px;
-            font-weight: 900;
-            text-align: center;
-            margin-bottom: 10px;
-            color: var(--neon-cyan);
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .form-subtitle {
-            text-align: center;
             color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 30px;
-            font-size: 14px;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
         }
 
         .input-group {
             position: relative;
-            margin-bottom: 20px;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
         .input-icon {
             position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
+            left: 1.5rem;
             color: var(--neon-cyan);
-            font-size: 20px;
+            font-size: 1.2rem;
             z-index: 1;
+            filter: drop-shadow(0 0 10px var(--neon-cyan));
         }
 
+        input[type="text"],
         input[type="email"] {
             width: 100%;
-            padding: 20px 20px 20px 60px;
-            font-size: 16px;
-            background: rgba(0, 0, 0, 0.3);
+            padding: 1.5rem 1.5rem 1.5rem 4rem;
+            background: rgba(0, 0, 0, 0.5);
             border: 2px solid rgba(0, 245, 255, 0.3);
             border-radius: 15px;
             color: white;
+            font-size: 1.1rem;
             outline: none;
             transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 204 !important;
+            pointer-events: auto !important;
+            cursor: text !important;
         }
 
+        input[type="text"]:focus,
         input[type="email"]:focus {
             border-color: var(--neon-cyan);
-            box-shadow: 0 0 30px rgba(0, 245, 255, 0.3);
-            background: rgba(0, 0, 0, 0.5);
+            box-shadow: 
+                0 0 30px rgba(0, 245, 255, 0.4),
+                inset 0 0 30px rgba(0, 245, 255, 0.1);
+            transform: translateY(-2px);
         }
 
+        input[type="text"]::placeholder,
         input[type="email"]::placeholder {
             color: rgba(255, 255, 255, 0.4);
         }
 
         .submit-btn {
             width: 100%;
-            padding: 25px;
-            font-size: 18px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            padding: 1.5rem;
             background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
             border: none;
             border-radius: 15px;
             color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer !important;
             position: relative;
+            z-index: 205 !important;
+            pointer-events: auto !important;
             overflow: hidden;
-            box-shadow: 0 0 40px rgba(0, 245, 255, 0.4);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 
+                0 10px 40px rgba(0, 245, 255, 0.4),
+                inset 0 0 20px rgba(255, 255, 255, 0.1);
         }
 
         .submit-btn::before {
@@ -453,7 +783,11 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            background: linear-gradient(90deg, 
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
             transition: left 0.5s ease;
         }
 
@@ -462,314 +796,14 @@
         }
 
         .submit-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0 60px rgba(0, 245, 255, 0.6);
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 
+                0 15px 60px rgba(0, 245, 255, 0.6),
+                inset 0 0 30px rgba(255, 255, 255, 0.2);
         }
 
         .submit-btn:active {
-            transform: translateY(0);
-        }
-
-        /* Success Message */
-        .success-message {
-            display: none;
-            text-align: center;
-            padding: 30px;
-            background: rgba(0, 255, 136, 0.1);
-            border: 2px solid var(--neon-green);
-            border-radius: 15px;
-            margin-top: 20px;
-            animation: successSlide 0.5s ease;
-        }
-
-        .success-message.show {
-            display: block;
-        }
-
-        @keyframes successSlide {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .success-icon {
-            font-size: 48px;
-            color: var(--neon-green);
-            margin-bottom: 15px;
-            animation: successBounce 0.6s ease;
-        }
-
-        @keyframes successBounce {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-        }
-
-        /* Features List */
-        .features-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            max-width: 900px;
-            width: 100%;
-            margin-bottom: 50px;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(0, 245, 255, 0.2);
-            border-radius: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .feature-item:hover {
-            border-color: var(--neon-cyan);
-            background: rgba(0, 245, 255, 0.05);
-            transform: translateX(5px);
-        }
-
-        .feature-icon {
-            font-size: 24px;
-            color: var(--neon-cyan);
-            min-width: 30px;
-        }
-
-        .feature-text {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        /* Social Proof */
-        .social-proof {
-            text-align: center;
-            margin-top: 30px;
-            padding: 20px;
-            background: rgba(255, 215, 0, 0.05);
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            border-radius: 15px;
-            max-width: 600px;
-        }
-
-        .social-proof-text {
-            font-size: 14px;
-            color: var(--neon-gold);
-            font-weight: 600;
-        }
-
-        .spots-remaining {
-            display: inline-block;
-            background: rgba(255, 0, 85, 0.2);
-            border: 2px solid var(--neon-red);
-            padding: 10px 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-            font-weight: 700;
-            color: var(--neon-red);
-            animation: spotsPulse 2s ease-in-out infinite;
-        }
-
-        @keyframes spotsPulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
-        }
-
-        /* Scan Lines */
-        .scan-line {
-            position: fixed;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, 
-                transparent, 
-                var(--neon-cyan) 50%, 
-                transparent
-            );
-            box-shadow: 0 0 20px var(--neon-cyan);
-            opacity: 0.5;
-            animation: scanMove 8s ease-in-out infinite;
-            z-index: 2;
-        }
-
-        @keyframes scanMove {
-            0%, 100% { transform: translateY(0); opacity: 0.5; }
-            50% { transform: translateY(100vh); opacity: 0.8; }
-        }
-
-        /* Hexagons */
-        #hexagons {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            opacity: 0.1;
-        }
-
-        .hexagon {
-            position: absolute;
-            width: 60px;
-            height: 70px;
-            opacity: 0.3;
-            animation: hexFloat 20s ease-in-out infinite;
-        }
-
-        .hexagon::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: var(--neon-cyan);
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-            border: 1px solid var(--neon-cyan);
-        }
-
-        @keyframes hexFloat {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 0.3; }
-            25% { transform: translate(30px, -30px) rotate(90deg); opacity: 0.5; }
-            50% { transform: translate(0, -60px) rotate(180deg); opacity: 0.3; }
-            75% { transform: translate(-30px, -30px) rotate(270deg); opacity: 0.5; }
-        }
-
-        /* Data Streams */
-        #data-streams {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            overflow: hidden;
-        }
-
-        .data-stream {
-            position: absolute;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            color: var(--neon-green);
-            opacity: 0.3;
-            animation: streamFall 10s linear infinite;
-            white-space: nowrap;
-        }
-
-        @keyframes streamFall {
-            0% {
-                transform: translateY(-100%);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.3;
-            }
-            90% {
-                opacity: 0.3;
-            }
-            100% {
-                transform: translateY(100vh);
-                opacity: 0;
-            }
-        }
-
-        /* Lightning Bolts */
-        .lightning {
-            position: fixed;
-            width: 2px;
-            height: 100vh;
-            background: linear-gradient(180deg, transparent, var(--neon-purple) 50%, transparent);
-            opacity: 0;
-            animation: lightning 6s ease-in-out infinite;
-            z-index: 3;
-            box-shadow: 0 0 10px var(--neon-purple);
-        }
-
-        @keyframes lightning {
-            0%, 95%, 100% { opacity: 0; }
-            96%, 98% { opacity: 1; }
-            97% { opacity: 0.5; }
-        }
-
-        /* Energy Rings */
-        .energy-ring {
-            position: fixed;
-            border: 2px solid var(--neon-cyan);
-            border-radius: 50%;
-            opacity: 0;
-            animation: ringPulse 4s ease-out infinite;
-            z-index: 2;
-            pointer-events: none;
-        }
-
-        @keyframes ringPulse {
-            0% {
-                width: 0;
-                height: 0;
-                opacity: 1;
-            }
-            100% {
-                width: 500px;
-                height: 500px;
-                opacity: 0;
-            }
-        }
-
-        /* Constellation Lines */
-        #constellation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            opacity: 0.2;
-        }
-
-        /* Vortex Effect */
-        .vortex-line {
-            position: fixed;
-            width: 1px;
-            height: 200px;
-            background: linear-gradient(180deg, transparent, var(--neon-purple), transparent);
-            transform-origin: center bottom;
-            opacity: 0.3;
-            animation: vortexSpin 15s linear infinite;
-            z-index: 1;
-        }
-
-        @keyframes vortexSpin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .logo { font-size: 48px; }
-            .headline { font-size: 36px; }
-            .subheadline { font-size: 18px; }
-            .waitlist-form { padding: 30px 20px; }
-            .countdown { gap: 15px; }
-            .countdown-number { font-size: 36px; }
-        }
-
-        /* Loading Animation */
-        .loading {
-            display: none;
-            width: 24px;
-            height: 24px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top-color: var(--neon-cyan);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+            transform: translateY(-2px) scale(0.98);
         }
 
         .submit-btn.loading {
@@ -777,130 +811,424 @@
             opacity: 0.7;
         }
 
-        .submit-btn.loading .loading {
-            display: inline-block;
+        .submit-btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
 
-        .submit-btn.loading .btn-text {
-            display: none;
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* ===== SUCCESS MESSAGE ===== */
+        .success-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid var(--neon-green);
+            border-radius: 20px;
+            padding: 3rem;
+            text-align: center;
+            z-index: 10002;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(20px);
+            box-shadow: 
+                0 0 80px rgba(0, 255, 136, 0.5),
+                inset 0 0 80px rgba(0, 255, 136, 0.1);
+        }
+
+        .success-message.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: all;
+        }
+
+        .success-icon {
+            font-size: 5rem;
+            color: var(--neon-green);
+            margin-bottom: 1rem;
+            animation: successPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: drop-shadow(0 0 30px var(--neon-green));
+        }
+
+        @keyframes successPop {
+            0% {
+                transform: scale(0) rotate(0deg);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2) rotate(10deg);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        .success-message h3 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--neon-green);
+            text-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .success-message p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .form-container {
+                padding: 2rem;
+            }
+        }
+
+        /* ===== DATA STREAM EFFECT ===== */
+        .data-stream {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.3;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .data-line {
+            position: absolute;
+            right: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan));
+            animation: dataFlow 3s linear infinite;
+        }
+
+        @keyframes dataFlow {
+            0% {
+                top: -10%;
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                top: 110%;
+                opacity: 0;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Neural Network Canvas -->
-    <canvas id="neural-canvas"></canvas>
+    <!-- Quantum Noise -->
+    <div class="quantum-noise" style="pointer-events: none !important;"></div>
 
-    <!-- Animated Grid -->
-    <div class="grid-overlay"></div>
+    <!-- Black Hole Intro -->
+    <div class="blackhole-intro" id="blackhole-intro">
+        <canvas id="blackhole-canvas"></canvas>
+    </div>
 
-    <!-- Floating Orbs -->
-    <div class="orb orb1"></div>
-    <div class="orb orb2"></div>
-    <div class="orb orb3"></div>
+    <!-- Background Effects -->
+    <canvas id="neural-canvas" style="pointer-events: none !important;"></canvas>
+    <canvas id="matrix-rain" style="pointer-events: none !important;"></canvas>
+    
+    <div class="perspective-grid" style="pointer-events: none !important;">
+        <div class="grid-3d" style="pointer-events: none !important;"></div>
+    </div>
 
-    <!-- Hexagon Pattern -->
-    <div id="hexagons"></div>
+    <div class="scanlines" style="pointer-events: none !important;"></div>
+    <div class="laser-scanner" style="pointer-events: none !important;"></div>
 
-    <!-- Scan Lines -->
-    <div class="scan-line" style="top: 20%; animation-delay: 0s;"></div>
-    <div class="scan-line" style="top: 40%; animation-delay: 2s;"></div>
-    <div class="scan-line" style="top: 60%; animation-delay: 4s;"></div>
-    <div class="scan-line" style="top: 80%; animation-delay: 6s;"></div>
+    <!-- Glowing Orbs -->
+    <div class="orb orb1" style="pointer-events: none !important;"></div>
+    <div class="orb orb2" style="pointer-events: none !important;"></div>
+    <div class="orb orb3" style="pointer-events: none !important;"></div>
 
-    <!-- Data Streams -->
-    <div id="data-streams"></div>
-
-    <!-- Lightning Bolts -->
-    <div class="lightning" style="left: 15%; animation-delay: 0s;"></div>
-    <div class="lightning" style="left: 45%; animation-delay: 3s;"></div>
-    <div class="lightning" style="left: 75%; animation-delay: 5s;"></div>
-
-    <!-- Energy Rings -->
-    <div id="energy-rings"></div>
-
-    <!-- Constellation -->
-    <canvas id="constellation"></canvas>
-
-    <!-- Vortex Lines -->
-    <div id="vortex"></div>
-
-    <!-- Main Container -->
-    <div class="container">
-        <!-- Logo -->
-        <div class="logo">APOLLO</div>
-
-        <!-- Badge -->
-        <div class="badge">
-            <i class="fas fa-bolt"></i> Beta Access - Limited Time
-        </div>
-
-        <!-- Headline -->
-        <h1 class="headline">
-            <span class="gradient-text">Access Denied</span>
-        </h1>
-
-        <!-- Subheadline -->
-        <p class="subheadline">
-            Unless invited.
-        </p>
+    <!-- Hexagons Container -->
+    <div id="hexagons" style="pointer-events: none !important;"></div>
 
 
-        <!-- Waitlist Form -->
-        <div class="waitlist-form">
-            <h2 class="form-title">Request Access</h2>
-            <p class="form-subtitle">Elite traders only</p>
-            
-            <form id="waitlist-form">
-                <div class="input-group">
-                    <i class="fas fa-envelope input-icon"></i>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        placeholder="Enter your email address" 
-                        required
-                    >
+
+    <!-- Data Stream -->
+    <div class="data-stream" style="pointer-events: none !important;">
+        <div class="data-line" style="animation-delay: 0s; pointer-events: none !important;"></div>
+        <div class="data-line" style="animation-delay: 0.5s; pointer-events: none !important;"></div>
+        <div class="data-line" style="animation-delay: 1s; pointer-events: none !important;"></div>
+        <div class="data-line" style="animation-delay: 1.5s; pointer-events: none !important;"></div>
+        <div class="data-line" style="animation-delay: 2s; pointer-events: none !important;"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="main-content">
+        <div class="container">
+            <!-- Header -->
+            <header>
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    APOLLO
                 </div>
+            </header>
 
-                <button type="submit" class="submit-btn">
-                    <span class="btn-text">
-                        <i class="fas fa-rocket"></i> Get Beta Access Now
-                    </span>
-                    <div class="loading"></div>
-                </button>
-            </form>
+            <!-- Hero Section -->
+            <section class="hero">
+                <div class="hero-content">
+                    <h1>
+                        <span class="glitch" data-text="APOLLO">APOLLO</span>
+                    </h1>
 
-            <div class="success-message" id="success-message">
-                <div class="success-icon">
-                    <i class="fas fa-check-circle"></i>
+                    <!-- Waitlist Form -->
+                    <div class="waitlist-section">
+                        <div class="form-container" style="position: relative; z-index: 100;">
+                            <h2 class="form-title">Join The Waitlist</h2>
+                            <p class="form-subtitle">
+                                Connect your accounts. Follow <a href="https://twitter.com/YourCompanyTwitter" target="_blank" style="color: var(--neon-cyan); text-decoration: none;">@ApolloTrading</a> for access announcements.
+                            </p>
+                            
+                            <!-- Success/Waiting Display -->
+                            <div id="waitlist-success" style="display: none; margin-bottom: 2rem;">
+                                <div style="background: rgba(0, 255, 136, 0.1); border: 2px solid var(--neon-green); border-radius: 15px; padding: 2rem; text-align: center;">
+                                    <i class="fas fa-check-circle" style="color: var(--neon-green); font-size: 3rem; margin-bottom: 1rem;"></i>
+                                    <h3 style="color: var(--neon-green); font-weight: 700; font-size: 1.5rem; margin-bottom: 1rem;">You're on the Waitlist!</h3>
+                                    <div style="background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 1.5rem; margin: 1rem 0;">
+                                        <p style="margin-bottom: 0.5rem;"><i class="fab fa-twitter" style="color: var(--neon-cyan); margin-right: 8px;"></i><span id="confirmed-twitter"></span></p>
+                                        <p style="margin-bottom: 0.5rem;"><i class="fab fa-telegram" style="color: var(--neon-blue); margin-right: 8px;"></i><span id="confirmed-telegram"></span></p>
+                                        <p><i class="fas fa-wallet" style="color: var(--neon-purple); margin-right: 8px;"></i><span id="confirmed-wallet" style="font-family: monospace; font-size: 0.85rem;"></span></p>
+                                    </div>
+                                    <p style="font-size: 1.1rem; color: rgba(255, 255, 255, 0.9); margin: 1.5rem 0; line-height: 1.6;">
+                                        We'll announce approved users on our official Twitter.<br>
+                                        <strong style="color: var(--neon-cyan);">Follow @ApolloTrading</strong> to be notified!
+                                    </p>
+                                    <p style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.6);">
+                                        Access is granted manually. Check back soon!
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <!-- Registration Form -->
+                            <form id="waitlist-form" style="position: relative; z-index: 200;">
+                                <!-- Twitter Input -->
+                                <div class="input-group" style="position: relative; z-index: 201;">
+                                    <div class="input-wrapper" style="position: relative; z-index: 202;">
+                                        <i class="fab fa-twitter input-icon" style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); pointer-events: none; z-index: 203;"></i>
+                                        <input 
+                                            type="text" 
+                                            id="twitter-handle" 
+                                            placeholder="@YourTwitterHandle"
+                                            required
+                                            style="position: relative; z-index: 204; pointer-events: auto !important; cursor: text !important;"
+                                        >
+                                    </div>
+                                </div>
+                                
+                                <!-- Telegram Input -->
+                                <div class="input-group" style="position: relative; z-index: 201; margin-top: 1rem;">
+                                    <div class="input-wrapper" style="position: relative; z-index: 202;">
+                                        <i class="fab fa-telegram input-icon" style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); pointer-events: none; z-index: 203;"></i>
+                                        <input 
+                                            type="text" 
+                                            id="telegram-username" 
+                                            placeholder="@YourTelegramUsername"
+                                            required
+                                            style="position: relative; z-index: 204; pointer-events: auto !important; cursor: text !important;"
+                                        >
+                                    </div>
+                                </div>
+                                
+                                <!-- Wallet Input -->
+                                <div class="input-group" style="position: relative; z-index: 201; margin-top: 1rem;">
+                                    <div class="input-wrapper" style="position: relative; z-index: 202;">
+                                        <i class="fas fa-wallet input-icon" style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); pointer-events: none; z-index: 203;"></i>
+                                        <input 
+                                            type="text" 
+                                            id="wallet-address" 
+                                            placeholder="Your Solana Wallet Address"
+                                            required
+                                            style="position: relative; z-index: 204; pointer-events: auto !important; cursor: text !important;"
+                                        >
+                                    </div>
+                                </div>
+                                
+                                <button type="button" id="connect-phantom-btn" class="submit-btn" style="position: relative; z-index: 205; pointer-events: auto !important; cursor: pointer !important; margin-top: 1rem; background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));">
+                                    <i class="fas fa-bolt" style="margin-right: 10px;"></i>
+                                    Auto-Fill with Phantom Wallet
+                                </button>
+                                
+                                <button type="submit" class="submit-btn" style="position: relative; z-index: 205; pointer-events: auto !important; cursor: pointer !important; margin-top: 1rem;">
+                                    <i class="fas fa-rocket" style="margin-right: 10px;"></i>
+                                    Join Waitlist
+                                </button>
+                                
+                                <p style="margin-top: 1.5rem; font-size: 0.85rem; color: rgba(255, 255, 255, 0.5); text-align: center; line-height: 1.6;">
+                                    We need all 3 accounts to sync your Telegram bot trades with your web profile. Follow <a href="https://twitter.com/YourCompanyTwitter" target="_blank" style="color: var(--neon-cyan); text-decoration: none;">@ApolloTrading</a> for access announcements.
+                                </p>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-                <h3 style="color: var(--neon-green); margin-bottom: 10px;">You're In!</h3>
-                <p style="color: rgba(255, 255, 255, 0.8);">
-                    Check your email for exclusive beta access details.
-                </p>
-            </div>
-        </div>
+            </section>
 
+
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    <div class="success-message" id="success-message">
+        <i class="fas fa-rocket success-icon" style="color: var(--neon-cyan);"></i>
+        <h3>You're on the Waitlist!</h3>
+        <p>Follow @ApolloTrading on Twitter for access announcements</p>
     </div>
 
     <script>
-        // Create Particles
-        function createParticles() {
-            const container = document.body;
-            for (let i = 0; i < 100; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                particle.style.left = Math.random() * 100 + '%';
-                particle.style.animationDelay = Math.random() * 15 + 's';
-                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
-                
-                const colors = ['#00f5ff', '#bd00ff', '#00ff88', '#ffd700'];
-                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-                
-                container.appendChild(particle);
+        // Custom cursor disabled to prevent click interference
+        // All interactive elements use default cursor for maximum compatibility
+
+        // ===== BLACK HOLE INTRO - ENHANCED =====
+        function initBlackHole() {
+            const canvas = document.getElementById('blackhole-canvas');
+            const ctx = canvas.getContext('2d');
+            const intro = document.getElementById('blackhole-intro');
+            const mainContent = document.getElementById('main-content');
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            let time = 0;
+            let phase = 0; // 0: expand, 1: swirl, 2: collapse
+            let animationComplete = false;
+
+            const particles = [];
+            const particleCount = 800;
+
+            // Create particles
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (i / particleCount) * Math.PI * 2;
+                const distance = 50 + Math.random() * 400;
+                particles.push({
+                    angle: angle,
+                    distance: distance,
+                    originalDistance: distance,
+                    speed: 0.01 + Math.random() * 0.02,
+                    size: 1 + Math.random() * 2,
+                    hue: 180 + Math.random() * 60
+                });
             }
+
+            function drawBlackHole() {
+                if (animationComplete) return;
+
+                // Clear with fade effect
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                time += 0.01;
+
+                // Phase transitions
+                if (phase === 0 && time > 2) {
+                    phase = 1;
+                } else if (phase === 1 && time > 6) {
+                    phase = 2;
+                } else if (phase === 2 && time > 9) {
+                    animationComplete = true;
+                    intro.classList.add('hidden');
+                    mainContent.classList.add('visible');
+                    return;
+                }
+
+                particles.forEach((p, i) => {
+                    // Phase 0: Expand outward
+                    if (phase === 0) {
+                        p.distance += (500 - p.distance) * 0.02;
+                        p.angle += p.speed * 0.5;
+                    }
+                    // Phase 1: Swirl and dance
+                    else if (phase === 1) {
+                        p.angle += p.speed * 2;
+                        p.distance += Math.sin(time * 2 + i * 0.1) * 2;
+                    }
+                    // Phase 2: Collapse into center
+                    else if (phase === 2) {
+                        p.distance -= p.distance * 0.08;
+                        p.angle += p.speed * 5;
+                    }
+
+                    const x = centerX + Math.cos(p.angle) * p.distance;
+                    const y = centerY + Math.sin(p.angle) * p.distance;
+
+                    // Gravitational lensing effect
+                    const distFromCenter = Math.sqrt(
+                        Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2)
+                    );
+                    const bendStrength = Math.max(0, 1 - distFromCenter / 400);
+                    const bendAngle = bendStrength * 0.5;
+
+                    const bentX = x + Math.cos(p.angle + Math.PI / 2) * bendAngle * 50;
+                    const bentY = y + Math.sin(p.angle + Math.PI / 2) * bendAngle * 50;
+
+                    // Draw particle with glow
+                    const gradient = ctx.createRadialGradient(bentX, bentY, 0, bentX, bentY, p.size * 3);
+                    gradient.addColorStop(0, `hsla(${p.hue}, 100%, 70%, 1)`);
+                    gradient.addColorStop(0.5, `hsla(${p.hue}, 100%, 50%, 0.5)`);
+                    gradient.addColorStop(1, 'transparent');
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(bentX, bentY, p.size * 3, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Draw event horizon
+                const horizonGradient = ctx.createRadialGradient(
+                    centerX, centerY, 0,
+                    centerX, centerY, 150 - time * 15
+                );
+                horizonGradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+                horizonGradient.addColorStop(0.5, 'rgba(0, 245, 255, 0.3)');
+                horizonGradient.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = horizonGradient;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, Math.max(0, 150 - time * 15), 0, Math.PI * 2);
+                ctx.fill();
+
+                requestAnimationFrame(drawBlackHole);
+            }
+
+            drawBlackHole();
         }
 
-        // Neural Network Canvas
+        // ===== NEURAL NETWORK =====
         function initNeuralNetwork() {
             const canvas = document.getElementById('neural-canvas');
             const ctx = canvas.getContext('2d');
@@ -910,22 +1238,27 @@
 
             const nodes = [];
             const nodeCount = 80;
+            let mouseX = -1000;
+            let mouseY = -1000;
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
 
             for (let i = 0; i < nodeCount; i++) {
                 nodes.push({
                     x: Math.random() * canvas.width,
                     y: Math.random() * canvas.height,
-                    vx: (Math.random() - 0.5) * 0.5,
-                    vy: (Math.random() - 0.5) * 0.5,
-                    radius: 2 + Math.random() * 2
+                    vx: (Math.random() - 0.5) * 1,
+                    vy: (Math.random() - 0.5) * 1,
+                    radius: Math.random() * 2 + 1
                 });
             }
 
             function animate() {
-                ctx.fillStyle = 'rgba(10, 0, 20, 0.1)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // Update and draw nodes
                 nodes.forEach(node => {
                     node.x += node.vx;
                     node.y += node.vy;
@@ -933,24 +1266,44 @@
                     if (node.x < 0 || node.x > canvas.width) node.vx *= -1;
                     if (node.y < 0 || node.y > canvas.height) node.vy *= -1;
 
+                    // Draw node
                     ctx.beginPath();
                     ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(0, 245, 255, 0.6)';
+                    ctx.fillStyle = 'rgba(0, 245, 255, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = 'rgba(0, 245, 255, 0.8)';
                     ctx.fill();
+                    ctx.shadowBlur = 0;
                 });
 
-                // Draw connections
+                // Connect to mouse
+                nodes.forEach(node => {
+                    const mouseDistance = Math.sqrt(
+                        Math.pow(node.x - mouseX, 2) + Math.pow(node.y - mouseY, 2)
+                    );
+
+                    if (mouseDistance < 250) {
+                        ctx.beginPath();
+                        ctx.moveTo(node.x, node.y);
+                        ctx.lineTo(mouseX, mouseY);
+                        ctx.strokeStyle = `rgba(189, 0, 255, ${0.5 * (1 - mouseDistance / 250)})`;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                });
+
+                // Connect nodes
                 nodes.forEach((node, i) => {
                     nodes.slice(i + 1).forEach(otherNode => {
                         const dx = node.x - otherNode.x;
                         const dy = node.y - otherNode.y;
                         const distance = Math.sqrt(dx * dx + dy * dy);
 
-                        if (distance < 150) {
+                        if (distance < 180) {
                             ctx.beginPath();
                             ctx.moveTo(node.x, node.y);
                             ctx.lineTo(otherNode.x, otherNode.y);
-                            ctx.strokeStyle = `rgba(0, 245, 255, ${0.2 * (1 - distance / 150)})`;
+                            ctx.strokeStyle = `rgba(0, 245, 255, ${0.3 * (1 - distance / 180)})`;
                             ctx.lineWidth = 1;
                             ctx.stroke();
                         }
@@ -963,57 +1316,199 @@
             animate();
         }
 
+        // ===== MATRIX RAIN =====
+        function initMatrixRain() {
+            const canvas = document.getElementById('matrix-rain');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
 
-        // Form Submission
+            const chars = '01アイウエオカキクケコサシスセソタチツテトABCDEF';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = Array(Math.floor(columns)).fill(1);
+
+            function draw() {
+                ctx.fillStyle = 'rgba(10, 0, 20, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.font = fontSize + 'px monospace';
+
+                drops.forEach((y, i) => {
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    const x = i * fontSize;
+                    
+                    ctx.fillStyle = `rgba(0, 245, 255, ${Math.random() * 0.5 + 0.3})`;
+                    ctx.fillText(text, x, y * fontSize);
+
+                    if (y * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                });
+            }
+
+            setInterval(draw, 50);
+        }
+
+        // ===== CREATE PARTICLES =====
+        function createParticles() {
+            const container = document.body;
+            const colors = ['var(--neon-cyan)', 'var(--neon-purple)', 'var(--neon-green)', 'var(--neon-gold)'];
+            
+            for (let i = 0; i < 60; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (15 + Math.random() * 15) + 's';
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                container.appendChild(particle);
+            }
+        }
+
+        // ===== CREATE HEXAGONS =====
+        function createHexagons() {
+            const container = document.getElementById('hexagons');
+            for (let i = 0; i < 30; i++) {
+                const hex = document.createElement('div');
+                hex.className = 'hexagon';
+                hex.style.left = Math.random() * 100 + '%';
+                hex.style.top = Math.random() * 100 + '%';
+                hex.style.animationDelay = Math.random() * 20 + 's';
+                hex.style.animationDuration = (15 + Math.random() * 15) + 's';
+                container.appendChild(hex);
+            }
+        }
+
+        // ===== WAITLIST REGISTRATION =====
+        
+        // Auto-fill wallet from Phantom
+        document.getElementById('connect-phantom-btn').addEventListener('click', async () => {
+            try {
+                if ('phantom' in window) {
+                    const provider = window.phantom?.solana;
+                    if (provider?.isPhantom) {
+                        const resp = await provider.connect();
+                        document.getElementById('wallet-address').value = resp.publicKey.toString();
+                    }
+                } else {
+                    alert('Phantom wallet not found! Please install from https://phantom.app/\n\nOr manually enter your Solana wallet address.');
+                }
+            } catch (error) {
+                console.error('Phantom error:', error);
+                alert('Please manually enter your Solana wallet address');
+            }
+        });
+
+        // Waitlist form submission
         document.getElementById('waitlist-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const email = document.getElementById('email').value;
-            const submitBtn = document.querySelector('.submit-btn');
+            let twitterHandle = document.getElementById('twitter-handle').value.trim();
+            let telegramUsername = document.getElementById('telegram-username').value.trim();
+            const walletAddress = document.getElementById('wallet-address').value.trim();
+            const submitBtn = document.querySelector('button[type="submit"]');
             const successMessage = document.getElementById('success-message');
 
-            // Add loading state
+            // Clean up handles
+            if (twitterHandle.startsWith('@')) {
+                twitterHandle = twitterHandle.substring(1);
+            }
+            if (telegramUsername.startsWith('@')) {
+                telegramUsername = telegramUsername.substring(1);
+            }
+            
+            // Validate Twitter handle
+            if (!twitterHandle || twitterHandle.length < 1) {
+                alert('Please enter your Twitter handle');
+                return;
+            }
+
+            if (!/^[A-Za-z0-9_]{1,15}$/.test(twitterHandle)) {
+                alert('Invalid Twitter handle. Must be 1-15 characters (letters, numbers, underscores only)');
+                return;
+            }
+            
+            // Validate Telegram username
+            if (!telegramUsername || telegramUsername.length < 1) {
+                alert('Please enter your Telegram username');
+                return;
+            }
+
+            if (!/^[A-Za-z0-9_]{5,32}$/.test(telegramUsername)) {
+                alert('Invalid Telegram username. Must be 5-32 characters (letters, numbers, underscores only)');
+                return;
+            }
+            
+            // Validate wallet address
+            if (!walletAddress || walletAddress.length < 32) {
+                alert('Please enter a valid Solana wallet address');
+                return;
+            }
+
             submitBtn.classList.add('loading');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right: 10px;"></i>Submitting...';
 
             try {
-                const response = await fetch('/api/v1/waitlist', {
+                const response = await fetch('/api/v1/waitlist/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ email })
+                    body: JSON.stringify({ 
+                        twitter_handle: twitterHandle,
+                        telegram_username: telegramUsername,
+                        wallet_address: walletAddress
+                    })
                 });
 
-                if (response.ok) {
-                    // Show success message
+                const data = await response.json();
+
+                if (response.ok || (data.message && data.message.includes('already'))) {
+                    // Store for later
+                    localStorage.setItem('apollo_twitter', '@' + twitterHandle);
+                    localStorage.setItem('apollo_telegram', '@' + telegramUsername);
+                    localStorage.setItem('apollo_wallet', walletAddress);
+                    localStorage.setItem('apollo_waitlist', 'true');
+
+                    // Show success
+                    document.getElementById('waitlist-form').style.display = 'none';
+                    document.getElementById('waitlist-success').style.display = 'block';
+                    document.getElementById('confirmed-twitter').textContent = '@' + twitterHandle;
+                    document.getElementById('confirmed-telegram').textContent = '@' + telegramUsername;
+                    document.getElementById('confirmed-wallet').textContent = walletAddress;
+
                     successMessage.classList.add('show');
-                    document.getElementById('email').value = '';
                     
-                    // Confetti effect (simple version)
-                    for (let i = 0; i < 30; i++) {
+                    // Epic confetti effect
+                    for (let i = 0; i < 150; i++) {
                         setTimeout(() => {
                             const confetti = document.createElement('div');
                             confetti.style.position = 'fixed';
-                            confetti.style.width = '10px';
-                            confetti.style.height = '10px';
+                            confetti.style.width = '12px';
+                            confetti.style.height = '12px';
                             confetti.style.background = ['#00f5ff', '#bd00ff', '#00ff88', '#ffd700'][Math.floor(Math.random() * 4)];
                             confetti.style.left = '50%';
                             confetti.style.top = '50%';
-                            confetti.style.borderRadius = '50%';
-                            confetti.style.zIndex = '9999';
+                            confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                            confetti.style.zIndex = '10003';
                             confetti.style.pointerEvents = 'none';
+                            confetti.style.boxShadow = '0 0 10px currentColor';
                             document.body.appendChild(confetti);
 
                             const angle = Math.random() * Math.PI * 2;
-                            const velocity = 5 + Math.random() * 10;
-                            let x = 0, y = 0, opacity = 1;
+                            const velocity = 5 + Math.random() * 20;
+                            let x = 0, y = 0, opacity = 1, rotation = 0;
 
                             const animate = () => {
                                 x += Math.cos(angle) * velocity;
-                                y += Math.sin(angle) * velocity - 5;
-                                opacity -= 0.02;
+                                y += Math.sin(angle) * velocity + 3;
+                                opacity -= 0.015;
+                                rotation += 15;
                                 
-                                confetti.style.transform = `translate(${x}px, ${y}px)`;
+                                confetti.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
                                 confetti.style.opacity = opacity;
 
                                 if (opacity > 0) {
@@ -1023,146 +1518,82 @@
                                 }
                             };
                             animate();
-                        }, i * 30);
+                        }, i * 15);
                     }
+
+                    // Hide success message after 5 seconds
+                    setTimeout(() => {
+                        successMessage.classList.remove('show');
+                    }, 5000);
                 } else {
-                    alert('Something went wrong. Please try again.');
+                    alert(data.error || 'Failed to join waitlist');
+                    submitBtn.classList.remove('loading');
+                    submitBtn.innerHTML = '<i class="fas fa-rocket" style="margin-right: 10px;"></i>Join Waitlist';
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Something went wrong. Please try again.');
-            } finally {
+                alert('Failed to submit. Please try again.');
                 submitBtn.classList.remove('loading');
+                submitBtn.innerHTML = '<i class="fas fa-rocket" style="margin-right: 10px;"></i>Join Waitlist';
             }
         });
 
-        // Create Hexagons
-        function createHexagons() {
-            const container = document.getElementById('hexagons');
-            for (let i = 0; i < 20; i++) {
-                const hex = document.createElement('div');
-                hex.className = 'hexagon';
-                hex.style.left = Math.random() * 100 + '%';
-                hex.style.top = Math.random() * 100 + '%';
-                hex.style.animationDelay = Math.random() * 20 + 's';
-                hex.style.animationDuration = (15 + Math.random() * 10) + 's';
-                container.appendChild(hex);
-            }
-        }
-
-        // Create Data Streams
-        function createDataStreams() {
-            const container = document.getElementById('data-streams');
-            const codes = ['0x', '1x', 'FF', '00', 'A7', '3E', 'B9', 'C2', 'D4', '5F'];
+        // Check if already on waitlist
+        window.addEventListener('load', () => {
+            const onWaitlist = localStorage.getItem('apollo_waitlist');
+            const savedTwitter = localStorage.getItem('apollo_twitter');
+            const savedTelegram = localStorage.getItem('apollo_telegram');
+            const savedWallet = localStorage.getItem('apollo_wallet');
             
-            for (let i = 0; i < 15; i++) {
-                const stream = document.createElement('div');
-                stream.className = 'data-stream';
-                stream.style.left = (i * 7) + '%';
-                stream.style.animationDelay = Math.random() * 10 + 's';
-                stream.style.animationDuration = (8 + Math.random() * 4) + 's';
-                
-                let text = '';
-                for (let j = 0; j < 30; j++) {
-                    text += codes[Math.floor(Math.random() * codes.length)] + ' ';
-                }
-                stream.textContent = text;
-                
-                container.appendChild(stream);
+            if (onWaitlist && savedTwitter && savedTelegram && savedWallet) {
+                document.getElementById('waitlist-form').style.display = 'none';
+                document.getElementById('waitlist-success').style.display = 'block';
+                document.getElementById('confirmed-twitter').textContent = savedTwitter;
+                document.getElementById('confirmed-telegram').textContent = savedTelegram;
+                document.getElementById('confirmed-wallet').textContent = savedWallet;
             }
-        }
+        });
 
-        // Create Energy Rings
-        function createEnergyRings() {
-            const container = document.getElementById('energy-rings');
-            setInterval(() => {
-                const ring = document.createElement('div');
-                ring.className = 'energy-ring';
-                ring.style.left = Math.random() * 100 + '%';
-                ring.style.top = Math.random() * 100 + '%';
-                container.appendChild(ring);
-                setTimeout(() => ring.remove(), 4000);
-            }, 3000);
-        }
+        // ===== INITIALIZE EVERYTHING =====
+        initBlackHole();
+        
+        setTimeout(() => {
+            createParticles();
+            createHexagons();
+            initNeuralNetwork();
+            initMatrixRain();
+        }, 9500);
 
-        // Create Vortex
-        function createVortex() {
-            const container = document.getElementById('vortex');
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            
-            for (let i = 0; i < 12; i++) {
-                const line = document.createElement('div');
-                line.className = 'vortex-line';
-                line.style.left = centerX + 'px';
-                line.style.top = centerY + 'px';
-                line.style.animationDelay = (i * 1.25) + 's';
-                container.appendChild(line);
-            }
-        }
-
-        // Create Constellation
-        function createConstellation() {
-            const canvas = document.getElementById('constellation');
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-
-            const stars = [];
-            for (let i = 0; i < 50; i++) {
-                stars.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    size: Math.random() * 2 + 1
-                });
-            }
-
-            function drawConstellation() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Draw stars
-                stars.forEach(star => {
-                    ctx.beginPath();
-                    ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(0, 245, 255, 0.5)';
-                    ctx.fill();
-                });
-
-                // Draw connecting lines
-                stars.forEach((star, i) => {
-                    stars.slice(i + 1, i + 4).forEach(other => {
-                        ctx.beginPath();
-                        ctx.moveTo(star.x, star.y);
-                        ctx.lineTo(other.x, other.y);
-                        ctx.strokeStyle = 'rgba(0, 245, 255, 0.1)';
-                        ctx.lineWidth = 0.5;
-                        ctx.stroke();
-                    });
-                });
-
-                requestAnimationFrame(drawConstellation);
-            }
-
-            drawConstellation();
-        }
-
-        // Initialize
-        createParticles();
-        createHexagons();
-        createDataStreams();
-        createEnergyRings();
-        createVortex();
-        createConstellation();
-        initNeuralNetwork();
-
-        // Resize canvas on window resize
+        // ===== RESIZE HANDLER =====
         window.addEventListener('resize', () => {
-            const canvas = document.getElementById('neural-canvas');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            const neuralCanvas = document.getElementById('neural-canvas');
+            const matrixCanvas = document.getElementById('matrix-rain');
+            const blackholeCanvas = document.getElementById('blackhole-canvas');
+            
+            neuralCanvas.width = window.innerWidth;
+            neuralCanvas.height = window.innerHeight;
+            matrixCanvas.width = window.innerWidth;
+            matrixCanvas.height = window.innerHeight;
+            blackholeCanvas.width = window.innerWidth;
+            blackholeCanvas.height = window.innerHeight;
+        });
+
+        // ===== GLITCH EFFECT ON SCROLL =====
+        let lastScroll = 0;
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            
+            if (Math.abs(currentScroll - lastScroll) > 100) {
+                document.querySelectorAll('.glitch').forEach(el => {
+                    el.style.animation = 'none';
+                    setTimeout(() => {
+                        el.style.animation = '';
+                    }, 10);
+                });
+            }
+            
+            lastScroll = currentScroll;
         });
     </script>
 </body>
 </html>
-

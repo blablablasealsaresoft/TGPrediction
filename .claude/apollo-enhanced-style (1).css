@@ -1,0 +1,331 @@
+/* 
+ * APOLLO CyberSentinel - Unified Enhanced Style Library
+ * Apply legendary animations and effects to any page
+ * Version: 2.0 Enhanced
+ */
+
+:root {
+    --neon-cyan: #00f5ff;
+    --neon-purple: #bd00ff;
+    --neon-green: #00ff88;
+    --neon-gold: #ffd700;
+    --neon-pink: #ff006e;
+    --neon-blue: #4d4dff;
+    --bg-deep: #0a0014;
+    --bg-dark: #150028;
+    --bg-darker: #1a0033;
+    --text-bright: #ffffff;
+    --text-dim: #a0a0a0;
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(0, 245, 255, 0.2);
+}
+
+body {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background: radial-gradient(ellipse at top, var(--bg-dark), var(--bg-deep)) !important;
+    color: var(--text-bright) !important;
+}
+
+/* Enhanced Card Style */
+.card, .dashboard-card, .stat-box, .feature-card {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(20px) !important;
+    border: 2px solid var(--glass-border) !important;
+    border-radius: 20px !important;
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.card:hover, .dashboard-card:hover, .stat-box:hover, .feature-card:hover {
+    transform: translateY(-10px) scale(1.03) !important;
+    border-color: var(--neon-cyan) !important;
+    box-shadow: 
+        0 20px 60px rgba(0, 245, 255, 0.4),
+        0 0 40px rgba(0, 245, 255, 0.3),
+        inset 0 0 20px rgba(0, 245, 255, 0.1) !important;
+}
+
+/* Shimmer effect on hover */
+.card::before, .dashboard-card::before, .stat-box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 245, 255, 0.2), transparent);
+    transition: left 0.7s;
+    pointer-events: none;
+}
+
+.card:hover::before, .dashboard-card:hover::before, .stat-box:hover::before {
+    left: 100%;
+}
+
+/* Enhanced Headers */
+h1, h2, h3, .section-title, .card-title {
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-gold)) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    animation: textGlow 3s ease-in-out infinite;
+}
+
+@keyframes textGlow {
+    0%, 100% {
+        filter: drop-shadow(0 0 10px rgba(0, 245, 255, 0.5));
+    }
+    50% {
+        filter: drop-shadow(0 0 20px rgba(0, 245, 255, 0.8));
+    }
+}
+
+/* Enhanced Buttons */
+button, .btn, .nav-btn, .cta-button {
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green)) !important;
+    border: none !important;
+    color: var(--bg-deep) !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 25px !important;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+    box-shadow: 0 5px 20px rgba(0, 245, 255, 0.4) !important;
+    position: relative;
+    overflow: hidden;
+    font-weight: 600;
+}
+
+button:hover, .btn:hover, .nav-btn:hover {
+    transform: translateY(-3px) scale(1.05) !important;
+    box-shadow: 0 10px 40px rgba(0, 245, 255, 0.6) !important;
+}
+
+button.active, .nav-btn.active {
+    background: linear-gradient(135deg, var(--neon-green), var(--neon-cyan)) !important;
+}
+
+/* Enhanced Badges */
+.badge {
+    padding: 0.4rem 1rem !important;
+    border-radius: 20px !important;
+    font-weight: 600 !important;
+    border: 2px solid !important;
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.badge-success {
+    background: rgba(0, 255, 136, 0.2) !important;
+    color: var(--neon-green) !important;
+    border-color: var(--neon-green) !important;
+}
+
+.badge-warning {
+    background: rgba(255, 170, 0, 0.2) !important;
+    color: var(--neon-gold) !important;
+    border-color: var(--neon-gold) !important;
+}
+
+.badge-info {
+    background: rgba(0, 245, 255, 0.2) !important;
+    color: var(--neon-cyan) !important;
+    border-color: var(--neon-cyan) !important;
+}
+
+/* Enhanced Metrics */
+.metric-value, .stat-value {
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green)) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    animation: valuePulse 3s ease-in-out infinite;
+}
+
+@keyframes valuePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+/* Status Indicators */
+.status-dot {
+    animation: statusPulse 1.5s ease-in-out infinite !important;
+    box-shadow: 0 0 20px currentColor !important;
+}
+
+@keyframes statusPulse {
+    0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% { 
+        transform: scale(1.3);
+        opacity: 0.7;
+    }
+}
+
+/* Enhanced Tables */
+.data-table th {
+    background: rgba(0, 245, 255, 0.1) !important;
+    border-bottom: 2px solid var(--neon-cyan) !important;
+}
+
+.data-table tr:hover {
+    background: rgba(0, 245, 255, 0.08) !important;
+    transform: translateX(5px);
+    transition: all 0.3s;
+}
+
+/* Icon Enhancements */
+.card-icon, .metric-icon, i {
+    animation: iconFloat 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px currentColor);
+}
+
+@keyframes iconFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+/* Progress Bars */
+.progress {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple)) !important;
+    animation: progressShimmer 2s linear infinite;
+    box-shadow: 0 0 20px var(--neon-cyan);
+}
+
+@keyframes progressShimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+
+/* Enhanced Header */
+.header {
+    background: rgba(10, 14, 39, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    border-bottom: 2px solid var(--neon-cyan) !important;
+    box-shadow: 0 4px 30px rgba(0, 245, 255, 0.3) !important;
+}
+
+/* Navigation */
+.nav {
+    background: rgba(10, 14, 39, 0.9) !important;
+    backdrop-filter: blur(15px) !important;
+}
+
+/* Glow on success states */
+.success, .online {
+    color: var(--neon-green) !important;
+    text-shadow: 0 0 10px var(--neon-green) !important;
+}
+
+/* Alert Boxes */
+.alert {
+    backdrop-filter: blur(10px) !important;
+    border-radius: 15px !important;
+    animation: alertSlideIn 0.5s ease-out;
+}
+
+@keyframes alertSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Feed Items */
+.feed-item {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-left: 3px solid var(--neon-cyan) !important;
+    transition: all 0.3s !important;
+}
+
+.feed-item:hover {
+    background: rgba(0, 245, 255, 0.1) !important;
+    transform: translateX(10px);
+    border-left-width: 5px !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--neon-cyan), var(--neon-purple));
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--neon-green), var(--neon-cyan));
+}
+
+/* Fade in animation for sections */
+.fade-in, .section-content {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive enhancements */
+@media (max-width: 768px) {
+    .card:hover, .dashboard-card:hover {
+        transform: translateY(-5px) scale(1.02) !important;
+    }
+}
+
+/* Add pulse to important elements */
+.pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
+}
+
+/* Breathing animation for containers */
+.breathe {
+    animation: breathe 6s ease-in-out infinite;
+}
+
+@keyframes breathe {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 40px rgba(0, 245, 255, 0.5);
+    }
+}

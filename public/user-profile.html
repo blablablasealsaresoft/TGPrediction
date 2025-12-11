@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APOLLO User Profile | The Most Epic Trading Profile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00f5ff;
+            --secondary: #bd00ff;
+            --success: #00ff88;
+            --warning: #ffd700;
+            --danger: #ff0055;
+            --dark: #0a0014;
+            --darker: #150028;
+            --bronze: #cd7f32;
+            --silver: #c0c0c0;
+            --gold: #ffd700;
+            --platinum: #e5e4e2;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--dark) 0%, var(--darker) 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 245, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(189, 0, 255, 0.1) 0%, transparent 50%);
+            animation: pulse 10s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Hero Section */
+        .profile-hero {
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.1) 0%, rgba(189, 0, 255, 0.1) 100%);
+            border: 2px solid var(--primary);
+            border-radius: 24px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+        }
+
+        .profile-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(0, 245, 255, 0.05), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 2rem;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .avatar-section {
+            text-align: center;
+        }
+
+        .avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            border: 4px solid var(--primary);
+            box-shadow: 0 0 40px rgba(0, 245, 255, 0.5);
+            margin-bottom: 1rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .tier-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 10px currentColor; }
+            50% { box-shadow: 0 0 20px currentColor; }
+        }
+
+        .tier-bronze { background: var(--bronze); color: #000; }
+        .tier-silver { background: var(--silver); color: #000; }
+        .tier-gold { background: var(--gold); color: #000; }
+        .tier-platinum { background: var(--platinum); color: #000; }
+
+        .identity-section h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .social-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 245, 255, 0.1);
+            border: 1px solid var(--primary);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--primary);
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .social-link:hover {
+            background: rgba(0, 245, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 245, 255, 0.3);
+        }
+
+        .rank-section {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            border: 1px solid var(--primary);
+        }
+
+        .rank-number {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, var(--warning), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Grid Layout */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 40px rgba(0, 245, 255, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(0, 245, 255, 0.2);
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: #a0a0a0;
+            font-size: 0.95rem;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .stat-value.positive {
+            color: var(--success);
+        }
+
+        .stat-value.negative {
+            color: var(--danger);
+        }
+
+        /* Wallet Cards */
+        .wallet-card {
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.05) 0%, rgba(189, 0, 255, 0.05) 100%);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .wallet-card::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 245, 255, 0.1) 0%, transparent 70%);
+            animation: rotate 10s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            word-break: break-all;
+            margin-top: 1rem;
+            border: 1px solid rgba(0, 245, 255, 0.2);
+            position: relative;
+            z-index: 1;
+        }
+
+        .copy-btn {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-top: 0.5rem;
+        }
+
+        .copy-btn:hover {
+            background: var(--secondary);
+            transform: scale(1.05);
+        }
+
+        /* PnL Display */
+        .pnl-display {
+            text-align: center;
+            padding: 2rem;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 245, 255, 0.1) 100%);
+            border: 2px solid var(--success);
+            margin-bottom: 1rem;
+        }
+
+        .pnl-display.negative {
+            background: linear-gradient(135deg, rgba(255, 0, 85, 0.1) 0%, rgba(255, 215, 0, 0.1) 100%);
+            border-color: var(--danger);
+        }
+
+        .pnl-amount {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .pnl-label {
+            color: #a0a0a0;
+            font-size: 1rem;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--primary));
+            border-radius: 4px;
+            transition: width 1s ease;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        /* Achievements */
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .achievement {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(0, 245, 255, 0.05);
+            border: 1px solid rgba(0, 245, 255, 0.2);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .achievement:hover {
+            transform: scale(1.05);
+            border-color: var(--primary);
+            background: rgba(0, 245, 255, 0.1);
+        }
+
+        .achievement.locked {
+            opacity: 0.3;
+            filter: grayscale(100%);
+        }
+
+        .achievement-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .achievement-name {
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 245, 255, 0.1);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .avatar {
+                margin: 0 auto 1rem;
+            }
+        }
+
+        /* Verified Badge */
+        .verified {
+            color: var(--primary);
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <nav style="position: fixed; top: 0; left: 0; right: 0; background: rgba(10, 0, 20, 0.95); backdrop-filter: blur(10px); border-bottom: 2px solid var(--primary); padding: 1rem 2rem; z-index: 1001; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <i class="fas fa-rocket" style="font-size: 1.5rem; color: var(--primary);"></i>
+            <span style="font-size: 1.5rem; font-weight: bold; background: linear-gradient(45deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">APOLLO</span>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <a href="/dashboard" style="color: #ffffff; text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.3s; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+            <a href="/prediction-market" style="color: #ffffff; text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.3s; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-crystal-ball"></i> Markets
+            </a>
+            <button style="background: linear-gradient(45deg, var(--primary), var(--secondary)); color: #000; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0, 245, 255, 0.5); animation: profilePulse 2s ease-in-out infinite;">
+                <i class="fas fa-user-circle"></i> My Profile
+            </button>
+            <style>
+                @keyframes profilePulse {
+                    0%, 100% { box-shadow: 0 4px 15px rgba(0, 245, 255, 0.5); }
+                    50% { box-shadow: 0 4px 25px rgba(0, 245, 255, 0.8), 0 0 30px rgba(189, 0, 255, 0.5); }
+                }
+            </style>
+        </div>
+    </nav>
+
+    <div class="container" style="padding-top: 80px;">
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 1rem; color: var(--primary);">Loading Epic Profile...</p>
+        </div>
+
+        <!-- Profile Content (hidden initially) -->
+        <div id="profileContent" style="display: none;">
+            <!-- Hero Section -->
+            <div class="profile-hero">
+                <div class="hero-content">
+                    <div class="avatar-section">
+                        <div class="avatar">
+                            <i class="fas fa-user-astronaut"></i>
+                        </div>
+                        <div id="tierBadge" class="tier-badge tier-bronze">BRONZE</div>
+                    </div>
+
+                    <div class="identity-section">
+                        <h1 id="displayName">Username</h1>
+                        <div class="social-links">
+                            <div id="twitterLink" class="social-link" style="display: none;">
+                                <i class="fab fa-twitter"></i>
+                                <span id="twitterHandle">@username</span>
+                            </div>
+                            <div id="telegramLink" class="social-link">
+                                <i class="fab fa-telegram"></i>
+                                <span id="telegramUsername">@username</span>
+                            </div>
+                            <div class="social-link">
+                                <i class="fas fa-robot"></i>
+                                <span>Telegram ID: <span id="telegramId">123456789</span></span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <span style="color: var(--success); font-weight: bold;">
+                                <i class="fas fa-check-circle"></i> Account Created
+                            </span>
+                            <span style="color: #a0a0a0; margin-left: 1rem;" id="accountAge"></span>
+                        </div>
+                    </div>
+
+                    <div class="rank-section">
+                        <div style="color: #a0a0a0; font-size: 0.9rem; margin-bottom: 0.5rem;">GLOBAL RANK</div>
+                        <div class="rank-number">#<span id="globalRank">-</span></div>
+                        <div style="margin-top: 0.5rem;">
+                            <span style="color: var(--primary);" id="percentile">Top 0%</span>
+                        </div>
+                        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #a0a0a0;">
+                            of <span id="totalUsers">0</span> traders
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wallets Section -->
+            <div class="stats-grid">
+                <div class="wallet-card">
+                    <div class="card-title">
+                        <i class="fas fa-wallet"></i> Bot Trading Wallet
+                        <span style="margin-left: auto; color: var(--success);">
+                            <i class="fas fa-circle" style="font-size: 0.5rem;"></i> ACTIVE
+                        </span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Balance</span>
+                        <span class="stat-value positive" id="botBalance">0.0000 SOL</span>
+                    </div>
+                    <div class="wallet-address" id="botWalletAddress">Loading...</div>
+                    <button class="copy-btn" onclick="copyAddress('bot')">
+                        <i class="fas fa-copy"></i> Copy Address
+                    </button>
+                </div>
+
+                <div class="wallet-card">
+                    <div class="card-title">
+                        <i class="fas fa-link"></i> External Wallet
+                        <span style="margin-left: auto;" id="externalStatus">
+                            <span style="color: #666;"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> NOT CONNECTED</span>
+                        </span>
+                    </div>
+                    <div id="externalWalletContent">
+                        <div class="wallet-address" id="externalWalletAddress">No external wallet connected</div>
+                        <button class="copy-btn" onclick="connectWallet()" id="connectBtn">
+                            <i class="fas fa-plug"></i> Connect Wallet
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PnL Section -->
+            <div id="pnlDisplay" class="pnl-display">
+                <div class="pnl-label">TOTAL PROFIT & LOSS (LIFETIME)</div>
+                <div class="pnl-amount"><span id="totalPnL">+0.0000</span> SOL</div>
+                <div style="font-size: 1.5rem; color: #a0a0a0;">
+                    Best Trade: <span id="bestTrade" style="color: var(--success);">+0.0000</span> SOL | 
+                    Worst: <span id="worstTrade" style="color: var(--danger);">-0.0000</span> SOL
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <!-- Lifetime Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-infinity"></i> Lifetime Stats</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Trades</span>
+                        <span class="stat-value" id="lifetimeTrades">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Profitable Trades</span>
+                        <span class="stat-value positive" id="lifetimeProfitable">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Win Rate</span>
+                        <span class="stat-value" id="lifetimeWinRate">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="lifetimeWinRateBar" style="width: 0%"></div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Avg Trade Size</span>
+                        <span class="stat-value" id="avgTradeSize">0.0000 SOL</span>
+                    </div>
+                </div>
+
+                <!-- Monthly Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-calendar-alt"></i> Last 30 Days</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Trades</span>
+                        <span class="stat-value" id="monthlyTrades">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Win Rate</span>
+                        <span class="stat-value" id="monthlyWinRate">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="monthlyWinRateBar" style="width: 0%"></div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">PnL</span>
+                        <span class="stat-value" id="monthlyPnL">+0.0000 SOL</span>
+                    </div>
+                </div>
+
+                <!-- Weekly Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-chart-line"></i> Last 7 Days</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Trades</span>
+                        <span class="stat-value" id="weeklyTrades">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Win Rate</span>
+                        <span class="stat-value" id="weeklyWinRate">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="weeklyWinRateBar" style="width: 0%"></div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">PnL</span>
+                        <span class="stat-value" id="weeklyPnL">+0.0000 SOL</span>
+                    </div>
+                </div>
+
+                <!-- Today Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-clock"></i> Today</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Daily PnL</span>
+                        <span class="stat-value" id="todayPnL">+0.0000 SOL</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Open Positions</span>
+                        <span class="stat-value" id="openPositions">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Winning Streak</span>
+                        <span class="stat-value positive" id="winningStreak">0 🔥</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trader Profile -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-star"></i> Trader Profile</div>
+                    <span id="verifiedBadge" style="display: none;" class="verified">
+                        <i class="fas fa-check-circle"></i> VERIFIED
+                    </span>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Reputation Score</span>
+                        <span class="stat-value" id="reputationScore">0.0 / 100</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Followers</span>
+                        <span class="stat-value" id="followers">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Strategies Shared</span>
+                        <span class="stat-value" id="strategiesShared">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Breakdown -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-chart-pie"></i> Trading Activity Breakdown</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Achievements -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fas fa-trophy"></i> Achievements</div>
+                </div>
+                <div class="achievements-grid" id="achievementsGrid">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api/v1';
+        let currentProfile = null;
+        let activityChart = null;
+
+        // Get user ID from URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('user_id') || '123456789';
+
+        async function loadProfile() {
+            try {
+                const response = await fetch(`${API_BASE}/user/${userId}/profile`);
+                const profile = await response.json();
+                
+                if (response.ok) {
+                    currentProfile = profile;
+                    displayProfile(profile);
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('profileContent').style.display = 'block';
+                } else {
+                    showError(profile.error || 'Failed to load profile');
+                }
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function displayProfile(profile) {
+            // Identity
+            document.getElementById('displayName').textContent = profile.identity.display_name + 
+                (profile.trader_profile.is_verified ? '' : '');
+            document.getElementById('telegramUsername').textContent = '@' + (profile.identity.telegram_username || 'user');
+            document.getElementById('telegramId').textContent = profile.user_id;
+
+            if (profile.identity.twitter_handle) {
+                document.getElementById('twitterLink').style.display = 'flex';
+                document.getElementById('twitterHandle').textContent = profile.identity.twitter_handle;
+            }
+
+            // Tier Badge
+            const tier = profile.trader_profile.tier.toLowerCase();
+            document.getElementById('tierBadge').textContent = tier.toUpperCase();
+            document.getElementById('tierBadge').className = `tier-badge tier-${tier}`;
+
+            // Verified Badge
+            if (profile.trader_profile.is_verified) {
+                document.getElementById('verifiedBadge').style.display = 'block';
+            }
+
+            // Account Age
+            if (profile.metadata.account_created) {
+                const created = new Date(profile.metadata.account_created);
+                const days = Math.floor((new Date() - created) / (1000 * 60 * 60 * 24));
+                document.getElementById('accountAge').textContent = `${days} days ago`;
+            }
+
+            // Rankings
+            document.getElementById('globalRank').textContent = profile.rankings.global_rank || '-';
+            document.getElementById('totalUsers').textContent = profile.rankings.total_users;
+            document.getElementById('percentile').textContent = `Top ${profile.rankings.percentile}%`;
+
+            // Wallets
+            if (profile.wallets.bot_wallet.address) {
+                document.getElementById('botWalletAddress').textContent = profile.wallets.bot_wallet.address;
+                document.getElementById('botBalance').textContent = profile.wallets.bot_wallet.balance.toFixed(4) + ' SOL';
+            }
+
+            if (profile.wallets.external_wallet.connected) {
+                document.getElementById('externalWalletAddress').textContent = profile.wallets.external_wallet.address;
+                document.getElementById('externalStatus').innerHTML = '<span style="color: var(--success);"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> CONNECTED</span>';
+                document.getElementById('connectBtn').textContent = '✓ Connected';
+                document.getElementById('connectBtn').style.background = 'var(--success)';
+            }
+
+            // PnL
+            const totalPnL = profile.stats.lifetime.total_pnl;
+            const pnlElement = document.getElementById('totalPnL');
+            pnlElement.textContent = (totalPnL >= 0 ? '+' : '') + totalPnL.toFixed(4);
+            pnlElement.style.color = totalPnL >= 0 ? 'var(--success)' : 'var(--danger)';
+            
+            const pnlDisplay = document.getElementById('pnlDisplay');
+            if (totalPnL < 0) {
+                pnlDisplay.classList.add('negative');
+            }
+
+            document.getElementById('bestTrade').textContent = '+' + profile.stats.lifetime.best_trade.toFixed(4);
+            document.getElementById('worstTrade').textContent = profile.stats.lifetime.worst_trade.toFixed(4);
+
+            // Lifetime Stats
+            document.getElementById('lifetimeTrades').textContent = profile.stats.lifetime.total_trades;
+            document.getElementById('lifetimeProfitable').textContent = profile.stats.lifetime.profitable_trades;
+            document.getElementById('lifetimeWinRate').textContent = profile.stats.lifetime.win_rate + '%';
+            document.getElementById('lifetimeWinRateBar').style.width = profile.stats.lifetime.win_rate + '%';
+            document.getElementById('avgTradeSize').textContent = profile.stats.lifetime.avg_trade_size.toFixed(4) + ' SOL';
+
+            // Monthly Stats
+            document.getElementById('monthlyTrades').textContent = profile.stats.monthly.total_trades;
+            document.getElementById('monthlyWinRate').textContent = profile.stats.monthly.win_rate + '%';
+            document.getElementById('monthlyWinRateBar').style.width = profile.stats.monthly.win_rate + '%';
+            const monthlyPnL = profile.stats.monthly.total_pnl;
+            const monthlyPnLEl = document.getElementById('monthlyPnL');
+            monthlyPnLEl.textContent = (monthlyPnL >= 0 ? '+' : '') + monthlyPnL.toFixed(4) + ' SOL';
+            monthlyPnLEl.className = monthlyPnL >= 0 ? 'stat-value positive' : 'stat-value negative';
+
+            // Weekly Stats
+            document.getElementById('weeklyTrades').textContent = profile.stats.weekly.total_trades;
+            document.getElementById('weeklyWinRate').textContent = profile.stats.weekly.win_rate + '%';
+            document.getElementById('weeklyWinRateBar').style.width = profile.stats.weekly.win_rate + '%';
+            const weeklyPnL = profile.stats.weekly.total_pnl;
+            const weeklyPnLEl = document.getElementById('weeklyPnL');
+            weeklyPnLEl.textContent = (weeklyPnL >= 0 ? '+' : '') + weeklyPnL.toFixed(4) + ' SOL';
+            weeklyPnLEl.className = weeklyPnL >= 0 ? 'stat-value positive' : 'stat-value negative';
+
+            // Today Stats
+            const todayPnL = profile.stats.today.pnl;
+            const todayPnLEl = document.getElementById('todayPnL');
+            todayPnLEl.textContent = (todayPnL >= 0 ? '+' : '') + todayPnL.toFixed(4) + ' SOL';
+            todayPnLEl.className = todayPnL >= 0 ? 'stat-value positive' : 'stat-value negative';
+            document.getElementById('openPositions').textContent = profile.activity.open_positions;
+            document.getElementById('winningStreak').textContent = profile.activity.winning_streak + ' 🔥';
+
+            // Trader Profile
+            document.getElementById('reputationScore').textContent = profile.trader_profile.reputation_score + ' / 100';
+            document.getElementById('followers').textContent = profile.trader_profile.followers;
+            document.getElementById('strategiesShared').textContent = profile.trader_profile.strategies_shared;
+
+            // Activity Chart
+            createActivityChart(profile.activity.trade_breakdown);
+
+            // Achievements
+            createAchievements(profile);
+        }
+
+        function createActivityChart(tradeBreakdown) {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            
+            const labels = Object.keys(tradeBreakdown);
+            const data = Object.values(tradeBreakdown);
+            
+            if (activityChart) {
+                activityChart.destroy();
+            }
+
+            activityChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels.map(l => l.charAt(0).toUpperCase() + l.slice(1)),
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            'rgba(0, 245, 255, 0.8)',
+                            'rgba(189, 0, 255, 0.8)',
+                            'rgba(0, 255, 136, 0.8)',
+                            'rgba(255, 215, 0, 0.8)',
+                            'rgba(255, 0, 85, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(0, 245, 255, 1)',
+                            'rgba(189, 0, 255, 1)',
+                            'rgba(0, 255, 136, 1)',
+                            'rgba(255, 215, 0, 1)',
+                            'rgba(255, 0, 85, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#ffffff',
+                                font: { size: 12 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createAchievements(profile) {
+            const achievements = [
+                { icon: '🎯', name: 'First Trade', earned: profile.stats.lifetime.total_trades > 0 },
+                { icon: '💰', name: 'Profitable', earned: profile.stats.lifetime.total_pnl > 0 },
+                { icon: '🔥', name: '10 Trades', earned: profile.stats.lifetime.total_trades >= 10 },
+                { icon: '⚡', name: '50 Trades', earned: profile.stats.lifetime.total_trades >= 50 },
+                { icon: '💎', name: '100 Trades', earned: profile.stats.lifetime.total_trades >= 100 },
+                { icon: '🏆', name: 'Win Rate 70%+', earned: profile.stats.lifetime.win_rate >= 70 },
+                { icon: '🎖️', name: 'Top 10%', earned: profile.rankings.percentile >= 90 },
+                { icon: '👑', name: 'Elite Trader', earned: profile.trader_profile.reputation_score >= 80 },
+                { icon: '🌟', name: 'Verified', earned: profile.trader_profile.is_verified },
+                { icon: '👥', name: 'Has Followers', earned: profile.trader_profile.followers > 0 },
+                { icon: '📊', name: 'Strategy Publisher', earned: profile.trader_profile.strategies_shared > 0 },
+                { icon: '🚀', name: 'Big Win +1 SOL', earned: profile.stats.lifetime.best_trade >= 1 }
+            ];
+
+            const grid = document.getElementById('achievementsGrid');
+            grid.innerHTML = achievements.map(a => `
+                <div class="achievement ${a.earned ? '' : 'locked'}">
+                    <div class="achievement-icon">${a.icon}</div>
+                    <div class="achievement-name">${a.name}</div>
+                </div>
+            `).join('');
+        }
+
+        function copyAddress(type) {
+            const address = type === 'bot' 
+                ? document.getElementById('botWalletAddress').textContent
+                : document.getElementById('externalWalletAddress').textContent;
+            
+            navigator.clipboard.writeText(address).then(() => {
+                alert('✓ Address copied to clipboard!');
+            });
+        }
+
+        function connectWallet() {
+            alert('Connect your Phantom/Solflare wallet here!\n(Feature coming soon)');
+        }
+
+        function showError(message) {
+            document.getElementById('loading').innerHTML = `
+                <div style="color: var(--danger); font-size: 1.2rem;">
+                    <i class="fas fa-exclamation-circle"></i> ${message}
+                </div>
+                <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.8rem 2rem; background: var(--primary); border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                    Retry
+                </button>
+            `;
+        }
+
+        // Load profile on page load
+        window.addEventListener('load', loadProfile);
+
+        // Add hover effects to nav links
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('nav a');
+            navLinks.forEach(link => {
+                link.addEventListener('mouseenter', (e) => {
+                    e.target.style.background = 'rgba(0, 245, 255, 0.1)';
+                });
+                link.addEventListener('mouseleave', (e) => {
+                    e.target.style.background = 'transparent';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+

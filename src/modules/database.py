@@ -71,16 +71,53 @@ class UserWallet(Base):
 
 
 class WaitlistSignup(Base):
-    """Waitlist email signup"""
+    """Waitlist signup with Twitter + Telegram + Wallet"""
     __tablename__ = 'waitlist_signups'
     
     id = Column(Integer, primary_key=True)
-    email = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=True)  # Legacy field
+    twitter_handle = Column(String, unique=True, index=True, nullable=True)  # Primary identifier
+    telegram_username = Column(String, index=True, nullable=True)  # Telegram for bot sync
+    wallet_address = Column(String, nullable=True)  # Solana wallet
     signup_date = Column(DateTime, default=datetime.utcnow)
     ip_address = Column(String, nullable=True)
     user_agent = Column(String, nullable=True)
     is_approved = Column(Boolean, default=False)
     approved_date = Column(DateTime, nullable=True)
+
+
+class WalletRegistration(Base):
+    """Web3 wallet registration for site-wide authentication"""
+    __tablename__ = 'wallet_registrations'
+    
+    id = Column(Integer, primary_key=True)
+    wallet_address = Column(String, unique=True, index=True, nullable=False)
+    wallet_provider = Column(String, nullable=True)  # phantom, solflare, etc.
+    registered_date = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    visit_count = Column(Integer, default=1)
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+
+
+class TwitterRegistration(Base):
+    """Twitter account registration for authentication and profile"""
+    __tablename__ = 'twitter_registrations'
+    
+    id = Column(Integer, primary_key=True)
+    twitter_handle = Column(String, unique=True, index=True, nullable=False)  # lowercase, no @
+    display_handle = Column(String, nullable=True)  # with @ for display
+    registered_date = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    visit_count = Column(Integer, default=1)
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+    # Profile data (can be fetched later from Twitter API)
+    profile_name = Column(String, nullable=True)
+    profile_image = Column(String, nullable=True)
+    follower_count = Column(Integer, nullable=True)
 
 
 class TrackedWallet(Base):

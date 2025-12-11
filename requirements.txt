@@ -1,2 +1,8 @@
 # See requirements/README.md for details on updating the lockfile.
 -r requirements/dev.lock
+
+# Web API dependencies
+aiohttp-cors>=0.7.0
+python-jose>=3.3.0
+passlib>=1.7.4
+bcrypt>=4.0.1
